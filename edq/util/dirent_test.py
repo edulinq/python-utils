@@ -1,5 +1,4 @@
 import os
-import sys
 import unittest
 
 import edq.util.dirent
@@ -31,7 +30,6 @@ DIRENT_TYPE_FILE = 'file'
 class TestDirentOperations(unittest.TestCase):
     """ Test basic operations on dirents. """
 
-    @unittest.skipIf((sys.platform.startswith("win") and (sys.version_info > (3, 11))), "windows symlink behavior")
     def test_dirent_base(self):
         """ Test that the base temp directory is properly setup. """
 
@@ -137,8 +135,13 @@ class TestDirentOperations(unittest.TestCase):
             path = os.path.join(base_dir, relpath)
 
             # Check the path exists.
-            if (not os.path.exists(path)):
+            if (not edq.util.dirent.exists(path)):
                 self.fail(f"Expected path does not exist: '{relpath}'.")
+
+            # Check the link status.
+            if (is_link is not None):
+                if (is_link != os.path.islink(path)):
+                    self.fail(f"Expected path does not have a matching link status. Expected {is_link}, but is {not is_link}: '{relpath}'.")
 
             # Check the type of the dirent.
             if (dirent_type is not None):
@@ -151,11 +154,6 @@ class TestDirentOperations(unittest.TestCase):
                 else:
                     raise ValueError(f"Unknown dirent type '{dirent_type}' for path: '{relpath}'.")
 
-            # Check the link status.
-            if (is_link is not None):
-                if (is_link != os.path.islink(path)):
-                    self.fail(f"Expected path does not have a matching link status. Expected {is_link}, but is {not is_link}: '{relpath}'.")
-
     def _check_nonexisting_paths(self, base_dir, raw_paths):
         """
         Ensure that specific paths do not exists, and fail the test if they do exist.
@@ -166,5 +164,5 @@ class TestDirentOperations(unittest.TestCase):
         for relpath in raw_paths:
             path = os.path.join(base_dir, relpath)
 
-            if (os.path.exists(path)):
+            if (edq.util.dirent.exists(path)):
                 self.fail(f"Path exists when it should not: '{relpath}'.")

@@ -1,3 +1,14 @@
+"""
+Operations relating to directory entries (dirents).
+
+These operations are designed for clarity and compatibility, not performance.
+
+Only directories, files, and links will be handled.
+Other types of dirents may result in an error being raised.
+
+In general, all recursive operations do not follow symlinks by default and instead treat the link as a file.
+"""
+
 import atexit
 import os
 import shutil
@@ -7,6 +18,15 @@ import uuid
 DEAULT_ENCODING: str = 'utf-8'
 """ The default encoding that will be used when reading and writing. """
 
+def exists(path: str) -> bool:
+    """
+    Check if a path exists.
+    This will transparently call os.path.lexists(),
+    which will include broken links.
+    """
+
+    return os.path.lexists(path)
+
 def get_temp_path(prefix: str = '', suffix: str = '', rm: bool = True) -> str:
     """
     Get a path to a valid (but not currently existing) temp dirent.
@@ -15,7 +35,7 @@ def get_temp_path(prefix: str = '', suffix: str = '', rm: bool = True) -> str:
     """
 
     path = None
-    while ((path is None) or os.path.exists(path)):
+    while ((path is None) or exists(path)):
         path = os.path.join(tempfile.gettempdir(), prefix + str(uuid.uuid4()) + suffix)
 
     if (rm):
@@ -48,7 +68,7 @@ def remove(path: str) -> None:
     and does not need to exist.
     """
 
-    if (not os.path.exists(path)):
+    if (not exists(path)):
         return
 
     if (os.path.isfile(path) or os.path.islink(path)):
@@ -57,6 +77,14 @@ def remove(path: str) -> None:
         shutil.rmtree(path)
     else:
         raise ValueError(f"Unknown type of dirent: '{path}'.")
+
+def same_dirent(a: str, b: str):
+    """
+    Check if two paths represent the same dirent.
+    If either (or both) paths do not exist, false will be returned.
+    """
+
+    return (exists(a) and exists(b) and os.path.samefile(a, b))
 
 def move(source: str, dest: str) -> None:
     """
@@ -69,60 +97,86 @@ def move(source: str, dest: str) -> None:
         dest = os.path.abspath(os.path.join(dest, os.path.basename(source)))
 
     # Skip if this is self.
-    if (os.path.exists(dest) and os.path.samefile(source, dest)):
+    if (same_dirent(source, dest)):
         return
 
     # Create any required parents.
     os.makedirs(os.path.dirname(dest), exist_ok = True)
 
     # Remove any existing dest.
-    if (os.path.exists(dest)):
+    if (exists(dest)):
         remove(dest)
 
     shutil.move(source, dest)
 
-def copy(source: str, dest: str, dirs_exist_ok: bool = False) -> None:
+def copy(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
     """
-    Copy a file or directory into dest.
-    If source is a file, then dest can be a file or dir.
-    If source is a dir, it is copied as a subdirectory of dest.
-    If dirs_exist_ok is true, an existing destination directory is allowed.
-    """
+    Copy a dirent or directory to a destination.
 
-    if (os.path.isfile(source) or os.path.islink(source)):
-        os.makedirs(os.path.dirname(dest), exist_ok = True)
+    The destination will be overwritten if it exists (and no_clober is false).
+    For copying the contents of a directory INTO another directory, use copy_contents().
 
-        try:
-            shutil.copy2(source, dest, follow_symlinks = False)
-        except shutil.SameFileError:
-            return
-    else:
-        if (os.path.isdir(dest)):
-            dest = os.path.join(dest, os.path.basename(source))
-
-        shutil.copytree(source, dest, dirs_exist_ok = dirs_exist_ok, symlinks = True)
-
-def copy_contents(source: str, dest: str) -> None:
-    """
-    Copy a file or the contents of a directory (excluding the top-level directory) into dest.
-    For a file: `cp source dest/`
-    For a dir: `cp -r source/* dest/`
+    No copy is made if the source and dest refer to the same dirent.
     """
 
-    source = os.path.abspath(source)
+    source = os.path.abspath(raw_source)
+    dest = os.path.abspath(raw_dest)
 
-    if (os.path.isfile(source)):
-        copy(source, dest)
+    if (same_dirent(source, dest)):
         return
 
-    for dirent in os.listdir(source):
-        source_path = os.path.join(source, dirent)
-        dest_path = os.path.join(dest, dirent)
+    if (not exists(source)):
+        raise ValueError(f"Source of copy does not exist: '{raw_source}'.")
 
-        if (os.path.isfile(source_path) or os.path.islink(source_path)):
-            copy(source_path, dest_path)
-        else:
-            shutil.copytree(source_path, dest_path, symlinks = True)
+    if (exists(dest)):
+        if (no_clobber):
+            raise ValueError(f"Destination of copy already exists: '{raw_dest}'.")
+
+        remove(dest)
+
+    mkdir(os.path.dirname(dest))
+
+    if (os.path.isfile(source)):
+        shutil.copy2(source, dest, follow_symlinks = False)
+    elif (os.path.islink(source)):
+        # shutil.copy2() can generally handle links, but Windows is inconsistent (between 3.11 and 3.12) on link handling.
+        link_target = os.readlink(source)
+        os.symlink(link_target, dest)
+    elif (os.path.isdir(source)):
+        for child in sorted(os.listdir(source)):
+            copy(os.path.join(raw_source, child), os.path.join(raw_dest, child))
+    else:
+        raise ValueError(f"Source of copy is not a dir, fie, or link: '{raw_source}'.")
+
+def copy_contents(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
+    """
+    Copy a file or the contents of a directory (excluding the top-level directory itself) into a destination.
+    If the destination exists, it must be a directory.
+
+    The source and destination should not be the same file.
+
+    For a file, this is equivalent to `mkdir -p dest && cp source dest`
+    For a dir, this is equivalent to `mkdir -p dest && cp -r source/* dest`
+    """
+
+    source = os.path.abspath(raw_source)
+    dest = os.path.abspath(raw_dest)
+
+    if (same_dirent(source, dest)):
+        raise ValueError(f"Source and destination of contents copy cannot be the same: '{raw_source}'.")
+
+    if (exists(dest) and (not os.path.isdir(dest))):
+        raise ValueError(f"Destination of contents copy exists and is not a dir: '{raw_dest}'.")
+
+    mkdir(dest)
+
+    if (os.path.isfile(source) or os.path.islink(source)):
+        copy(source, os.path.join(dest, os.path.basename(source)), no_clobber = no_clobber)
+    elif (os.path.isdir(source)):
+        for child in sorted(os.listdir(source)):
+            copy(os.path.join(raw_source, child), os.path.join(raw_dest, child), no_clobber = no_clobber)
+    else:
+        raise ValueError(f"Source of contents copy is not a dir, fie, or link: '{raw_source}'.")
 
 def read_file(path: str, strip: bool = True, encoding: str = DEAULT_ENCODING) -> str:
     """ Read the contents of a file. """
