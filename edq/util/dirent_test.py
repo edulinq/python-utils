@@ -26,11 +26,12 @@ but it will be created by _prep_temp_dir().
 
 DIRENT_TYPE_DIR = 'dir'
 DIRENT_TYPE_FILE = 'file'
+DIRENT_TYPE_BROKEN_SYMLINK = 'broken_symlink'
 
 class TestDirentOperations(unittest.TestCase):
     """ Test basic operations on dirents. """
 
-    def test_dirent_base(self):
+    def test_setup(self):
         """ Test that the base temp directory is properly setup. """
 
         temp_dir = self._prep_temp_dir()
@@ -50,7 +51,175 @@ class TestDirentOperations(unittest.TestCase):
 
         self._check_existing_paths(temp_dir, expected_paths)
 
-    def test_dirent_operations_remove(self):
+    def test_move_base(self):
+        """
+        Test moving dirents.
+
+        This test will create some additional dirents:
+        ├── dir_1
+        │   └── dir_2
+        │       ├── a.txt
+        │       └── dir_empty
+        """
+
+        # [(source, dest, no_clobber?, error substring), ...]
+        # The dest can be a single string, or a tuple of (operation input, expected output).
+        test_cases = [
+            ('a.txt', 'test.txt', False, None),
+
+            # Move into Dir - Explicit
+            ('a.txt', os.path.join('dir_1', 'a.txt'), False, None),
+
+            # Move into Dir - Implicit
+            ('a.txt', ('dir_1', os.path.join('dir_1', 'a.txt')), False, None),
+
+            # Move out of Dir
+            (os.path.join('dir_1', 'b.txt'), 'b.txt', False, None),
+
+            # Missing Parents
+            ('a.txt', os.path.join('dir_1', 'a', 'b', 'a.txt'), False, None),
+
+            # Same File
+            ('a.txt', 'a.txt', False, None),
+
+            # Clobber File with File
+            ('a.txt', os.path.join('dir_1', 'b.txt'), False, None),
+
+            # No Clobber File with File
+            ('a.txt', os.path.join('dir_1', 'b.txt'), True, 'Destination of move already exists'),
+
+            # Clobber File with File - Implicit
+            ('a.txt', (os.path.join('dir_1', 'dir_2'), os.path.join('dir_1', 'dir_2', 'a.txt')), False, None),
+
+            # No Clobber File with File - Implicit
+            ('a.txt', os.path.join('dir_1', 'dir_2'), True, 'Destination of move already exists'),
+
+            # Clobber Dir with Dir
+            ('dir_empty', 'dir_1', False, None),
+
+            # Clobber Dir with Dir - Implicit
+            ('dir_empty', (os.path.join('dir_1', 'dir_2'), os.path.join('dir_1', 'dir_2', 'dir_empty')), False, None),
+
+            # No Clobber Dir with Dir - Implicit
+            ('dir_empty', os.path.join('dir_1', 'dir_2'), True, 'Destination of move already exists'),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (source, raw_dest, no_clobber, error_substring) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{source}' -> '{raw_dest}'):"):
+                temp_dir = self._prep_temp_dir()
+
+                # Create the additional dirents for this test.
+                edq.util.dirent.copy(os.path.join(temp_dir, 'a.txt'), os.path.join(temp_dir, 'dir_1', 'dir_2', 'a.txt'))
+                edq.util.dirent.copy(os.path.join(temp_dir, 'dir_empty'), os.path.join(temp_dir, 'dir_1', 'dir_2', 'dir_empty'))
+
+                if (isinstance(raw_dest, tuple)):
+                    (input_dest, expected_dest) = raw_dest
+                else:
+                    input_dest = raw_dest
+                    expected_dest = raw_dest
+
+                source = os.path.join(temp_dir, source)
+                input_dest = os.path.join(temp_dir, input_dest)
+                expected_dest = os.path.join(temp_dir, expected_dest)
+
+                try:
+                    edq.util.dirent.move(source, input_dest, no_clobber = no_clobber)
+                except Exception as ex:
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{str(ex)}'.")
+
+                    self.assertIn(error_substring, str(ex), 'Error is not as expected.')
+                    continue
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
+                self._check_existing_paths(temp_dir, [expected_dest])
+
+                if (not edq.util.dirent.same_dirent(os.path.join(temp_dir, source), os.path.join(temp_dir, expected_dest))):
+                    self._check_nonexisting_paths(temp_dir, [source])
+
+    def test_move_rename(self):
+        """ Test renaming dirents (via move()). """
+
+        temp_dir = self._prep_temp_dir()
+
+        # [(source, dest, expected error), ...]
+        rename_relpaths = [
+            # Symlink - File
+            ('symlinklink_a.txt', 'rename_symlinklink_a.txt', None),
+
+            # Symlink - Dir
+            ('symlinklink_dir_1', 'rename_symlinklink_dir_1', None),
+
+            # File in Directory
+            (os.path.join('dir_1', 'dir_2', 'c.txt'), os.path.join('dir_1', 'dir_2', 'rename_c.txt'), None),
+
+            # File
+            ('a.txt', 'rename_a.txt', None),
+
+            # Empty File
+            ('file_empty', 'rename_file_empty', None),
+
+            # Directory
+            ('dir_1', 'rename_dir_1', None),
+
+            # Empty Directory
+            ('dir_empty', 'rename_dir_empty', None),
+
+            # Non-Existent
+            ('ZZZ', 'rename_ZZZ', 'No such file or directory'),
+        ]
+
+        expected_paths = [
+            ('rename_a.txt', DIRENT_TYPE_FILE),
+            ('rename_dir_1', DIRENT_TYPE_DIR),
+            (os.path.join('rename_dir_1', 'b.txt'), DIRENT_TYPE_FILE),
+            (os.path.join('rename_dir_1', 'dir_2'), DIRENT_TYPE_DIR),
+            (os.path.join('rename_dir_1', 'dir_2', 'rename_c.txt'), DIRENT_TYPE_FILE),
+            ('rename_dir_empty', DIRENT_TYPE_DIR),
+            ('rename_file_empty', DIRENT_TYPE_FILE),
+            ('rename_symlinklink_a.txt', DIRENT_TYPE_BROKEN_SYMLINK, True),
+            ('rename_symlinklink_dir_1', DIRENT_TYPE_BROKEN_SYMLINK, True),
+            ('symlinklink_dir_empty', DIRENT_TYPE_BROKEN_SYMLINK, True),
+        ]
+
+        unexpected_paths = [
+            'symlinklink_a.txt',
+            'symlinklink_dir_1',
+            os.path.join('dir_1', 'dir_2', 'c.txt'),
+            'a.txt',
+            'file_empty',
+            'dir_1',
+            'dir_empty',
+            'ZZZ',
+            'rename_ZZZ',
+        ]
+
+        for (i, test_case) in enumerate(rename_relpaths):
+            (source, dest, error_substring) = test_case
+
+            source = os.path.join(temp_dir, source)
+            dest = os.path.join(temp_dir, dest)
+
+            try:
+                edq.util.dirent.move(source, dest)
+            except Exception as ex:
+                if (error_substring is None):
+                    self.fail(f"Case {i}: Unexpected error: '{str(ex)}'.")
+
+                self.assertIn(error_substring, str(ex), f"Case {i}: Error is not as expected.")
+                continue
+
+            if (error_substring is not None):
+                self.fail(f"Case {i}: Did not get expected error: '{error_substring}'.")
+
+        self._check_nonexisting_paths(temp_dir, unexpected_paths)
+        self._check_existing_paths(temp_dir, expected_paths)
+
+    def test_remove_base(self):
         """ Test removing dirents. """
 
         temp_dir = self._prep_temp_dir()
@@ -76,10 +245,10 @@ class TestDirentOperations(unittest.TestCase):
             'dir_1',
 
             # Empty Directory
-            'dir_empty'
+            'dir_empty',
 
             # Non-Existent
-            'ZZZ'
+            'ZZZ',
         ]
 
         expected_paths = [
@@ -98,8 +267,10 @@ class TestDirentOperations(unittest.TestCase):
 
     def _prep_temp_dir(self):
         temp_dir = edq.util.dirent.get_temp_dir(prefix = 'edq_test_dirent_')
+
         edq.util.dirent.mkdir(os.path.join(temp_dir, 'dir_empty'))
         edq.util.dirent.copy_contents(TEST_BASE_DIR, temp_dir)
+
         return temp_dir
 
     def _check_existing_paths(self, base_dir, raw_paths):
@@ -116,7 +287,7 @@ class TestDirentOperations(unittest.TestCase):
         for raw_path in raw_paths:
             relpath = ''
             dirent_type = None
-            is_link = None
+            is_link = False
 
             if (isinstance(raw_path, str)):
                 relpath = raw_path
@@ -151,6 +322,9 @@ class TestDirentOperations(unittest.TestCase):
                 elif (dirent_type == DIRENT_TYPE_FILE):
                     if (not os.path.isfile(path)):
                         self.fail(f"Expected path to be a file, but it is not: '{relpath}'.")
+                elif (dirent_type == DIRENT_TYPE_BROKEN_SYMLINK):
+                    if ((not os.path.islink(path)) or os.path.isfile(path) or os.path.isdir(path)):
+                        self.fail(f"Expected path to be a broken link, but it is not: '{relpath}'.")
                 else:
                     raise ValueError(f"Unknown dirent type '{dirent_type}' for path: '{relpath}'.")
 
