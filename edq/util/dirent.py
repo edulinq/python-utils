@@ -82,15 +82,19 @@ def same_dirent(a: str, b: str):
     """
     Check if two paths represent the same dirent.
     If either (or both) paths do not exist, false will be returned.
+    If either paths are links, they are resolved before checking
+    (so a link and the target file are considered the "same").
     """
 
     return (exists(a) and exists(b) and os.path.samefile(a, b))
 
-def move(source: str, dest: str) -> None:
+def move(source: str, raw_dest: str, no_clobber: bool = False) -> None:
     """
     Move the source dirent to the given destination.
     Any existing destination will be removed before moving.
     """
+
+    dest = os.path.abspath(raw_dest)
 
     # If dest is a dir, then resolve the path.
     if (os.path.isdir(dest)):
@@ -100,12 +104,15 @@ def move(source: str, dest: str) -> None:
     if (same_dirent(source, dest)):
         return
 
+    # Check for clobber.
+    if (exists(dest)):
+        if (no_clobber):
+            raise ValueError(f"Destination of move already exists: '{raw_dest}'.")
+
+        remove(dest)
+
     # Create any required parents.
     os.makedirs(os.path.dirname(dest), exist_ok = True)
-
-    # Remove any existing dest.
-    if (exists(dest)):
-        remove(dest)
 
     shutil.move(source, dest)
 
@@ -143,6 +150,8 @@ def copy(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
         link_target = os.readlink(source)
         os.symlink(link_target, dest)
     elif (os.path.isdir(source)):
+        mkdir(dest)
+
         for child in sorted(os.listdir(source)):
             copy(os.path.join(raw_source, child), os.path.join(raw_dest, child))
     else:
