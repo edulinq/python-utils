@@ -88,13 +88,17 @@ def same_dirent(a: str, b: str):
 
     return (exists(a) and exists(b) and os.path.samefile(a, b))
 
-def move(source: str, raw_dest: str, no_clobber: bool = False) -> None:
+def move(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
     """
     Move the source dirent to the given destination.
     Any existing destination will be removed before moving.
     """
 
+    source = os.path.abspath(raw_source)
     dest = os.path.abspath(raw_dest)
+
+    if (not exists(source)):
+        raise ValueError(f"No such file or directory: '{raw_source}'.")
 
     # If dest is a dir, then resolve the path.
     if (os.path.isdir(dest)):
