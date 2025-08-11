@@ -53,6 +53,54 @@ class TestDirentOperations(unittest.TestCase):
 
         self._check_existing_paths(temp_dir, expected_paths)
 
+    def test_mkdir_base(self):
+        """ Test creating directories. """
+
+        temp_dir = self._prep_temp_dir()
+
+        # [(path, error substring), ...]
+        test_cases = [
+            # Base
+            ('new_dir_1', None),
+            (os.path.join('dir_1', 'new_dir_2'), None),
+
+            # Missing Parents
+            (os.path.join('ZZZ', 'new_dir_ZZZ'), None),
+            (os.path.join('ZZZ', 'YYY', 'XXX', 'new_dir_XXX'), None),
+
+            # Existing Dir
+            ('dir_1', None),
+            ('dir_empty', None),
+            ('symlink_dir_1', None),
+
+            # Existing Non-Dir
+            ('a.txt', 'Target of mkdir already exists'),
+            ('symlink_a.txt', 'Target of mkdir already exists'),
+
+            # Existing Non-Dir Parent
+            (os.path.join('dir_1', 'b.txt', 'BBB'), 'Target of mkdir contains parent'),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (path, error_substring) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{path}'):"):
+                path = os.path.join(temp_dir, path)
+
+                try:
+                    edq.util.dirent.mkdir(path)
+                except Exception as ex:
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{str(ex)}'.")
+
+                    self.assertIn(error_substring, str(ex), 'Error is not as expected.')
+                    continue
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
+                self.assertTrue(edq.util.dirent.exists(path), 'Dir does not exist post mkdir.')
+
     def test_get_temp_path_base(self):
         """ Ensure that temp paths are not the same. """
 

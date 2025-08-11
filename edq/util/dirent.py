@@ -53,11 +53,35 @@ def get_temp_dir(prefix: str = '', suffix: str = '', rm: bool = True) -> str:
     mkdir(path)
     return path
 
-def mkdir(path: str) -> None:
+def mkdir(raw_path: str) -> None:
     """
     Make a directory (including any required parent directories).
-    Does not complain if the directory (or parents) already exist.
+    Does not complain if the directory (or parents) already exist
+    (this includes if the directory or parents are links to directories).
     """
+
+    path = os.path.abspath(raw_path)
+
+    if (exists(path)):
+        if (os.path.isdir(path)):
+            return
+
+        raise ValueError(f"Target of mkdir already exists, and is not a dir: '{raw_path}'.")
+
+    # Check all parents to ensure that they are all dirs (or don't exist).
+    # This is naturally handled by os.makedirs(),
+    # but the error messages are not consistent between POSIX and Windows.
+    parent_path = path
+    while (True):
+        new_parent_path = os.path.dirname(parent_path)
+        if (parent_path == new_parent_path):
+            # We have reached root (are our own parent).
+            break
+
+        parent_path = new_parent_path
+
+        if (os.path.exists(parent_path) and (not os.path.isdir(parent_path))):
+            raise ValueError(f"Target of mkdir contains parent ('{os.path.basename(parent_path)}') that exists and is not a dir: '{raw_path}'.")
 
     os.makedirs(path, exist_ok = True)
 
