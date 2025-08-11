@@ -15,9 +15,10 @@ This test data directory is laid out as:
 │       └── c.txt
 ├── dir_empty
 ├── file_empty
-├── symlinklink_a.txt -> a.txt
-├── symlinklink_dir_1 -> dir_1
-└── symlinklink_dir_empty -> dir_empty
+├── symlink_a.txt -> a.txt
+├── symlink_dir_1 -> dir_1
+├── symlink_dir_empty -> dir_empty
+└── symlink_file_empty -> file_empty
 
 Where non-empty files are filled with their filename (without the extension).
 dir_empty will not exist in the repository (since it is an empty directory),
@@ -44,12 +45,56 @@ class TestDirentOperations(unittest.TestCase):
             (os.path.join('dir_1', 'dir_2', 'c.txt'), DIRENT_TYPE_FILE),
             ('dir_empty', DIRENT_TYPE_DIR),
             ('file_empty', DIRENT_TYPE_FILE),
-            ('symlinklink_a.txt', DIRENT_TYPE_FILE, True),
-            ('symlinklink_dir_1', DIRENT_TYPE_DIR, True),
-            ('symlinklink_dir_empty', DIRENT_TYPE_DIR, True),
+            ('symlink_a.txt', DIRENT_TYPE_FILE, True),
+            ('symlink_dir_1', DIRENT_TYPE_DIR, True),
+            ('symlink_dir_empty', DIRENT_TYPE_DIR, True),
+            ('symlink_file_empty', DIRENT_TYPE_FILE, True),
         ]
 
         self._check_existing_paths(temp_dir, expected_paths)
+
+    def test_exists_base(self):
+        """
+        Test checking for existence.
+
+        ./dir_empty and ./file_empty will be removed to check for broken links.
+        """
+
+        temp_dir = self._prep_temp_dir()
+
+        # Remove some dirents to break links.
+        edq.util.dirent.remove(os.path.join(temp_dir, 'dir_empty'))
+        edq.util.dirent.remove(os.path.join(temp_dir, 'file_empty'))
+
+        # [(path, exists?), ...]
+        test_cases = [
+            # File
+            ('a.txt', True),
+            (os.path.join('dir_1', 'b.txt'), True),
+
+            # Dir
+            ('dir_1', True),
+            (os.path.join('dir_1', 'dir_2'), True),
+
+            # Links
+            ('symlink_a.txt', True),
+            ('symlink_dir_1', True),
+            ('symlink_dir_empty', True),  # Broken Link
+            ('symlink_file_empty', True),  # Broken Link
+
+            # Not Exists
+            ('dir_empty', False),
+            ('file_empty', False),
+            (os.path.join('dir_1', 'ZZZ'), False),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (path, expected) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{path}'):"):
+                path = os.path.join(temp_dir, path)
+                actual = edq.util.dirent.exists(path)
+                self.assertEqual(expected, actual)
 
     def test_move_base(self):
         """
@@ -149,10 +194,10 @@ class TestDirentOperations(unittest.TestCase):
         # [(source, dest, expected error), ...]
         rename_relpaths = [
             # Symlink - File
-            ('symlinklink_a.txt', 'rename_symlinklink_a.txt', None),
+            ('symlink_a.txt', 'rename_symlink_a.txt', None),
 
             # Symlink - Dir
-            ('symlinklink_dir_1', 'rename_symlinklink_dir_1', None),
+            ('symlink_dir_1', 'rename_symlink_dir_1', None),
 
             # File in Directory
             (os.path.join('dir_1', 'dir_2', 'c.txt'), os.path.join('dir_1', 'dir_2', 'rename_c.txt'), None),
@@ -181,14 +226,15 @@ class TestDirentOperations(unittest.TestCase):
             (os.path.join('rename_dir_1', 'dir_2', 'rename_c.txt'), DIRENT_TYPE_FILE),
             ('rename_dir_empty', DIRENT_TYPE_DIR),
             ('rename_file_empty', DIRENT_TYPE_FILE),
-            ('rename_symlinklink_a.txt', DIRENT_TYPE_BROKEN_SYMLINK, True),
-            ('rename_symlinklink_dir_1', DIRENT_TYPE_BROKEN_SYMLINK, True),
-            ('symlinklink_dir_empty', DIRENT_TYPE_BROKEN_SYMLINK, True),
+            ('rename_symlink_a.txt', DIRENT_TYPE_BROKEN_SYMLINK, True),
+            ('rename_symlink_dir_1', DIRENT_TYPE_BROKEN_SYMLINK, True),
+            ('symlink_dir_empty', DIRENT_TYPE_BROKEN_SYMLINK, True),
+            ('symlink_file_empty', DIRENT_TYPE_BROKEN_SYMLINK, True),
         ]
 
         unexpected_paths = [
-            'symlinklink_a.txt',
-            'symlinklink_dir_1',
+            'symlink_a.txt',
+            'symlink_dir_1',
             os.path.join('dir_1', 'dir_2', 'c.txt'),
             'a.txt',
             'file_empty',
@@ -227,10 +273,10 @@ class TestDirentOperations(unittest.TestCase):
         # Remove these paths in this order.
         remove_relpaths = [
             # Symlink - File
-            'symlinklink_a.txt',
+            'symlink_a.txt',
 
             # Symlink - Dir
-            'symlinklink_dir_1',
+            'symlink_dir_1',
 
             # File in Directory
             os.path.join('dir_1', 'dir_2', 'c.txt'),
@@ -255,7 +301,7 @@ class TestDirentOperations(unittest.TestCase):
             (os.path.join('dir_1', 'dir_2'), DIRENT_TYPE_DIR),
             ('file_empty', DIRENT_TYPE_FILE),
             # Windows has some symlink issues, so we will not check for this file.
-            # ('symlinklink_dir_empty', DIRENT_TYPE_DIR, True),
+            # ('symlink_dir_empty', DIRENT_TYPE_DIR, True),
         ]
 
         for relpath in remove_relpaths:
