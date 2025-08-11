@@ -53,6 +53,20 @@ class TestDirentOperations(unittest.TestCase):
 
         self._check_existing_paths(temp_dir, expected_paths)
 
+    def test_get_temp_path_base(self):
+        """ Ensure that temp paths are not the same. """
+
+        a = edq.util.dirent.get_temp_path()
+        b = edq.util.dirent.get_temp_path()
+
+        self.assertNotEqual(a, b)
+
+    def test_get_temp_dir_base(self):
+        """ Ensure that the temp dir exists. """
+
+        path = edq.util.dirent.get_temp_dir()
+        self.assertTrue(edq.util.dirent.exists(path))
+
     def test_exists_base(self):
         """
         Test checking for existence.
