@@ -102,7 +102,7 @@ def remove(path: str) -> None:
     else:
         raise ValueError(f"Unknown type of dirent: '{path}'.")
 
-def same_dirent(a: str, b: str):
+def same(a: str, b: str):
     """
     Check if two paths represent the same dirent.
     If either (or both) paths do not exist, false will be returned.
@@ -129,7 +129,7 @@ def move(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
         dest = os.path.abspath(os.path.join(dest, os.path.basename(source)))
 
     # Skip if this is self.
-    if (same_dirent(source, dest)):
+    if (same(source, dest)):
         return
 
     # Check for clobber.
@@ -157,7 +157,7 @@ def copy(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
     source = os.path.abspath(raw_source)
     dest = os.path.abspath(raw_dest)
 
-    if (same_dirent(source, dest)):
+    if (same(source, dest)):
         return
 
     if (not exists(source)):
@@ -199,7 +199,7 @@ def copy_contents(raw_source: str, raw_dest: str, no_clobber: bool = False) -> N
     source = os.path.abspath(raw_source)
     dest = os.path.abspath(raw_dest)
 
-    if (same_dirent(source, dest)):
+    if (same(source, dest)):
         raise ValueError(f"Source and destination of contents copy cannot be the same: '{raw_source}'.")
 
     if (exists(dest) and (not os.path.isdir(dest))):

@@ -53,6 +53,47 @@ class TestDirentOperations(unittest.TestCase):
 
         self._check_existing_paths(temp_dir, expected_paths)
 
+    def test_same_base(self):
+        """ Test checking for two paths pointing to the same dirent. """
+
+        temp_dir = self._prep_temp_dir()
+
+        # [(path, path, same?), ...]
+        test_cases = [
+            # Same
+            ('a.txt', 'a.txt', True),
+            ('dir_1', 'dir_1', True),
+            (os.path.join('dir_1', 'b.txt'), os.path.join('dir_1', 'b.txt'), True),
+            (os.path.join('dir_1', 'b.txt'), os.path.join('dir_1', '..', 'dir_1', 'b.txt'), True),
+
+            # Not Same
+            ('a.txt', 'dir_1', False),
+            ('a.txt', os.path.join('dir_1', 'b.txt'), False),
+            ('a.txt', 'file_empty', False),
+            ('a.txt', 'dir_empty', False),
+
+            # Not Exists
+            ('a.txt', 'ZZZ', False),
+            (os.path.join('dir_1', 'b.txt'), os.path.join('dir_1', 'ZZZ'), False),
+            (os.path.join('dir_1', 'b.txt'), os.path.join('ZZZ', 'b.txt'), False),
+
+            # Links
+            ('a.txt', 'symlink_a.txt', True),
+            ('a.txt', 'symlink_file_empty', False),
+            ('dir_1', 'symlink_dir_1', True),
+            ('dir_1', 'symlink_dir_empty', False),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (a, b, expected) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{a}' vs '{b}'):"):
+                a = os.path.join(temp_dir, a)
+                b = os.path.join(temp_dir, b)
+
+                actual = edq.util.dirent.same(a, b)
+                self.assertEqual(expected, actual)
+
     def test_mkdir_base(self):
         """ Test creating directories. """
 
@@ -245,7 +286,7 @@ class TestDirentOperations(unittest.TestCase):
 
                 self._check_existing_paths(temp_dir, [expected_dest])
 
-                if (not edq.util.dirent.same_dirent(os.path.join(temp_dir, source), os.path.join(temp_dir, expected_dest))):
+                if (not edq.util.dirent.same(os.path.join(temp_dir, source), os.path.join(temp_dir, expected_dest))):
                     self._check_nonexisting_paths(temp_dir, [source])
 
     def test_move_rename(self):
