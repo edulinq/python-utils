@@ -53,6 +53,45 @@ class TestDirentOperations(unittest.TestCase):
 
         self._check_existing_paths(temp_dir, expected_paths)
 
+    def test_contains_path_base(self):
+        """ Test checking path containment. """
+
+        temp_dir = self._prep_temp_dir()
+
+        # [(parent, child, contains?), ...]
+        test_cases = [
+            # Containment
+            ('a', os.path.join('a', 'b', 'c'), True),
+            (os.path.join('a', 'b'), os.path.join('a', 'b', 'c'), True),
+            ('.', os.path.join('a', 'b', 'c'), True),
+            ('..', '.', True),
+
+            # Self No Containment
+            ('a', 'a', False),
+            (os.path.join('a', 'b', 'c'), os.path.join('a', 'b', 'c'), False),
+            ('.', '.', False),
+
+            # Trivial No Containment
+            ('a', 'b', False),
+            ('z', os.path.join('a', 'b', 'c'), False),
+            ('aa', os.path.join('a', 'b', 'c'), False),
+            ('a', os.path.join('aa', 'b', 'c'), False),
+
+            # Child Contains Parent
+            (os.path.join('a', 'b', 'c'), 'a', False),
+            (os.path.join('a', 'b', 'c'), os.path.join('a', 'b'), False),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (parent, child, expected) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{parent}' ⊂ '{child}'):"):
+                parent = os.path.join(temp_dir, parent)
+                child = os.path.join(temp_dir, child)
+
+                actual = edq.util.dirent.contains_path(parent, child)
+                self.assertEqual(expected, actual)
+
     def test_read_write_file_base(self):
         """ Test reading and writing a file. """
 

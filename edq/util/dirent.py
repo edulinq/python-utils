@@ -284,6 +284,9 @@ def contains_path(parent: str, child: str) -> bool:
     (this function does not allow a path to contain itself).
     """
 
+    if ((parent == '') or (child == '')):
+        return False
+
     parent = os.path.abspath(parent)
     child = os.path.abspath(child)
 
