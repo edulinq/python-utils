@@ -53,6 +53,109 @@ class TestDirentOperations(unittest.TestCase):
 
         self._check_existing_paths(temp_dir, expected_paths)
 
+    def test_copy_base(self):
+        """ Test copying dirents. """
+
+        # [(source, dest, no_clobber?, error substring), ...]
+        test_cases = [
+            # File
+            ('a.txt', 'test.txt', False, None),
+            ('a.txt', 'test.txt', True, None),
+            ('a.txt', os.path.join('dir_1', 'test.txt'), False, None),
+            ('a.txt', os.path.join('dir_1', 'test.txt'), True, None),
+
+            # File - Clobber
+            ('a.txt', 'file_empty', False, None),
+            ('a.txt', os.path.join('dir_1', 'b.txt'), False, None),
+            ('a.txt', 'dir_1', False, None),
+            ('a.txt', os.path.join('dir_1', 'dir_2'), False, None),
+
+            # File - No Clobber
+            ('a.txt', 'file_empty', True, 'Destination of copy already exists'),
+            ('a.txt', os.path.join('dir_1', 'b.txt'), True, 'Destination of copy already exists'),
+            ('a.txt', 'dir_1', True, 'Destination of copy already exists'),
+            ('a.txt', os.path.join('dir_1', 'dir_2'), True, 'Destination of copy already exists'),
+
+            # Dir
+            ('dir_empty', 'test', False, None),
+            ('dir_empty', 'test', True, None),
+            ('dir_empty', os.path.join('dir_1', 'test'), False, None),
+            ('dir_empty', os.path.join('dir_1', 'test'), True, None),
+
+            # Dir - Clobber
+            ('dir_empty', 'file_empty', False, None),
+            ('dir_empty', os.path.join('dir_1', 'b.txt'), False, None),
+            ('dir_empty', 'dir_1', False, None),
+            ('dir_empty', os.path.join('dir_1', 'dir_2'), False, None),
+
+            # Dir - No Clobber
+            ('dir_empty', 'file_empty', True, 'Destination of copy already exists'),
+            ('dir_empty', os.path.join('dir_1', 'b.txt'), True, 'Destination of copy already exists'),
+            ('dir_empty', 'dir_1', True, 'Destination of copy already exists'),
+            ('dir_empty', os.path.join('dir_1', 'dir_2'), True, 'Destination of copy already exists'),
+
+            # Link
+            ('symlink_a.txt', 'test.txt', False, None),
+            ('symlink_dir_1', 'test', False, None),
+            ('symlink_dir_empty', 'test', False, None),
+            ('symlink_file_empty', 'test.txt', False, None),
+
+            # Link - Clobber
+            ('symlink_a.txt', 'file_empty', False, None),
+            ('symlink_a.txt', 'symlink_dir_1', False, None),
+
+            # Link - No Clobber
+            ('symlink_a.txt', 'file_empty', True, 'Destination of copy already exists'),
+            ('symlink_a.txt', 'symlink_dir_1', True, 'Destination of copy already exists'),
+
+            # Clobber Parent
+            (os.path.join('dir_1', 'b.txt'), 'dir_1', False, 'Destination of copy cannot contain the source.'),
+
+            # Same
+            ('a.txt', 'a.txt', False, None),
+            ('symlink_a.txt', 'a.txt', False, None),
+            ('a.txt', 'a.txt', True, None),
+            ('symlink_a.txt', 'a.txt', True, None),
+
+            # Missing Source
+            ('ZZZ', 'test.txt', False, 'Source of copy does not exist'),
+            ('ZZZ', 'test.txt', True, 'Source of copy does not exist'),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (source, dest, no_clobber, error_substring) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{source}' -> '{dest}'):"):
+                temp_dir = self._prep_temp_dir()
+
+                source = os.path.join(temp_dir, source)
+                dest = os.path.join(temp_dir, dest)
+
+                try:
+                    edq.util.dirent.copy(source, dest, no_clobber = no_clobber)
+                except Exception as ex:
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{str(ex)}'.")
+
+                    self.assertIn(error_substring, str(ex), 'Error is not as expected.')
+                    continue
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
+                dirent_type, is_link = self._get_dirent_type(source)
+
+                checks = [
+                    (source, dirent_type, is_link),
+                ]
+
+                if (not edq.util.dirent.same(source, dest)):
+                    checks += [
+                        (dest, dirent_type, is_link),
+                    ]
+
+                self._check_existing_paths(temp_dir, checks)
+
     def test_same_base(self):
         """ Test checking for two paths pointing to the same dirent. """
 
@@ -213,6 +316,7 @@ class TestDirentOperations(unittest.TestCase):
         # [(source, dest, no_clobber?, error substring), ...]
         # The dest can be a single string, or a tuple of (operation input, expected output).
         test_cases = [
+            # File
             ('a.txt', 'test.txt', False, None),
 
             # Move into Dir - Explicit
@@ -489,3 +593,18 @@ class TestDirentOperations(unittest.TestCase):
 
             if (edq.util.dirent.exists(path)):
                 self.fail(f"Path exists when it should not: '{relpath}'.")
+
+    def _get_dirent_type(self, path):
+        is_link = os.path.islink(path)
+        dirent_type = None
+
+        if (os.path.isdir(path)):
+            dirent_type = DIRENT_TYPE_DIR
+        elif (os.path.isfile(path)):
+            dirent_type = DIRENT_TYPE_FILE
+        elif (os.path.islink(path)):
+            dirent_type = DIRENT_TYPE_BROKEN_SYMLINK
+        else:
+            raise ValueError(f"Unknown dirent type: '{path}'.")
+
+        return dirent_type, is_link

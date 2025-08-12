@@ -18,6 +18,8 @@ import uuid
 DEAULT_ENCODING: str = 'utf-8'
 """ The default encoding that will be used when reading and writing. """
 
+DEPTH_LIMIT: int = 10000
+
 def exists(path: str) -> bool:
     """
     Check if a path exists.
@@ -68,22 +70,32 @@ def mkdir(raw_path: str) -> None:
 
         raise ValueError(f"Target of mkdir already exists, and is not a dir: '{raw_path}'.")
 
-    # Check all parents to ensure that they are all dirs (or don't exist).
-    # This is naturally handled by os.makedirs(),
-    # but the error messages are not consistent between POSIX and Windows.
+    _check_parent_dirs(raw_path)
+
+    os.makedirs(path, exist_ok = True)
+
+def _check_parent_dirs(raw_path: str) -> None:
+    """
+    Check all parents to ensure that they are all dirs (or don't exist).
+    This is naturally handled by os.makedirs(),
+    but the error messages are not consistent between POSIX and Windows.
+    """
+
+    path = os.path.abspath(raw_path)
+
     parent_path = path
-    while (True):
+    for _ in range(DEPTH_LIMIT):
         new_parent_path = os.path.dirname(parent_path)
         if (parent_path == new_parent_path):
             # We have reached root (are our own parent).
-            break
+            return
 
         parent_path = new_parent_path
 
         if (os.path.exists(parent_path) and (not os.path.isdir(parent_path))):
             raise ValueError(f"Target of mkdir contains parent ('{os.path.basename(parent_path)}') that exists and is not a dir: '{raw_path}'.")
 
-    os.makedirs(path, exist_ok = True)
+    raise ValueError("Depth limit reached.")
 
 def remove(path: str) -> None:
     """
@@ -148,7 +160,7 @@ def copy(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
     """
     Copy a dirent or directory to a destination.
 
-    The destination will be overwritten if it exists (and no_clober is false).
+    The destination will be overwritten if it exists (and no_clobber is false).
     For copying the contents of a directory INTO another directory, use copy_contents().
 
     No copy is made if the source and dest refer to the same dirent.
@@ -167,16 +179,19 @@ def copy(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
         if (no_clobber):
             raise ValueError(f"Destination of copy already exists: '{raw_dest}'.")
 
+        if (contains_path(dest, source)):
+            raise ValueError(f"Destination of copy cannot contain the source. Destination: '{raw_dest}', Source: '{raw_source}'.")
+
         remove(dest)
 
     mkdir(os.path.dirname(dest))
 
-    if (os.path.isfile(source)):
-        shutil.copy2(source, dest, follow_symlinks = False)
-    elif (os.path.islink(source)):
-        # shutil.copy2() can generally handle links, but Windows is inconsistent (between 3.11 and 3.12) on link handling.
+    if (os.path.islink(source)):
+        # shutil.copy2() can generally handle (broken) links, but Windows is inconsistent (between 3.11 and 3.12) on link handling.
         link_target = os.readlink(source)
         os.symlink(link_target, dest)
+    elif (os.path.isfile(source)):
+        shutil.copy2(source, dest, follow_symlinks = False)
     elif (os.path.isdir(source)):
         mkdir(dest)
 
@@ -243,3 +258,27 @@ def write_file(path: str, contents: str, strip: bool = True, newline: bool = Tru
 
     with open(path, 'w', encoding = encoding) as file:
         file.write(contents)
+
+def contains_path(parent: str, child: str) -> bool:
+    """
+    Check if the parent path contains the child path.
+    This is pure lexical analysis, no dirent stats are checked.
+    Will return false if the (absolute) paths are the same
+    (this function does not allow a path to contain itself).
+    """
+
+    parent = os.path.abspath(parent)
+    child = os.path.abspath(child)
+
+    child = os.path.dirname(child)
+    for _ in range(DEPTH_LIMIT):
+        if (parent == child):
+            return True
+
+        new_child = os.path.dirname(child)
+        if (child == new_child):
+            return False
+
+        child = new_child
+
+    raise ValueError("Depth limit reached.")
