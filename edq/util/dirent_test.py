@@ -53,6 +53,45 @@ class TestDirentOperations(unittest.TestCase):
 
         self._check_existing_paths(temp_dir, expected_paths)
 
+    def test_copy_contents_base(self):
+        """
+        Test copying the contents of a dirent.
+        Note that the base functionality of copy_contents() is tested by test_setup().
+        """
+
+        # [(source, dest, no clobber?, error substring), ...]
+        test_cases = [
+            ('a.txt', 'dir_1', False, None),
+            ('a.txt', 'ZZZ', False, None),
+            ('dir_empty', 'dir_1', False, None),
+
+            ('dir_1', 'dir_1', False, 'Source and destination of contents copy cannot be the same'),
+            ('dir_empty', 'symlink_dir_empty', False, 'Source and destination of contents copy cannot be the same'),
+
+            ('a.txt', 'file_empty', False, 'Destination of contents copy exists and is not a dir'),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (source, dest, no_clobber, error_substring) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{source}' -> '{dest}'):"):
+                temp_dir = self._prep_temp_dir()
+
+                source = os.path.join(temp_dir, source)
+                dest = os.path.join(temp_dir, dest)
+
+                try:
+                    edq.util.dirent.copy_contents(source, dest, no_clobber = no_clobber)
+                except Exception as ex:
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{str(ex)}'.")
+
+                    self.assertIn(error_substring, str(ex), 'Error is not as expected.')
+                    continue
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
     def test_copy_base(self):
         """ Test copying dirents. """
 
