@@ -53,6 +53,157 @@ class TestDirentOperations(unittest.TestCase):
 
         self._check_existing_paths(temp_dir, expected_paths)
 
+    def test_read_write_file_base(self):
+        """ Test reading and writing a file. """
+
+        # [(path, write kwargs, read kwargs, write contents, expected contents, error substring), ...]
+        test_cases = [
+            # Base
+            (
+                "test.txt",
+                {},
+                {},
+                "test",
+                "test",
+                None,
+            ),
+
+            # Defaults
+            (
+                "test.txt",
+                {},
+                {},
+                " test ",
+                "test",
+                None,
+            ),
+
+            # No Modifications
+            (
+                "test.txt",
+                {'strip': False, 'newline': False},
+                {'strip': False},
+                " test ",
+                " test ",
+                None,
+            ),
+
+            # No Strip
+            (
+                "test.txt",
+                {'strip': False, 'newline': True},
+                {'strip': False},
+                " test ",
+                " test \n",
+                None,
+            ),
+
+            # No Read Strip
+            (
+                "test.txt",
+                {},
+                {'strip': False},
+                "test",
+                "test\n",
+                None,
+            ),
+
+            # Empty Write
+            (
+                "test.txt",
+                {'newline': False},
+                {},
+                "",
+                "",
+                None,
+            ),
+
+            # None
+            (
+                "test.txt",
+                {'newline': False},
+                {},
+                None,
+                "",
+                None,
+            ),
+
+            # Clobber
+            (
+                "a.txt",
+                {},
+                {},
+                "test",
+                "test",
+                None,
+            ),
+            (
+                "dir_1",
+                {},
+                {},
+                "test",
+                "test",
+                None,
+            ),
+            (
+                "symlink_a.txt",
+                {},
+                {},
+                "test",
+                "test",
+                None,
+            ),
+
+            # No Clobber
+            (
+                "a.txt",
+                {'no_clobber': True},
+                {},
+                "test",
+                "test",
+                'Destination of write already exists',
+            ),
+            (
+                "dir_1",
+                {'no_clobber': True},
+                {},
+                "test",
+                "test",
+                'Destination of write already exists',
+            ),
+            (
+                "symlink_a.txt",
+                {'no_clobber': True},
+                {},
+                "test",
+                "test",
+                'Destination of write already exists',
+            ),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (path, write_options, read_options, write_contents, expected_contents, error_substring) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{path}'):"):
+                temp_dir = self._prep_temp_dir()
+
+                path = os.path.join(temp_dir, path)
+
+                try:
+                    edq.util.dirent.write_file(path, write_contents, **write_options)
+                    actual_contents = edq.util.dirent.read_file(path, **read_options)
+                except Exception as ex:
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{str(ex)}'.")
+
+                    self.assertIn(error_substring, str(ex), 'Error is not as expected.')
+                    continue
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
+            self.assertEqual(expected_contents, actual_contents)
+
     def test_copy_contents_base(self):
         """
         Test copying the contents of a dirent.
@@ -461,7 +612,7 @@ class TestDirentOperations(unittest.TestCase):
             ('dir_empty', 'rename_dir_empty', None),
 
             # Non-Existent
-            ('ZZZ', 'rename_ZZZ', 'No such file or directory'),
+            ('ZZZ', 'rename_ZZZ', 'Source of move does not exist'),
         ]
 
         expected_paths = [

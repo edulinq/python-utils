@@ -134,7 +134,7 @@ def move(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
     dest = os.path.abspath(raw_dest)
 
     if (not exists(source)):
-        raise ValueError(f"No such file or directory: '{raw_source}'.")
+        raise ValueError(f"Source of move does not exist: '{raw_source}'.")
 
     # If dest is a dir, then resolve the path.
     if (os.path.isdir(dest)):
@@ -230,8 +230,13 @@ def copy_contents(raw_source: str, raw_dest: str, no_clobber: bool = False) -> N
     else:
         raise ValueError(f"Source of contents copy is not a dir, fie, or link: '{raw_source}'.")
 
-def read_file(path: str, strip: bool = True, encoding: str = DEAULT_ENCODING) -> str:
+def read_file(raw_path: str, strip: bool = True, encoding: str = DEAULT_ENCODING) -> str:
     """ Read the contents of a file. """
+
+    path = os.path.abspath(raw_path)
+
+    if (not exists(path)):
+        raise ValueError(f"Source of read does not exist: '{raw_path}'.")
 
     with open(path, 'r', encoding = encoding) as file:
         contents = file.read()
@@ -241,11 +246,23 @@ def read_file(path: str, strip: bool = True, encoding: str = DEAULT_ENCODING) ->
 
     return contents
 
-def write_file(path: str, contents: str, strip: bool = True, newline: bool = True, encoding: str = DEAULT_ENCODING) -> None:
+def write_file(
+        raw_path: str, contents: str,
+        strip: bool = True, newline: bool = True,
+        encoding: str = DEAULT_ENCODING,
+        no_clobber = False) -> None:
     """
     Write the contents of a file.
-    Any existing file will be truncated.
+    If clobbering, any existing dirent will be removed before write.
     """
+
+    path = os.path.abspath(raw_path)
+
+    if (exists(path)):
+        if (no_clobber):
+            raise ValueError(f"Destination of write already exists: '{raw_path}'.")
+
+        remove(path)
 
     if (contents is None):
         contents = ''
