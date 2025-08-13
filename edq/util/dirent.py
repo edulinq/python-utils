@@ -15,7 +15,7 @@ import shutil
 import tempfile
 import uuid
 
-DEAULT_ENCODING: str = 'utf-8'
+DEFAULT_ENCODING: str = 'utf-8'
 """ The default encoding that will be used when reading and writing. """
 
 DEPTH_LIMIT: int = 10000
@@ -230,7 +230,7 @@ def copy_contents(raw_source: str, raw_dest: str, no_clobber: bool = False) -> N
     else:
         raise ValueError(f"Source of contents copy is not a dir, fie, or link: '{raw_source}'.")
 
-def read_file(raw_path: str, strip: bool = True, encoding: str = DEAULT_ENCODING) -> str:
+def read_file(raw_path: str, strip: bool = True, encoding: str = DEFAULT_ENCODING) -> str:
     """ Read the contents of a file. """
 
     path = os.path.abspath(raw_path)
@@ -249,7 +249,7 @@ def read_file(raw_path: str, strip: bool = True, encoding: str = DEAULT_ENCODING
 def write_file(
         raw_path: str, contents: str,
         strip: bool = True, newline: bool = True,
-        encoding: str = DEAULT_ENCODING,
+        encoding: str = DEFAULT_ENCODING,
         no_clobber = False) -> None:
     """
     Write the contents of a file.

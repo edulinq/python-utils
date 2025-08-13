@@ -1,6 +1,6 @@
 import os
-import unittest
 
+import edq.testing.unittest
 import edq.util.dirent
 
 THIS_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
@@ -29,7 +29,7 @@ DIRENT_TYPE_DIR = 'dir'
 DIRENT_TYPE_FILE = 'file'
 DIRENT_TYPE_BROKEN_SYMLINK = 'broken_symlink'
 
-class TestDirentOperations(unittest.TestCase):
+class TestDirent(edq.testing.unittest.BaseTest):
     """ Test basic operations on dirents. """
 
     def test_setup(self):
@@ -232,10 +232,12 @@ class TestDirentOperations(unittest.TestCase):
                     edq.util.dirent.write_file(path, write_contents, **write_options)
                     actual_contents = edq.util.dirent.read_file(path, **read_options)
                 except Exception as ex:
+                    error_string = self.format_error_string(ex)
                     if (error_substring is None):
-                        self.fail(f"Unexpected error: '{str(ex)}'.")
+                        self.fail(f"Unexpected error: '{error_string}'.")
 
-                    self.assertIn(error_substring, str(ex), 'Error is not as expected.')
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
                     continue
 
                 if (error_substring is not None):
@@ -273,10 +275,12 @@ class TestDirentOperations(unittest.TestCase):
                 try:
                     edq.util.dirent.copy_contents(source, dest, no_clobber = no_clobber)
                 except Exception as ex:
+                    error_string = self.format_error_string(ex)
                     if (error_substring is None):
-                        self.fail(f"Unexpected error: '{str(ex)}'.")
+                        self.fail(f"Unexpected error: '{error_string}'.")
 
-                    self.assertIn(error_substring, str(ex), 'Error is not as expected.')
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
                     continue
 
                 if (error_substring is not None):
@@ -363,10 +367,12 @@ class TestDirentOperations(unittest.TestCase):
                 try:
                     edq.util.dirent.copy(source, dest, no_clobber = no_clobber)
                 except Exception as ex:
+                    error_string = self.format_error_string(ex)
                     if (error_substring is None):
-                        self.fail(f"Unexpected error: '{str(ex)}'.")
+                        self.fail(f"Unexpected error: '{error_string}'.")
 
-                    self.assertIn(error_substring, str(ex), 'Error is not as expected.')
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
                     continue
 
                 if (error_substring is not None):
@@ -463,10 +469,12 @@ class TestDirentOperations(unittest.TestCase):
                 try:
                     edq.util.dirent.mkdir(path)
                 except Exception as ex:
+                    error_string = self.format_error_string(ex)
                     if (error_substring is None):
-                        self.fail(f"Unexpected error: '{str(ex)}'.")
+                        self.fail(f"Unexpected error: '{error_string}'.")
 
-                    self.assertIn(error_substring, str(ex), 'Error is not as expected.')
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
                     continue
 
                 if (error_substring is not None):
@@ -608,10 +616,12 @@ class TestDirentOperations(unittest.TestCase):
                 try:
                     edq.util.dirent.move(source, input_dest, no_clobber = no_clobber)
                 except Exception as ex:
+                    error_string = self.format_error_string(ex)
                     if (error_substring is None):
-                        self.fail(f"Unexpected error: '{str(ex)}'.")
+                        self.fail(f"Unexpected error: '{error_string}'.")
 
-                    self.assertIn(error_substring, str(ex), 'Error is not as expected.')
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
                     continue
 
                 if (error_substring is not None):
@@ -689,10 +699,12 @@ class TestDirentOperations(unittest.TestCase):
             try:
                 edq.util.dirent.move(source, dest)
             except Exception as ex:
+                error_string = self.format_error_string(ex)
                 if (error_substring is None):
-                    self.fail(f"Case {i}: Unexpected error: '{str(ex)}'.")
+                    self.fail(f"Case {i}: Unexpected error: '{error_string}'.")
 
-                self.assertIn(error_substring, str(ex), f"Case {i}: Error is not as expected.")
+                self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
                 continue
 
             if (error_substring is not None):
