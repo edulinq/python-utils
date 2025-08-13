@@ -1,6 +1,6 @@
 import typing
 
-def get_qualified_name(target: type | object | str) -> str:
+def get_qualified_name(target: typing.Union[type, object, str]) -> str:
     """
     Try to get a qualified name for a type (or for the type of an object).
     Names will not always come out clean.

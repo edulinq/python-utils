@@ -27,7 +27,7 @@ class BaseTest(unittest.TestCase):
 
         super().assertListEqual(a, b, FORMAT_STR % (a_json, b_json))
 
-    def format_error_string(self, ex: BaseException | None) -> str:
+    def format_error_string(self, ex: typing.Union[BaseException, None]) -> str:
         """
         Format an error string from an exception so it can be checked for testing.
         The type of the error will be included,
