@@ -49,7 +49,7 @@ jobs:
 
       - name: Run Tests
         shell: bash
-        run: ./scripts/run_tests.py
+        run: ./scripts/run_tests.sh
 
   deploy:
     needs: test
