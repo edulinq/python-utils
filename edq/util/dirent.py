@@ -13,6 +13,7 @@ import atexit
 import os
 import shutil
 import tempfile
+import typing
 import uuid
 
 DEFAULT_ENCODING: str = 'utf-8'
@@ -247,7 +248,7 @@ def read_file(raw_path: str, strip: bool = True, encoding: str = DEFAULT_ENCODIN
     return contents
 
 def write_file(
-        raw_path: str, contents: str,
+        raw_path: str, contents: typing.Union[str, None],
         strip: bool = True, newline: bool = True,
         encoding: str = DEFAULT_ENCODING,
         no_clobber = False) -> None:
@@ -274,6 +275,39 @@ def write_file(
         contents += "\n"
 
     with open(path, 'w', encoding = encoding) as file:
+        file.write(contents)
+
+def read_file_bytes(raw_path: str) -> bytes:
+    """ Read the contents of a file as bytes. """
+
+    path = os.path.abspath(raw_path)
+
+    if (not exists(path)):
+        raise ValueError(f"Source of read bytes does not exist: '{raw_path}'.")
+
+    with open(path, 'rb') as file:
+        return file.read()
+
+def write_file_bytes(
+        raw_path: str, contents: typing.Union[bytes, None],
+        no_clobber = False) -> None:
+    """
+    Write the contents of a file as bytes.
+    If clobbering, any existing dirent will be removed before write.
+    """
+
+    path = os.path.abspath(raw_path)
+
+    if (exists(path)):
+        if (no_clobber):
+            raise ValueError(f"Destination of write bytes already exists: '{raw_path}'.")
+
+        remove(path)
+
+    if (contents is None):
+        contents = b''
+
+    with open(path, 'wb') as file:
         file.write(contents)
 
 def contains_path(parent: str, child: str) -> bool:
