@@ -1,4 +1,3 @@
-import json
 import typing
 import unittest
 
@@ -15,13 +14,21 @@ class BaseTest(unittest.TestCase):
     maxDiff = None
     """ Don't limit the size of diffs. """
 
-    def assertJSONDictEqual(self, a: dict, b: dict) -> None:
+    def assertJSONDictEqual(self, a: dict, b: dict) -> None:  # pylint: disable=invalid-name
+        """
+        Call assertDictEqual(), but supply a message containing the full JSON representation of the arguments.
+        """
+
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
 
         super().assertDictEqual(a, b, FORMAT_STR % (a_json, b_json))
 
-    def assertJSONListEqual(self, a: list, b: list) -> None:
+    def assertJSONListEqual(self, a: list, b: list) -> None:  # pylint: disable=invalid-name
+        """
+        Call assertListEqual(), but supply a message containing the full JSON representation of the arguments.
+        """
+
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
 

@@ -23,7 +23,7 @@ function main() {
 
     mkdir -p "${outputDir}"
 
-    pdoc --output-directory "${outputDir}" ./edq !.*_test.py
+    pdoc --output-directory "${outputDir}" ./edq !.*_test
     return $?
 }
 

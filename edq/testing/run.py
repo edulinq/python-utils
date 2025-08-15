@@ -11,10 +11,6 @@ import sys
 import typing
 import unittest
 
-THIS_DIR: str = os.path.join(os.path.dirname(os.path.realpath(__file__)))
-BASE_PACKAGE_DIR: str = os.path.join(THIS_DIR, '..')
-PROJECT_ROOT_DIR: str = os.path.join(BASE_PACKAGE_DIR, '..')
-
 DEFAULT_TEST_FILENAME_PATTERN: str = '*_test.py'
 
 def _collect_tests(suite: typing.Union[unittest.TestCase, unittest.suite.TestSuite]) -> typing.List[unittest.TestCase]:
@@ -41,13 +37,22 @@ def run(args: argparse.Namespace) -> int:
     Will raise if tests fail to load (e.g. syntax errors) and a suggested exit code otherwise.
     """
 
-    # Start in the project's root and add it in the path.
-    os.chdir(PROJECT_ROOT_DIR)
-    sys.path.append(PROJECT_ROOT_DIR)
+    if (args.work_dir is not None):
+        os.chdir(args.work_dir)
+
+    if (args.path_additions is not None):
+        for path in args.path_additions:
+            sys.path.append(path)
+
+    if (args.test_dirs is None):
+        args.test_dirs = ['.']
 
     runner = unittest.TextTestRunner(verbosity = 3)
-    discovered_suite = unittest.TestLoader().discover(BASE_PACKAGE_DIR, pattern = args.filename_pattern)
-    test_cases = _collect_tests(discovered_suite)
+    test_cases = []
+
+    for test_dir in args.test_dirs:
+        discovered_suite = unittest.TestLoader().discover(test_dir, pattern = args.filename_pattern)
+        test_cases += _collect_tests(discovered_suite)
 
     tests = unittest.suite.TestSuite()
 
@@ -64,26 +69,42 @@ def run(args: argparse.Namespace) -> int:
     faults = len(result.errors) + len(result.failures)
 
     if (not result.wasSuccessful()):
-        # This value will be used as an exit status, so don't larger than a byte.
+        # This value will be used as an exit status, so it should not be larger than a byte.
         # (Some higher values are used specially, so just keep it at a round number.)
         return max(1, min(faults, 100))
 
     return 0
 
 def main() -> int:
+    """ Parse the CLI arguments and run tests. """
+
     args = _get_parser().parse_args()
     return run(args)
 
 def _get_parser() -> argparse.ArgumentParser:
+    """ Build a parser for CLI arguments. """
+
     parser = argparse.ArgumentParser(description = 'Run unit tests discovered in this project.')
 
-    parser.add_argument('pattern',
-        action = 'store', type = str, default = None, nargs = '?',
-        help = 'If supplied, only tests with names matching this pattern will be run. This pattern is used directly in re.search().')
+    parser.add_argument('--work-dir', dest = 'work_dir',
+        action = 'store', type = str, default = os.getcwd(),
+        help = 'Set the working directory when running tests, defaults to the current working directory (%(default)s).')
+
+    parser.add_argument('--tests-dir', dest = 'test_dirs',
+        action = 'append',
+        help = 'Discover tests from these directories. Defaults to the current directory.')
+
+    parser.add_argument('--add-path', dest = 'path_additions',
+        action = 'append',
+        help = 'If supplied, add this path the sys.path before running tests.')
 
     parser.add_argument('--filename-pattern', dest = 'filename_pattern',
         action = 'store', type = str, default = DEFAULT_TEST_FILENAME_PATTERN,
         help = 'The pattern to use to find test files (default: %(default)s).')
+
+    parser.add_argument('pattern',
+        action = 'store', type = str, default = None, nargs = '?',
+        help = 'If supplied, only tests with names matching this pattern will be run. This pattern is used directly in re.search().')
 
     return parser
 
