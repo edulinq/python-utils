@@ -82,6 +82,10 @@ jobs:
         shell: bash
         run: pip3 install -r requirements.txt -r requirements-dev.txt
 
+      - name: Generate Documentation
+        shell: bash
+        run: ./scripts/gen_docs.sh
+
       - name: Deploy
         uses: casperdcl/deploy-pypi@10cf4cd83fc885003a8d4f37f93a5a0f0fc2d2f4  # v2.4.1
         with:
