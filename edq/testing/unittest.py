@@ -3,6 +3,7 @@ import unittest
 
 import edq.util.json
 import edq.util.reflection
+import edq.util.json
 
 FORMAT_STR: str = "\n--- Expected ---\n%s\n--- Actual ---\n%s\n---\n"
 
@@ -33,6 +34,18 @@ class BaseTest(unittest.TestCase):
         b_json = edq.util.json.dumps(b, indent = 4)
 
         super().assertListEqual(a, b, FORMAT_STR % (a_json, b_json))
+
+    def assertListEqual(self, a, b):
+        a_json = edq.util.json.dumps(a, indent = 4)
+        b_json = edq.util.json.dumps(b, indent = 4)
+
+        super().assertListEqual(a, b, FORMAT_STR % (a_json, b_json))
+
+    def assertDictEqual(self, a, b):
+        a_json = edq.util.json.dumps(a, indent = 4)
+        b_json = edq.util.json.dumps(b, indent = 4)
+
+        super().assertDictEqual(a, b, FORMAT_STR % (a_json, b_json))
 
     def format_error_string(self, ex: typing.Union[BaseException, None]) -> str:
         """
