@@ -26,11 +26,11 @@ def get_tiered_config(
     and where that key came from.
     """
 
-    config: typing.Dict[str, str] = {}
-    sources: typing.Dict[str, str] = {}
-
     if (skip_keys is None):
         skip_keys = [CONFIG_PATHS_KEY]
+
+    config: typing.Dict[str, str] = {}
+    sources: typing.Dict[str, str] = {}
 
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
@@ -117,10 +117,10 @@ def _get_ancestor_config_file_path(
     Otherwise, returns None.
     """
 
-    current_directory = os.path.abspath(current_directory)
     if (local_config_root_cutoff is not None):
         local_config_root_cutoff = os.path.abspath(local_config_root_cutoff)
 
+    current_directory = os.path.abspath(current_directory)
     for _ in range(edq.util.dirent.DEPTH_LIMIT):
         config_file_path = os.path.join(current_directory, config_file_name)
         if (os.path.isfile(config_file_path)):

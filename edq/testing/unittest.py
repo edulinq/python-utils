@@ -4,7 +4,6 @@ import unittest
 import edq.util.json
 import edq.util.reflection
 
-
 FORMAT_STR: str = "\n--- Expected ---\n%s\n--- Actual ---\n%s\n---\n"
 
 class BaseTest(unittest.TestCase):

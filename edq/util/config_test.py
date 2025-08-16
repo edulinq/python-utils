@@ -209,8 +209,8 @@ class TestConfig(edq.testing.unittest.BaseTest):
             )
 
     def _evaluate_test_config(
-            self, test_work_dir, expected_config, expected_source,
-            skip_keys = None,
+            self, test_work_dir, expected_config,
+            expected_source, skip_keys = None,
             cli_args = None, global_config_path = None):
         """
         Prepares testing environment and normalizes cli config paths,
