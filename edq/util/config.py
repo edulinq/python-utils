@@ -17,7 +17,8 @@ def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace],
         skip_keys: typing.Union[list, None] = None,
         global_config_path: str = DEFAULT_GLOBAL_CONFIG_PATH,
-        local_config_root_cutoff: typing.Union[str, None] = None
+        local_config_root_cutoff: typing.Union[str, None] = None,
+        config_file_name: str = DEFAULT_CONFIG_FILENAME
         )-> typing.Tuple[typing.Dict[str, str], typing.Dict[str, str]]:
     """
     Get all the tiered configuration options (from files and CLI).
@@ -39,7 +40,7 @@ def get_tiered_config(
         _load_config_file(global_config_path, config, sources, "<global config file>")
 
     # Check the local user config file.
-    local_config_path = _get_local_config_path(local_config_root_cutoff = local_config_root_cutoff)
+    local_config_path = _get_local_config_path(config_file_name = config_file_name, local_config_root_cutoff = local_config_root_cutoff)
     if (local_config_path is not None):
         _load_config_file(local_config_path, config, sources, "<local config file>")
 
@@ -76,7 +77,7 @@ def _load_config_file(
             config[key] = value
             sources[key] = f"{source_label}{CONFIG_TYPE_DELIMITER}{os.path.abspath(config_path)}"
 
-def _get_local_config_path(local_config_root_cutoff: typing.Union[str, None] = None) -> typing.Union[str, None]:
+def _get_local_config_path(config_file_name: str, local_config_root_cutoff: typing.Union[str, None] = None) -> typing.Union[str, None]:
     """
     Searches for a configuration file in a hierarchical order,
     starting with DEFAULT_CONFIG_FILENAME, then LEGACY_CONFIG_FILENAME,
@@ -89,8 +90,8 @@ def _get_local_config_path(local_config_root_cutoff: typing.Union[str, None] = N
     """
 
     # The case where DEFAULT_CONFIG_FILENAME file in current directory.
-    if (os.path.isfile(DEFAULT_CONFIG_FILENAME)):
-        return os.path.abspath(DEFAULT_CONFIG_FILENAME)
+    if (os.path.isfile(config_file_name)):
+        return os.path.abspath(config_file_name)
 
     # The case where LEGACY_CONFIG_FILENAME file in current directory.
     if (os.path.isfile(LEGACY_CONFIG_FILENAME)):
@@ -100,12 +101,13 @@ def _get_local_config_path(local_config_root_cutoff: typing.Union[str, None] = N
     parent_dir = os.path.dirname(os.getcwd())
     return _get_ancestor_config_file_path(
         parent_dir,
+        config_file_name = config_file_name,
         local_config_root_cutoff = local_config_root_cutoff
     )
 
 def _get_ancestor_config_file_path(
         current_directory: str,
-        config_file: str = DEFAULT_CONFIG_FILENAME,
+        config_file_name: str,
         local_config_root_cutoff: typing.Union[str, None] = None
         )-> typing.Union[str, None]:
     """
@@ -120,7 +122,7 @@ def _get_ancestor_config_file_path(
         local_config_root_cutoff = os.path.abspath(local_config_root_cutoff)
 
     for _ in range(edq.util.dirent.DEPTH_LIMIT):
-        config_file_path = os.path.join(current_directory, config_file)
+        config_file_path = os.path.join(current_directory, config_file_name)
         if (os.path.isfile(config_file_path)):
             return config_file_path
 
