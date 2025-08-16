@@ -5,7 +5,7 @@ import typing
 DEFAULT_LOGGING_LEVEL: str = logging.getLevelName(logging.INFO)
 DEFAULT_LOGGING_FORMAT: str = '%(asctime)s [%(levelname)-8s] - %(filename)s:%(lineno)s -- %(message)s'
 
-LEVELS: list[str] = [
+LEVELS: typing.List[str] = [
     'TRACE',
     logging.getLevelName(logging.DEBUG),
     logging.getLevelName(logging.INFO),
