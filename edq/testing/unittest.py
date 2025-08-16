@@ -14,7 +14,7 @@ class BaseTest(unittest.TestCase):
     maxDiff = None
     """ Don't limit the size of diffs. """
 
-    def assertJSONDictEqual(self, a: dict, b: dict) -> None:  # pylint: disable=invalid-name
+    def assertJSONDictEqual(self, a: typing.Dict[str, typing.Any], b: typing.Dict[str, typing.Any]) -> None:  # pylint: disable=invalid-name
         """
         Call assertDictEqual(), but supply a message containing the full JSON representation of the arguments.
         """
@@ -24,7 +24,7 @@ class BaseTest(unittest.TestCase):
 
         super().assertDictEqual(a, b, FORMAT_STR % (a_json, b_json))
 
-    def assertJSONListEqual(self, a: list, b: list) -> None:  # pylint: disable=invalid-name
+    def assertJSONListEqual(self, a: typing.List[typing.Any], b: typing.List[typing.Any]) -> None:  # pylint: disable=invalid-name
         """
         Call assertListEqual(), but supply a message containing the full JSON representation of the arguments.
         """

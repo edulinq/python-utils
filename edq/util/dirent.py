@@ -115,7 +115,7 @@ def remove(path: str) -> None:
     else:
         raise ValueError(f"Unknown type of dirent: '{path}'.")
 
-def same(a: str, b: str):
+def same(a: str, b: str) -> bool:
     """
     Check if two paths represent the same dirent.
     If either (or both) paths do not exist, false will be returned.
@@ -251,7 +251,7 @@ def write_file(
         raw_path: str, contents: typing.Union[str, None],
         strip: bool = True, newline: bool = True,
         encoding: str = DEFAULT_ENCODING,
-        no_clobber = False) -> None:
+        no_clobber: bool = False) -> None:
     """
     Write the contents of a file.
     If clobbering, any existing dirent will be removed before write.
@@ -290,7 +290,7 @@ def read_file_bytes(raw_path: str) -> bytes:
 
 def write_file_bytes(
         raw_path: str, contents: typing.Union[bytes, None],
-        no_clobber = False) -> None:
+        no_clobber: bool = False) -> None:
     """
     Write the contents of a file as bytes.
     If clobbering, any existing dirent will be removed before write.

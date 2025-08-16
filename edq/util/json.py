@@ -47,7 +47,7 @@ class DictConverter(abc.ABC):
         if (type(self) != type(other)):  # pylint: disable=unidiomatic-typecheck
             return False
 
-        return self.to_dict() == other.to_dict()  # type: ignore[attr-defined]
+        return bool(self.to_dict() == other.to_dict())  # type: ignore[attr-defined]
 
     def __str__(self) -> str:
         return dumps(self)
@@ -68,11 +68,11 @@ def _custom_handle(value: typing.Any) -> typing.Union[typing.Dict[str, typing.An
         return str(value)
 
     if (hasattr(value, '__dict__')):
-        return vars(value)
+        return dict(vars(value))
 
     raise ValueError(f"Could not JSON serialize object: '{value}'.")
 
-def load(file_obj: typing.TextIO, strict: bool = False, **kwargs) -> typing.Dict[str, typing.Any]:
+def load(file_obj: typing.TextIO, strict: bool = False, **kwargs: typing.Any) -> typing.Any:
     """
     Load a file object/handler as JSON.
     If strict is set, then use standard Python JSON,
@@ -84,7 +84,7 @@ def load(file_obj: typing.TextIO, strict: bool = False, **kwargs) -> typing.Dict
 
     return json5.load(file_obj, **kwargs)
 
-def loads(text: str, strict: bool = False, **kwargs) -> typing.Dict[str, typing.Any]:
+def loads(text: str, strict: bool = False, **kwargs: typing.Any) -> typing.Any:
     """
     Load a string as JSON.
     If strict is set, then use standard Python JSON,
@@ -100,7 +100,7 @@ def load_path(
         path: str,
         strict: bool = False,
         encoding: str = edq.util.dirent.DEFAULT_ENCODING,
-        **kwargs) -> typing.Dict[str, typing.Any]:
+        **kwargs: typing.Any) -> typing.Any:
     """
     Load a file path as JSON.
     If strict is set, then use standard Python JSON,
@@ -113,39 +113,39 @@ def load_path(
     except Exception as ex:
         raise ValueError(f"Failed to read JSON file '{path}'.") from ex
 
-def loads_object(text: str, cls: typing.Type[DictConverter], **kwargs) -> DictConverter:
+def loads_object(text: str, cls: typing.Type[DictConverter], **kwargs: typing.Any) -> DictConverter:
     """ Load a JSON string into an object (which is a subclass of DictConverter). """
 
     data = loads(text, **kwargs)
     if (not isinstance(data, dict)):
         raise ValueError(f"JSON to load into an object is not a dict, found '{type(data)}'.")
 
-    return cls.from_dict(data)
+    return cls.from_dict(data)  # type: ignore[no-any-return]
 
-def load_object_path(path: str, cls: typing.Type[DictConverter], **kwargs) -> DictConverter:
+def load_object_path(path: str, cls: typing.Type[DictConverter], **kwargs: typing.Any) -> DictConverter:
     """ Load a JSON file into an object (which is a subclass of DictConverter). """
 
     data = load_path(path, **kwargs)
     if (not isinstance(data, dict)):
         raise ValueError(f"JSON to load into an object is not a dict, found '{type(data)}'.")
 
-    return cls.from_dict(data)
+    return cls.from_dict(data)  # type: ignore[no-any-return]
 
 def dump(
         data: typing.Any,
         file_obj: typing.TextIO,
-        default: typing.Union[typing.Callable, None] = _custom_handle,
+        default: typing.Union[typing.Callable, None] = _custom_handle,  # type: ignore[type-arg]
         sort_keys: bool = True,
-        **kwargs) -> None:
+        **kwargs: typing.Any) -> None:
     """ Dump an object as a JSON file object. """
 
     json.dump(data, file_obj, default = default, sort_keys = sort_keys, **kwargs)
 
 def dumps(
         data: typing.Any,
-        default: typing.Union[typing.Callable, None] = _custom_handle,
+        default: typing.Union[typing.Callable, None] = _custom_handle,  # type: ignore[type-arg]
         sort_keys: bool = True,
-        **kwargs) -> str:
+        **kwargs: typing.Any) -> str:
     """ Dump an object as a JSON string. """
 
     return json.dumps(data, default = default, sort_keys = sort_keys, **kwargs)
@@ -153,10 +153,10 @@ def dumps(
 def dump_path(
         data: typing.Any,
         path: str,
-        default: typing.Union[typing.Callable, None] = _custom_handle,
+        default: typing.Union[typing.Callable, None] = _custom_handle,  # type: ignore[type-arg]
         sort_keys: bool = True,
         encoding: str = edq.util.dirent.DEFAULT_ENCODING,
-        **kwargs) -> None:
+        **kwargs: typing.Any) -> None:
     """ Dump an object as a JSON file. """
 
     with open(path, 'w', encoding = encoding) as file:
