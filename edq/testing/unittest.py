@@ -34,6 +34,36 @@ class BaseTest(unittest.TestCase):
 
         super().assertListEqual(a, b, FORMAT_STR % (a_json, b_json))
 
+    def assertListEqual(self, list1: list, list2: list, msg: typing.Any = None) -> None:
+        """
+        Assert two lists are equal, showing JSON-formatted output when they differ.
+        """
+
+        list1_json = edq.util.json.dumps(list1, indent = 4)
+        list2_json = edq.util.json.dumps(list2, indent = 4)
+
+        if(msg is None):
+            msg = FORMAT_STR % (list1_json, list2_json)
+
+        super().assertListEqual(list1, list2, msg = msg)
+
+    def assertDictEqual(self,
+            d1: typing.Mapping[typing.Any, object],
+            d2: typing.Mapping[typing.Any, object],
+            msg: typing.Any = None
+        ) -> None:
+        """
+        Assert two dicts are equal, showing JSON-formatted output when they differ.
+        """
+
+        d1_json = edq.util.json.dumps(d1, indent = 4)
+        d2_json = edq.util.json.dumps(d2, indent = 4)
+
+        if(msg is None):
+            msg = FORMAT_STR % (d1_json, d2_json)
+
+        super().assertDictEqual(d1, d2, msg = msg)
+
     def format_error_string(self, ex: typing.Union[BaseException, None]) -> str:
         """
         Format an error string from an exception so it can be checked for testing.
