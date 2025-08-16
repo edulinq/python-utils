@@ -8,7 +8,11 @@ THIS_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
 CONFIGS_DIR = os.path.join(THIS_DIR, "testdata", "configs")
 
 class TestConfig(edq.testing.unittest.BaseTest):
+    """ Test basic operations on configs. """
+
     def test_base(self):
+        """ Test that configs are loaded correctly from the file system with the correct tier. """
+
         # [(work directory, expected config, expected source, {skip keys , cli arguments, config global}), ...]
         test_cases = [
             (
@@ -206,13 +210,19 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
     def _evaluate_test_config(
             self, test_work_dir, expected_config, expected_source,
-            skip_keys = [edq.util.config.CONFIG_PATHS_KEY],
-            cli_args = {}, global_config_path = None):
+            skip_keys = None,
+            cli_args = None, global_config_path = None):
         """
         Prepares testing environment and normalizes cli config paths,
         global config path and expected source paths. Evaluates the given expected and
         source configs with actual get_tiered_config() output.
         """
+
+        if (cli_args is None):
+            cli_args = {}
+
+        if (skip_keys is None):
+            skip_keys = [edq.util.config.CONFIG_PATHS_KEY]
 
         temp_dir = edq.util.dirent.get_temp_dir(prefix = 'autograder-test-config-')
 

@@ -1,30 +1,35 @@
 import argparse
-
 import os
+import typing
+
 import platformdirs
 
 import edq.util.dirent
 import edq.util.json
 
-CONFIG_PATHS_KEY = 'config_paths'
-LEGACY_CONFIG_FILENAME = 'config.json'
-DEFAULT_CONFIG_FILENAME = 'autograder.json'
-DEFAULT_GLOBAL_CONFIG_PATH = platformdirs.user_config_dir(DEFAULT_CONFIG_FILENAME)
-CONFIG_TYPE_DELIMITER = "::"
+CONFIG_PATHS_KEY: str = 'config_paths'
+LEGACY_CONFIG_FILENAME: str = 'config.json'
+DEFAULT_CONFIG_FILENAME: str = 'autograder.json'
+DEFAULT_GLOBAL_CONFIG_PATH: str = platformdirs.user_config_dir(DEFAULT_CONFIG_FILENAME)
+CONFIG_TYPE_DELIMITER: str = "::"
 
 def get_tiered_config(
-        cli_arguments,
-        skip_keys = [CONFIG_PATHS_KEY],
-        global_config_path = DEFAULT_GLOBAL_CONFIG_PATH,
-        local_config_root_cutoff = None):
+        cli_arguments: typing.Union[dict, argparse.Namespace],
+        skip_keys: typing.Union[list, None] = None,
+        global_config_path: str = DEFAULT_GLOBAL_CONFIG_PATH,
+        local_config_root_cutoff: typing.Union[str, None] = None
+        )-> typing.Tuple[typing.Dict[str, str], typing.Dict[str, str]]:
     """
     Get all the tiered configuration options (from files and CLI).
     If |show_sources| is True, then an addition dict will be returned that shows each key,
     and where that key came from.
     """
 
-    config = {}
-    sources = {}
+    config: typing.Dict[str, str] = {}
+    sources: typing.Dict[str, str] = {}
+
+    if (skip_keys is None):
+        skip_keys = [CONFIG_PATHS_KEY]
 
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
@@ -57,13 +62,21 @@ def get_tiered_config(
 
     return config, sources
 
-def _load_config_file(config_path, config, sources, source_label):
-    with open(config_path, 'r') as file:
+def _load_config_file(
+        config_path: str,
+        config: typing.Dict[str, str],
+        sources: typing.Dict[str, str],
+        source_label: str,
+        encoding: str = edq.util.dirent.DEFAULT_ENCODING
+        )-> None:
+    """ Loads configs and the source from the given config JSON file. """
+
+    with open(config_path, 'r', encoding = encoding) as file:
         for (key, value) in edq.util.json.load(file).items():
             config[key] = value
             sources[key] = f"{source_label}{CONFIG_TYPE_DELIMITER}{os.path.abspath(config_path)}"
 
-def _get_local_config_path(local_config_root_cutoff = None):
+def _get_local_config_path(local_config_root_cutoff: typing.Union[str, None] = None) -> typing.Union[str, None]:
     """
     Searches for a configuration file in a hierarchical order,
     starting with DEFAULT_CONFIG_FILENAME, then LEGACY_CONFIG_FILENAME,
@@ -91,9 +104,10 @@ def _get_local_config_path(local_config_root_cutoff = None):
     )
 
 def _get_ancestor_config_file_path(
-        current_directory,
-        config_file = DEFAULT_CONFIG_FILENAME,
-        local_config_root_cutoff = None):
+        current_directory: str,
+        config_file: str = DEFAULT_CONFIG_FILENAME,
+        local_config_root_cutoff: typing.Union[str, None] = None
+        )-> typing.Union[str, None]:
     """
     Search through the parent directories (until root or a given cutoff directory(inclusive)) for a configuration file.
     Stops at the first occurrence of the specified config file (default: DEFAULT_CONFIG_FILENAME) along the path to root.
