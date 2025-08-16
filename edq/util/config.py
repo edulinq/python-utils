@@ -9,16 +9,16 @@ import edq.util.json
 
 CONFIG_PATHS_KEY: str = 'config_paths'
 LEGACY_CONFIG_FILENAME: str = 'config.json'
-DEFAULT_CONFIG_FILENAME: str = 'autograder.json'
+DEFAULT_CONFIG_FILENAME: str = 'edq-config.json'
 DEFAULT_GLOBAL_CONFIG_PATH: str = platformdirs.user_config_dir(DEFAULT_CONFIG_FILENAME)
 CONFIG_TYPE_DELIMITER: str = "::"
 
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace],
+        config_file_name: str,
         skip_keys: typing.Union[list, None] = None,
         global_config_path: str = DEFAULT_GLOBAL_CONFIG_PATH,
         local_config_root_cutoff: typing.Union[str, None] = None,
-        config_file_name: str = DEFAULT_CONFIG_FILENAME
         )-> typing.Tuple[typing.Dict[str, str], typing.Dict[str, str]]:
     """
     Get all the tiered configuration options (from files and CLI).

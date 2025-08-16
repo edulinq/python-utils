@@ -16,12 +16,24 @@ class TestConfig(edq.testing.unittest.BaseTest):
         # [(work directory, expected config, expected source, {skip keys , cli arguments, config global}), ...]
         test_cases = [
             (
+                "custom-name",
+                {
+                    "user": "user@test.edulinq.org"
+                },
+                {
+                    "user": f"<local config file>::{os.path.join('TEMP_DIR', 'custom-name', 'new-edq-config.json')}"
+                },
+                {
+                    "config_file_name": "new-edq-config.json"
+                }
+            ),
+            (
                 "simple",
                 {
                     "user": "user@test.edulinq.org"
                 },
                 {
-                    "user": f"<local config file>::{os.path.join('TEMP_DIR', 'simple', 'autograder.json')}"
+                    "user": f"<local config file>::{os.path.join('TEMP_DIR', 'simple', 'edq-config.json')}"
                 },
                 {}
             ),
@@ -41,7 +53,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "server": "http://test.edulinq.org"
                 },
                 {
-                    "server": f"<local config file>::{os.path.join('TEMP_DIR', 'nested', 'autograder.json')}"
+                    "server": f"<local config file>::{os.path.join('TEMP_DIR', 'nested', 'edq-config.json')}"
                 },
                 {}
             ),
@@ -51,7 +63,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org"
                 },
                 {
-                    "user": f"<local config file>::{os.path.join('TEMP_DIR', 'nested', 'nest1', 'nest2b', 'autograder.json')}"
+                    "user": f"<local config file>::{os.path.join('TEMP_DIR', 'nested', 'nest1', 'nest2b', 'edq-config.json')}"
                 },
                 {}
             ),
@@ -61,10 +73,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org"
                 },
                 {
-                    "user": f"<global config file>::{os.path.join('TEMP_DIR', 'global', 'autograder.json')}"
+                    "user": f"<global config file>::{os.path.join('TEMP_DIR', 'global', 'edq-config.json')}"
                 },
                 {
-                    "global_config_path": os.path.join("global", "autograder.json")
+                    "global_config_path": os.path.join("global", "edq-config.json")
                 }
             ),
             (
@@ -105,13 +117,13 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org"
                 },
                 {
-                    "user": f"<cli config file>::{os.path.join('TEMP_DIR', 'simple', 'autograder.json')}"
+                    "user": f"<cli config file>::{os.path.join('TEMP_DIR', 'simple', 'edq-config.json')}"
                 },
                 {
                     "cli_args": {
                         edq.util.config.CONFIG_PATHS_KEY: [
-                            os.path.join("global", "autograder.json"),
-                            os.path.join("simple", "autograder.json")
+                            os.path.join("global", "edq-config.json"),
+                            os.path.join("simple", "edq-config.json")
                         ]
                     }
                 }
@@ -123,14 +135,14 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "server": "http://test.edulinq.org"
                 },
                 {
-                    "user": f"<cli config file>::{os.path.join('TEMP_DIR', 'simple', 'autograder.json')}",
-                    "server": f"<cli config file>::{os.path.join('TEMP_DIR', 'nested', 'autograder.json')}"
+                    "user": f"<cli config file>::{os.path.join('TEMP_DIR', 'simple', 'edq-config.json')}",
+                    "server": f"<cli config file>::{os.path.join('TEMP_DIR', 'nested', 'edq-config.json')}"
                 },
                 {
                     "cli_args": {
                         edq.util.config.CONFIG_PATHS_KEY: [
-                            os.path.join("nested", "autograder.json"),
-                            os.path.join("simple", "autograder.json")
+                            os.path.join("nested", "edq-config.json"),
+                            os.path.join("simple", "edq-config.json")
                         ]
                     }
                 }
@@ -141,10 +153,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org"
                 },
                 {
-                    "user": f"<local config file>::{os.path.join('TEMP_DIR', 'simple', 'autograder.json')}"
+                    "user": f"<local config file>::{os.path.join('TEMP_DIR', 'simple', 'edq-config.json')}"
                 },
                 {
-                    "global_config_path": os.path.join("global", "autograder.json")
+                    "global_config_path": os.path.join("global", "edq-config.json")
                 }
             ),
             (
@@ -153,13 +165,13 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org"
                 },
                 {
-                    "user": f"<cli config file>::{os.path.join('TEMP_DIR', 'simple', 'autograder.json')}"
+                    "user": f"<cli config file>::{os.path.join('TEMP_DIR', 'simple', 'edq-config.json')}"
                 },
                 {
                     "cli_args": {
-                        edq.util.config.CONFIG_PATHS_KEY: [os.path.join("simple", "autograder.json")]
+                        edq.util.config.CONFIG_PATHS_KEY: [os.path.join("simple", "edq-config.json")]
                     },
-                    "global_config_path": os.path.join("global", "autograder.json")
+                    "global_config_path": os.path.join("global", "edq-config.json")
                 }
             ),
             (
@@ -196,7 +208,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         "server",
                         edq.util.config.CONFIG_PATHS_KEY
                     ],
-                    "global_config_path": os.path.join("global", "autograder.json")
+                    "global_config_path": os.path.join("global", "edq-config.json")
                 }
             )
         ]
@@ -211,7 +223,8 @@ class TestConfig(edq.testing.unittest.BaseTest):
     def _evaluate_test_config(
             self, test_work_dir, expected_config,
             expected_source, skip_keys = None,
-            cli_args = None, global_config_path = None):
+            cli_args = None, global_config_path = None,
+            config_file_name = None):
         """
         Prepares testing environment and normalizes cli config paths,
         global config path and expected source paths. Evaluates the given expected and
@@ -224,7 +237,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
         if (skip_keys is None):
             skip_keys = [edq.util.config.CONFIG_PATHS_KEY]
 
-        temp_dir = edq.util.dirent.get_temp_dir(prefix = 'autograder-test-config-')
+        if (config_file_name is None):
+            config_file_name = edq.util.config.DEFAULT_CONFIG_FILENAME
+
+        temp_dir = edq.util.dirent.get_temp_dir(prefix = 'edq-test-config-')
 
         global_config = os.path.join(temp_dir)
         if (global_config_path is not None):
@@ -248,7 +264,8 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 cli_arguments = cli_args,
                 global_config_path = global_config,
                 local_config_root_cutoff = temp_dir,
-                skip_keys = skip_keys
+                skip_keys = skip_keys,
+                config_file_name = config_file_name
             )
         finally:
             os.chdir(previous_work_directory)
