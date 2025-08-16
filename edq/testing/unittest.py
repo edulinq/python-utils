@@ -1,4 +1,3 @@
-import collections
 import typing
 import unittest
 
@@ -50,8 +49,8 @@ class BaseTest(unittest.TestCase):
         super().assertListEqual(list1, list2, msg = msg)
 
     def assertDictEqual(self,
-            d1: collections.abc.Mapping[typing.Any, object],
-            d2: collections.abc.Mapping[typing.Any, object],
+            d1: typing.Mapping[typing.Any, object],
+            d2: typing.Mapping[typing.Any, object],
             msg: typing.Any = None
         ) -> None:
         """
