@@ -81,3 +81,39 @@ class TestPyImport(edq.testing.unittest.BaseTest):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
                 self.assertIsNotNone(module)
+
+    def test_fetch_base(self):
+        """ Test fetching an attribute from a module. """
+
+        # [(name, error substring), ...]
+        test_cases = [
+            # Standard Module
+            ('edq.util.pyimport.fetch', None),
+
+            # Errors
+            ('', 'Target name of fetch must be fully qualified'),
+            ('edq', 'Target name of fetch must be fully qualified'),
+            ('ZZZ.aaa', 'Unable to locate module'),
+            ('edq.ZZZ.aaa', 'Unable to locate module'),
+            ('edq.util.pyimport.ZZZ', 'does not have attribute'),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (name, error_substring) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{name}'):"):
+                try:
+                    target = edq.util.pyimport.fetch(name)
+                except Exception as ex:
+                    error_string = self.format_error_string(ex)
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{error_string}'.")
+
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
+                    continue
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
+                self.assertIsNotNone(target)

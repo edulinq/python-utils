@@ -71,3 +71,24 @@ def import_name(module_name: str, cache: bool = True) -> typing.Any:
         _import_cache[cache_key] = module
 
     return module
+
+def fetch(name: str) -> typing.Any:
+    """
+    Fetch an entity inside of a module.
+    Note that the target is not a module, but an attribute/object inside of the module.
+    The provided name should be fully qualified.
+    """
+
+    parts = name.strip().rsplit('.', 1)
+    if (len(parts) != 2):
+        raise ValueError(f"Target name of fetch must be fully qualified, got '{name}'.")
+
+    module_name = parts[0]
+    short_name = parts[1]
+
+    module = import_name(module_name)
+
+    if (not hasattr(module, short_name)):
+        raise ValueError(f"Module '{module_name}' does not have attribute '{short_name}'.")
+
+    return getattr(module, short_name)
