@@ -24,11 +24,11 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.util.config.ConfigSource(
                         label = "<global config file>",
-                        path = os.path.join("TEMP_DIR", "global", "edq-config.json")
+                        path = os.path.join("TEMP_DIR", "global", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     )
                 },
                 {
-                    "global_config_path": os.path.join("TEMP_DIR", "global", "edq-config.json"),
+                    "global_config_path": os.path.join("TEMP_DIR", "global", edq.util.config.DEFAULT_CONFIG_FILENAME ),
                     "local_config_root_cutoff": "TEMP_DIR"
                 }
             ),
@@ -58,7 +58,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.util.config.ConfigSource(
                         label = "<local config file>",
-                        path = os.path.join("TEMP_DIR", "simple", "edq-config.json")
+                        path = os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     )
                 },
                 {
@@ -91,7 +91,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "server": edq.util.config.ConfigSource(
                         label = "<local config file>",
-                        path = os.path.join("TEMP_DIR", "nested", "edq-config.json")
+                        path = os.path.join("TEMP_DIR", "nested", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     )
                 },
                 {
@@ -107,7 +107,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.util.config.ConfigSource(
                         label = "<local config file>",
-                        path = os.path.join("TEMP_DIR", "nested", "nest1", "nest2b", "edq-config.json")
+                        path = os.path.join("TEMP_DIR", "nested", "nest1", "nest2b", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     )
                 },
                 {   "legacy_config_file_name": "config.json",
@@ -124,18 +124,18 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.util.config.ConfigSource(
                         label = "<cli config file>",
-                        path = os.path.join("TEMP_DIR", "simple", "edq-config.json")
+                        path = os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     ),
                     "server": edq.util.config.ConfigSource(
                         label = "<cli config file>",
-                        path = os.path.join("TEMP_DIR", "nested", "edq-config.json")
+                        path = os.path.join("TEMP_DIR", "nested", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     )
                 },
                 {
                     "cli_arguments": {
                         edq.util.config.CONFIG_PATHS_KEY: [
-                            os.path.join("TEMP_DIR", "simple", "edq-config.json"),
-                            os.path.join("TEMP_DIR", "nested", "edq-config.json")
+                            os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME),
+                            os.path.join("TEMP_DIR", "nested", edq.util.config.DEFAULT_CONFIG_FILENAME)
                         ]
                     },
                     "local_config_root_cutoff": "TEMP_DIR"
@@ -150,14 +150,14 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.util.config.ConfigSource(
                         label = "<cli config file>",
-                        path = os.path.join("TEMP_DIR", "simple", "edq-config.json")
+                        path = os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     )
                 },
                 {
                     "cli_arguments": {
                         edq.util.config.CONFIG_PATHS_KEY: [
                             os.path.join("TEMP_DIR", "custom-name", "new-edq-config.json"),
-                            os.path.join("TEMP_DIR", "simple", "edq-config.json")
+                            os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
                         ]
                     },
                     "local_config_root_cutoff": "TEMP_DIR"
@@ -208,11 +208,11 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.util.config.ConfigSource(
                         label = "<local config file>",
-                        path = os.path.join("TEMP_DIR", "simple", "edq-config.json")
+                        path = os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     )
                 },
                 {
-                    "global_config_path": os.path.join("global", "edq-config.json"),
+                    "global_config_path": os.path.join("global", edq.util.config.DEFAULT_CONFIG_FILENAME),
                     "local_config_root_cutoff": "TEMP_DIR"
                 }
             ),
@@ -247,7 +247,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "cli_arguments": {
                         "user": "user@test.edulinq.org",
-                        edq.util.config.CONFIG_PATHS_KEY: [os.path.join("TEMP_DIR", "simple", "edq-config.json")]
+                        edq.util.config.CONFIG_PATHS_KEY: [os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)]
                     },
                     "local_config_root_cutoff": "TEMP_DIR"
                 }
@@ -276,7 +276,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         "server",
                         edq.util.config.CONFIG_PATHS_KEY
                     ],
-                    "global_config_path": os.path.join("TEMP_DIR", "global", "edq-config.json"),
+                    "global_config_path": os.path.join("TEMP_DIR", "global", edq.util.config.DEFAULT_CONFIG_FILENAME),
                     "local_config_root_cutoff": "TEMP_DIR"
                 }
             )
