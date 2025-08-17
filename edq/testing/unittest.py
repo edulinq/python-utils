@@ -14,7 +14,7 @@ class BaseTest(unittest.TestCase):
     maxDiff = None
     """ Don't limit the size of diffs. """
 
-    def assertJSONDictEqual(self, a: dict, b: dict) -> None:  # pylint: disable=invalid-name
+    def assertJSONDictEqual(self, a: dict, b: dict, msg: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
         Call assertDictEqual(), but supply a message containing the full JSON representation of the arguments.
         """
@@ -22,9 +22,12 @@ class BaseTest(unittest.TestCase):
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
 
-        super().assertDictEqual(a, b, FORMAT_STR % (a_json, b_json))
+        if(msg is None):
+            msg = FORMAT_STR % (a_json, b_json)
 
-    def assertJSONListEqual(self, a: list, b: list) -> None:  # pylint: disable=invalid-name
+        super().assertDictEqual(a, b, msg = msg)
+
+    def assertJSONListEqual(self, a: list, b: list, msg: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
         Call assertListEqual(), but supply a message containing the full JSON representation of the arguments.
         """
@@ -32,37 +35,11 @@ class BaseTest(unittest.TestCase):
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
 
+        if(msg is None):
+            msg = FORMAT_STR % (a_json, b_json)
+
         super().assertListEqual(a, b, FORMAT_STR % (a_json, b_json))
 
-    def assertListEqual(self, list1: list, list2: list, msg: typing.Any = None) -> None:
-        """
-        Assert two lists are equal, showing JSON-formatted output when they differ.
-        """
-
-        list1_json = edq.util.json.dumps(list1, indent = 4)
-        list2_json = edq.util.json.dumps(list2, indent = 4)
-
-        if(msg is None):
-            msg = FORMAT_STR % (list1_json, list2_json)
-
-        super().assertListEqual(list1, list2, msg = msg)
-
-    def assertDictEqual(self,
-            d1: typing.Mapping[typing.Any, object],
-            d2: typing.Mapping[typing.Any, object],
-            msg: typing.Any = None
-        ) -> None:
-        """
-        Assert two dicts are equal, showing JSON-formatted output when they differ.
-        """
-
-        d1_json = edq.util.json.dumps(d1, indent = 4)
-        d2_json = edq.util.json.dumps(d2, indent = 4)
-
-        if(msg is None):
-            msg = FORMAT_STR % (d1_json, d2_json)
-
-        super().assertDictEqual(d1, d2, msg = msg)
 
     def format_error_string(self, ex: typing.Union[BaseException, None]) -> str:
         """
