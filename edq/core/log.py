@@ -14,13 +14,12 @@ LEVELS: typing.List[str] = [
     logging.getLevelName(logging.CRITICAL),
 ]
 
-WARN_LOGGERS: typing.List[str] = [
-]
-""" Loggers (usually third-party) to move up to warning on init. """
-
-def init(level: str = DEFAULT_LOGGING_LEVEL, log_format: str = DEFAULT_LOGGING_FORMAT, **kwargs: typing.Any) -> None:
+def init(level: str = DEFAULT_LOGGING_LEVEL, log_format: str = DEFAULT_LOGGING_FORMAT,
+        warn_loggers: typing.Union[typing.List[str], None] = None,
+        **kwargs: typing.Any) -> None:
     """
     Initialize or re-initialize the logging infrastructure.
+    The list of warning loggers is a list of identifiers for loggers (usually third-party) to move up to warning on init.
     """
 
     # Add trace.
@@ -28,8 +27,9 @@ def init(level: str = DEFAULT_LOGGING_LEVEL, log_format: str = DEFAULT_LOGGING_F
 
     logging.basicConfig(level = level, format = log_format, force = True)
 
-    for warn_logger in WARN_LOGGERS:
-        logging.getLogger(warn_logger).setLevel(logging.WARNING)
+    if (warn_loggers is not None):
+        for warn_logger in warn_loggers:
+            logging.getLogger(warn_logger).setLevel(logging.WARNING)
 
     logging.trace("Logging initialized with level '%s'.", level)  # type: ignore[attr-defined]
 
