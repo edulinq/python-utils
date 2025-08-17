@@ -16,7 +16,7 @@ function main() {
 
     cd "${ROOT_DIR}"
 
-    mypy edq --strict
+    mypy edq --strict --cache-dir "${ROOT_DIR}/.mypy_strict_cache"
     return $?
 }
 

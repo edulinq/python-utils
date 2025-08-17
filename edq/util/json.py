@@ -134,7 +134,7 @@ def load_object_path(path: str, cls: typing.Type[DictConverter], **kwargs: typin
 def dump(
         data: typing.Any,
         file_obj: typing.TextIO,
-        default: typing.Union[typing.Callable, None] = _custom_handle,  # type: ignore[type-arg]
+        default: typing.Union[typing.Callable, None] = _custom_handle,
         sort_keys: bool = True,
         **kwargs: typing.Any) -> None:
     """ Dump an object as a JSON file object. """
@@ -143,7 +143,7 @@ def dump(
 
 def dumps(
         data: typing.Any,
-        default: typing.Union[typing.Callable, None] = _custom_handle,  # type: ignore[type-arg]
+        default: typing.Union[typing.Callable, None] = _custom_handle,
         sort_keys: bool = True,
         **kwargs: typing.Any) -> str:
     """ Dump an object as a JSON string. """
@@ -153,7 +153,7 @@ def dumps(
 def dump_path(
         data: typing.Any,
         path: str,
-        default: typing.Union[typing.Callable, None] = _custom_handle,  # type: ignore[type-arg]
+        default: typing.Union[typing.Callable, None] = _custom_handle,
         sort_keys: bool = True,
         encoding: str = edq.util.dirent.DEFAULT_ENCODING,
         **kwargs: typing.Any) -> None:

@@ -192,7 +192,7 @@ def replace_path_pattern(text: str, key: str, target_dir: str) -> str:
 def _get_test_method(test_name: str, path: str) -> typing.Callable:
     """ Get a test method that represents the test case at the given path. """
 
-    def __method(self):
+    def __method(self: edq.testing.unittest.BaseTest) -> None:
         test_info = CLITestInfo.load_path(path, test_name, getattr(self, BASE_TEMP_DIR_ATTR))
 
         if ((test_info.platform_skip is not None) and re.search(test_info.platform_skip, sys.platform)):
