@@ -8,29 +8,60 @@ import edq.util.dirent
 import edq.util.json
 
 CONFIG_PATHS_KEY: str = 'config_paths'
-LEGACY_CONFIG_FILENAME: str = 'config.json'
-DEFAULT_CONFIG_FILENAME: str = 'edq-config.json'
-DEFAULT_GLOBAL_CONFIG_PATH: str = platformdirs.user_config_dir(DEFAULT_CONFIG_FILENAME)
-CONFIG_TYPE_DELIMITER: str = "::"
+DEFAULT_CONFIG_FILENAME = "edq-config.json"
+
+class ConfigSource:
+    """ A class for storing config source in a structured way. """
+
+    def __init__(self, label, path = None):
+        self.label = label
+        self.path = path
+
+    def to_dict(self):
+        """ Return a dict that can be used to represent this object. """
+
+        return vars(self)
+
+    def __eq__(self, other: object) -> bool:
+        """ Check for equality. This check uses to_dict() and compares the results. """
+
+        # Note the hard type check (done so we can keep this method general).
+        if (type(self) != type(other)):  # pylint: disable=unidiomatic-typecheck
+            return False
+
+        return bool(self.to_dict() == other.to_dict())  # type: ignore[attr-defined]
+
+    def __str__(self) -> str:
+        return f"label is {self.label}, path is {self.path}"
+
+    def __repr__(self) -> str:
+        return f"ConfigSource({self.to_dict()!r})"
 
 def get_tiered_config(
-        cli_arguments: typing.Union[dict, argparse.Namespace],
-        config_file_name: str,
+        config_file_name: str = DEFAULT_CONFIG_FILENAME ,
+        legacy_config_file_name: typing.Union[str, None] = None,
+        global_config_path: typing.Union[str, None] = None,
         skip_keys: typing.Union[list, None] = None,
-        global_config_path: str = DEFAULT_GLOBAL_CONFIG_PATH,
+        cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
-        )-> typing.Tuple[typing.Dict[str, str], typing.Dict[str, str]]:
+        )-> typing.Tuple[typing.Dict[str, str], typing.Dict[str, ConfigSource]]:
     """
     Get all the tiered configuration options (from files and CLI).
     If |show_sources| is True, then an addition dict will be returned that shows each key,
     and where that key came from.
     """
 
+    if (global_config_path is None):
+        global_config_path = platformdirs.user_config_dir(config_file_name)
+
+    if (cli_arguments is None):
+        cli_arguments = {}
+
     if (skip_keys is None):
         skip_keys = [CONFIG_PATHS_KEY]
 
     config: typing.Dict[str, str] = {}
-    sources: typing.Dict[str, str] = {}
+    sources: typing.Dict[str, ConfigSource] = {}
 
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
@@ -40,7 +71,12 @@ def get_tiered_config(
         _load_config_file(global_config_path, config, sources, "<global config file>")
 
     # Check the local user config file.
-    local_config_path = _get_local_config_path(config_file_name = config_file_name, local_config_root_cutoff = local_config_root_cutoff)
+    local_config_path = _get_local_config_path(
+        config_file_name = config_file_name,
+        legacy_config_file_name = legacy_config_file_name,
+        local_config_root_cutoff = local_config_root_cutoff
+    )
+
     if (local_config_path is not None):
         _load_config_file(local_config_path, config, sources, "<local config file>")
 
@@ -59,45 +95,50 @@ def get_tiered_config(
             continue
 
         config[key] = value
-        sources[key] = "<cli argument>"
+        sources[key] = ConfigSource(label = "<cli argument>")
 
     return config, sources
 
 def _load_config_file(
         config_path: str,
         config: typing.Dict[str, str],
-        sources: typing.Dict[str, str],
-        source_label: str,
-        encoding: str = edq.util.dirent.DEFAULT_ENCODING
+        sources: typing.Dict[str, ConfigSource],
+        source_label: str
         )-> None:
     """ Loads configs and the source from the given config JSON file. """
 
-    with open(config_path, 'r', encoding = encoding) as file:
-        for (key, value) in edq.util.json.load(file).items():
-            config[key] = value
-            sources[key] = f"{source_label}{CONFIG_TYPE_DELIMITER}{os.path.abspath(config_path)}"
+    for (key, value) in edq.util.json.load_path(config_path).items():
+        config[key] = value
+        sources[key] = ConfigSource(label = source_label, path = os.path.abspath(config_path))
 
-def _get_local_config_path(config_file_name: str, local_config_root_cutoff: typing.Union[str, None] = None) -> typing.Union[str, None]:
+def _get_local_config_path(
+        config_file_name: str,
+        legacy_config_file_name: typing.Union[str, None] = None,
+        local_config_root_cutoff: typing.Union[str, None] = None
+    ) -> typing.Union[str, None]:
     """
-    Searches for a configuration file in a hierarchical order,
-    starting with DEFAULT_CONFIG_FILENAME, then LEGACY_CONFIG_FILENAME,
-    and continuing up the directory tree looking for DEFAULT_CONFIG_FILENAME.
-    Returns the path to the first configuration file found.
+    Searches for a config file in hierarchical order.
+    Begins with the provided config file name,
+    optionally checks the legacy config file name if specified,
+    then continues up the directory tree looking for the provided config file name.
+    Returns the path to the first config file found.
 
-    If no configuration file is found, returns None.
-    The cutoff limits config search depth.
-    This helps to prevent detection of a config file in higher directories during testing.
+    If no config file is found, returns None.
+
+    The cutoff parameter limits the search depth, preventing detection of
+    config file in higher-level directories during testing.
     """
 
-    # The case where DEFAULT_CONFIG_FILENAME file in current directory.
+    # The case where provided config file in current directory.
     if (os.path.isfile(config_file_name)):
         return os.path.abspath(config_file_name)
 
-    # The case where LEGACY_CONFIG_FILENAME file in current directory.
-    if (os.path.isfile(LEGACY_CONFIG_FILENAME)):
-        return os.path.abspath(LEGACY_CONFIG_FILENAME)
+    # The case where provided legacy config file in current directory.
+    if (legacy_config_file_name is not None):
+        if (os.path.isfile(legacy_config_file_name )):
+            return os.path.abspath(legacy_config_file_name )
 
-    #  The case where a DEFAULT_CONFIG_FILENAME file located in any ancestor directory on the path to root.
+    #  The case where a provided config file located in any ancestor directory on the path to root.
     parent_dir = os.path.dirname(os.getcwd())
     return _get_ancestor_config_file_path(
         parent_dir,
@@ -111,9 +152,9 @@ def _get_ancestor_config_file_path(
         local_config_root_cutoff: typing.Union[str, None] = None
         )-> typing.Union[str, None]:
     """
-    Search through the parent directories (until root or a given cutoff directory(inclusive)) for a configuration file.
-    Stops at the first occurrence of the specified config file (default: DEFAULT_CONFIG_FILENAME) along the path to root.
-    Returns the path if a configuration file is found.
+    Search through the parent directories (until root or a given cutoff directory(inclusive)) for a config file.
+    Stops at the first occurrence of the specified config file along the path to root.
+    Returns the path if a config file is found.
     Otherwise, returns None.
     """
 
