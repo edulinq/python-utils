@@ -14,6 +14,7 @@ TRACEBACK_LINE_REPLACEMENT: str = '<TRACEBACK_LINE>'
 TEXT_NORMALIZATIONS: typing.List[typing.Tuple[str, str]] = [
     (r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+ \[\S+ *\] - .*\.py:\d+ -- ', '<LOG_PREFIX> -- '),
     (r'\d+\.\d+ seconds', '<DURATION_SECONDS>'),
+    (r'\bv\d+\.\d+\.\d+\b', '<VERSION>'),
     (r'^\s*File "[^"]+", line \d+,.*$\n.*$(\n\s*[\^~]+\s*$)?', '<TRACEBACK_LINE>'),
     (rf'{TRACEBACK_LINE_REPLACEMENT}(\n{TRACEBACK_LINE_REPLACEMENT})*', '<TRACEBACK>'),
 ]

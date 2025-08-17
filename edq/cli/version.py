@@ -11,7 +11,7 @@ import edq.core.version
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
-    print(edq.core.version.get_version())
+    print(f"v{edq.core.version.get_version()}")
     return 0
 
 def main() -> int:

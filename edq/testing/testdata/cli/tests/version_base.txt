@@ -3,4 +3,4 @@
     "arguments": [],
 }
 ---
-0.0.3
+<VERSION>
