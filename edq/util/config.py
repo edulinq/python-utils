@@ -11,30 +11,24 @@ CONFIG_PATHS_KEY: str = 'config_paths'
 DEFAULT_CONFIG_FILENAME = "edq-config.json"
 
 class ConfigSource:
-    """ A class for storing config source in a structured way. """
+    """ A class for storing config source information in a structured way. """
 
-    def __init__(self, label, path = None):
+    def __init__(self, label: str, path: typing.Union[str, None] = None):
         self.label = label
+        """ Label of a config. """
+
         self.path = path
-
-    def to_dict(self):
-        """ Return a dict that can be used to represent this object. """
-
-        return vars(self)
+        """ Source path of a config. """
 
     def __eq__(self, other: object) -> bool:
-        """ Check for equality. This check uses to_dict() and compares the results. """
+        """ Check for equality. """
 
-        if (type(self) != type(other)):  # pylint: disable=unidiomatic-typecheck
-            return False
-
-        return bool(self.to_dict() == other.to_dict())  # type: ignore[attr-defined]
+        return ((self.label == other.label) and (self.path == other.path)) # type: ignore[attr-defined]
 
     def __str__(self) -> str:
-        return f"label is {self.label}, path is {self.path}"
+        """ Return a human-readable string representation of ConfigSource object. """
 
-    def __repr__(self) -> str:
-        return f"ConfigSource({self.to_dict()!r})"
+        return f"({self.label}, {self.path})"
 
 def get_tiered_config(
         config_file_name: str = DEFAULT_CONFIG_FILENAME,
@@ -43,7 +37,7 @@ def get_tiered_config(
         skip_keys: typing.Union[list, None] = None,
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
-        )-> typing.Tuple[typing.Dict[str, str], typing.Dict[str, ConfigSource]]:
+    ) -> typing.Tuple[typing.Dict[str, str], typing.Dict[str, ConfigSource]]:
     """
     Load all tiered configuration options from files and command-line arguments.
     Returns a configuration dictionary with the values based on tiering rules and a source dictionary mapping each key to its origin.
@@ -61,6 +55,7 @@ def get_tiered_config(
     config: typing.Dict[str, str] = {}
     sources: typing.Dict[str, ConfigSource] = {}
 
+    # Ensure CLI arguments are always a dict, even if provided as argparse.Namespace.
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
 
@@ -102,7 +97,7 @@ def _load_config_file(
         config: typing.Dict[str, str],
         sources: typing.Dict[str, ConfigSource],
         source_label: str
-        )-> None:
+    ) -> None:
     """ Loads config variables and the source from the given config JSON file. """
 
     for (key, value) in edq.util.json.load_path(config_path).items():
@@ -115,7 +110,7 @@ def _get_local_config_path(
         local_config_root_cutoff: typing.Union[str, None] = None
     ) -> typing.Union[str, None]:
     """
-    Searches for a config file in hierarchical order.
+    Search for a config file in hierarchical order.
     Begins with the provided config file name,
     optionally checks the legacy config file name if specified,
     then continues up the directory tree looking for the provided config file name.
@@ -148,7 +143,7 @@ def _get_ancestor_config_file_path(
         current_directory: str,
         config_file_name: str,
         local_config_root_cutoff: typing.Union[str, None] = None
-        )-> typing.Union[str, None]:
+    ) -> typing.Union[str, None]:
     """
     Search through the parent directories (until root or a given cutoff directory(inclusive)) for a config file.
     Stops at the first occurrence of the specified config file along the path to root.
@@ -165,6 +160,7 @@ def _get_ancestor_config_file_path(
         if (os.path.isfile(config_file_path)):
             return config_file_path
 
+        # Check if current directory is root.
         parent_dir = os.path.dirname(current_directory)
         if (parent_dir == current_directory):
             break

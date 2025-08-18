@@ -16,26 +16,28 @@ class BaseTest(unittest.TestCase):
 
     def assertJSONDictEqual(self, a: typing.Dict[str, typing.Any], b: typing.Dict[str, typing.Any], msg: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
-        Call assertDictEqual(). If no message is provided, defaults to a message containing the full JSON representation of the arguments.
+        Call assertDictEqual(), but supply a message containing the full JSON representation of the arguments.
+        If a custom message is provided, it will override the JSON representation.
         """
 
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
 
-        if(msg is None):
+        if (msg is None):
             msg = FORMAT_STR % (a_json, b_json)
 
         super().assertDictEqual(a, b, msg = msg)
 
     def assertJSONListEqual(self, a: typing.List[typing.Any], b: typing.List[typing.Any], msg: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
-        Call assertListEqual(), If no message is provided, defaults to a message containing the full JSON representation of the arguments.
+        Call assertDictEqual(), but supply a message containing the full JSON representation of the arguments.
+        If a custom message is provided, it will override the JSON representation.
         """
 
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
 
-        if(msg is None):
+        if (msg is None):
             msg = FORMAT_STR % (a_json, b_json)
 
         super().assertListEqual(a, b, msg = msg)
