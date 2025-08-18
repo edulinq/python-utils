@@ -25,7 +25,7 @@ class BaseTest(unittest.TestCase):
         if(msg is None):
             msg = FORMAT_STR % (a_json, b_json)
 
-        super().assertDictEqual(a, b, FORMAT_STR % (a_json, b_json))
+        super().assertDictEqual(a, b, msg = msg)
 
     def assertJSONListEqual(self, a: typing.List[typing.Any], b: typing.List[typing.Any], msg: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
@@ -38,7 +38,7 @@ class BaseTest(unittest.TestCase):
         if(msg is None):
             msg = FORMAT_STR % (a_json, b_json)
 
-        super().assertListEqual(a, b, FORMAT_STR % (a_json, b_json))
+        super().assertListEqual(a, b, msg = msg)
 
     def format_error_string(self, ex: typing.Union[BaseException, None]) -> str:
         """
