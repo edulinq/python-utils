@@ -303,24 +303,24 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 os.chdir(initial_work_directory)
 
                 try:
-                    (actual_configs, actual_sources) = edq.util.config.get_tiered_config(**extra_args)
+                    (actual_config, actual_sources) = edq.util.config.get_tiered_config(**extra_args)
                 finally:
                     os.chdir(previous_work_directory)
 
                 for (key, value) in actual_sources.items():
-                    if value.path is not None:
+                    if (value.path is not None):
                         value.path = value.path.replace(temp_dir, "TEMP_DIR")
                         actual_sources[key] = value
 
-                self.assertJSONDictEqual(expected_config, actual_configs)
+                self.assertJSONDictEqual(expected_config, actual_config)
                 self.assertJSONDictEqual(expected_source, actual_sources)
 
-def _replace_placeholders_dict(data, old, new):
-    for (key, value) in data.items():
+def _replace_placeholders_dict(data_dict, old, new):
+    for (key, value) in data_dict.items():
         if (isinstance(value, str)):
             if (old in value):
-                data[key] = value.replace(old, new)
+                data_dict[key] = value.replace(old, new)
 
-def _replace_placeholders_list(data, old, new):
-    for (i, path) in enumerate(data):
-        data[i] = path.replace(old, new)
+def _replace_placeholders_list(data_list, old, new):
+    for (i, path) in enumerate(data_list):
+        data_list[i] = path.replace(old, new)
