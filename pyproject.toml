@@ -1,8 +1,10 @@
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
-    "setuptools",
+    "build",
     "packaging>=21.3",
+    "setuptools>=60",
+    "setuptools-scm>=8.0",
     "twine",
     "vermin",
 ]

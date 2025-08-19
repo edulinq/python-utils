@@ -15,7 +15,7 @@ import edq.testing.cli_test
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
-    edq.testing.cli.add_test_paths(edq.testing.cli_test.CLITest, args.paths)
+    edq.testing.cli.add_test_paths(edq.testing.cli_test.CLITest, args.data_dir, args.paths)
 
     runner = unittest.TextTestRunner(verbosity = 2)
     tests = unittest.defaultTestLoader.loadTestsFromTestCase(edq.testing.cli_test.CLITest)
@@ -35,6 +35,10 @@ def _get_parser() -> edq.core.argparser.Parser:
     parser.add_argument('paths', metavar = 'PATH',
         type = str, nargs = '+',
         help = 'Path to CLI test case files.')
+
+    parser.add_argument('--data-dir', dest = 'data_dir',
+        action = 'store', type = str, default = '.',
+        help = 'The additional data directory (expansion of __DATA_DIR__) used for tests (default: %(default)s).')
 
     return parser
 
