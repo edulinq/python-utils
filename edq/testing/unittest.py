@@ -14,10 +14,25 @@ class BaseTest(unittest.TestCase):
     maxDiff = None
     """ Don't limit the size of diffs. """
 
-    def assertJSONDictEqual(self, a: typing.Dict[str, typing.Any], b: typing.Dict[str, typing.Any]) -> None:  # pylint: disable=invalid-name
+    def assertJSONDictEqual(self, a: typing.Any, b: typing.Any) -> None:  # pylint: disable=invalid-name
         """
-        Call assertDictEqual(), but supply a message containing the full JSON representation of the arguments.
+        Like unittest.TestCase.assertDictEqual(),
+        but will try to convert each comparison argument to a dict if it is not already,
+        and uses an assertion message containing the full JSON representation of the arguments.
+
         """
+
+        if (not isinstance(a, dict)):
+            if (isinstance(a, edq.util.json.DictConverter)):
+                a = a.to_dict()
+            else:
+                a = vars(a)
+
+        if (not isinstance(b, dict)):
+            if (isinstance(b, edq.util.json.DictConverter)):
+                b = b.to_dict()
+            else:
+                b = vars(b)
 
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
