@@ -1,7 +1,6 @@
 import os
 
 import edq.testing.cli
-import edq.testing.unittest
 
 THIS_DIR: str = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
 BASE_TESTDATA_DIR: str = os.path.join(THIS_DIR, "testdata", "cli")
