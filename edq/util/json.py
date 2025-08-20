@@ -7,6 +7,7 @@ and strict when writing (using vanilla JSON).
 import abc
 import enum
 import json
+import os
 import typing
 
 import json5
@@ -107,6 +108,8 @@ def load_path(
     otherwise use JSON5.
     """
 
+    if (os.path.isdir(path)):
+        raise IsADirectoryError(f"{path} is a directory, not a file")
     try:
         with open(path, 'r', encoding = encoding) as file:
             return load(file, strict = strict, **kwargs)
