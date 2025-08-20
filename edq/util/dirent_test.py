@@ -3,31 +3,50 @@ import os
 import edq.testing.unittest
 import edq.util.dirent
 
-THIS_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-TEST_BASE_DIR = os.path.join(THIS_DIR, 'testdata', 'dirent-operations')
-"""
-This test data directory is laid out as:
-.
-├── a.txt
-├── dir_1
-│   ├── b.txt
-│   └── dir_2
-│       └── c.txt
-├── dir_empty
-├── file_empty
-├── symlink_a.txt -> a.txt
-├── symlink_dir_1 -> dir_1
-├── symlink_dir_empty -> dir_empty
-└── symlink_file_empty -> file_empty
-
-Where non-empty files are filled with their filename (without the extension).
-dir_empty will not exist in the repository (since it is an empty directory),
-but it will be created by _prep_temp_dir().
-"""
-
 DIRENT_TYPE_DIR = 'dir'
 DIRENT_TYPE_FILE = 'file'
 DIRENT_TYPE_BROKEN_SYMLINK = 'broken_symlink'
+
+def create_test_dir(temp_dir_prefix: str) -> str:
+    """
+    Create a temp dir and populate it with dirents for testing.
+
+    This test data directory is laid out as:
+    .
+    ├── a.txt
+    ├── dir_1
+    │   ├── b.txt
+    │   └── dir_2
+    │       └── c.txt
+    ├── dir_empty
+    ├── file_empty
+    ├── symlink_a.txt -> a.txt
+    ├── symlink_dir_1 -> dir_1
+    ├── symlink_dir_empty -> dir_empty
+    └── symlink_file_empty -> file_empty
+
+    Where non-empty files are filled with their filename (without the extension).
+    """
+
+    temp_dir = edq.util.dirent.get_temp_dir(prefix = temp_dir_prefix)
+
+    # Dirs
+    edq.util.dirent.mkdir(os.path.join(temp_dir, 'dir_1', 'dir_2'))
+    edq.util.dirent.mkdir(os.path.join(temp_dir, 'dir_empty'))
+
+    # Files
+    edq.util.dirent.write_file(os.path.join(temp_dir, 'a.txt'), 'a')
+    edq.util.dirent.write_file(os.path.join(temp_dir, 'file_empty'), '')
+    edq.util.dirent.write_file(os.path.join(temp_dir, 'dir_1', 'b.txt'), 'b')
+    edq.util.dirent.write_file(os.path.join(temp_dir, 'dir_1', 'dir_2', 'c.txt'), 'c')
+
+    # Links
+    os.symlink('a.txt', os.path.join(temp_dir, 'symlink_a.txt'))
+    os.symlink('dir_1', os.path.join(temp_dir, 'symlink_dir_1'))
+    os.symlink('dir_empty', os.path.join(temp_dir, 'symlink_dir_empty'))
+    os.symlink('file_empty', os.path.join(temp_dir, 'symlink_file_empty'))
+
+    return temp_dir
 
 class TestDirent(edq.testing.unittest.BaseTest):
     """ Test basic operations on dirents. """
@@ -363,10 +382,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
                 self.assertEqual(expected_contents, actual_contents)
 
     def test_copy_contents_base(self):
-        """
-        Test copying the contents of a dirent.
-        Note that the base functionality of copy_contents() is tested by test_setup().
-        """
+        """ Test copying the contents of a dirent. """
 
         # [(source, dest, no clobber?, error substring), ...]
         test_cases = [
@@ -877,12 +893,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
         self._check_existing_paths(temp_dir, expected_paths)
 
     def _prep_temp_dir(self):
-        temp_dir = edq.util.dirent.get_temp_dir(prefix = 'edq_test_dirent_')
-
-        edq.util.dirent.mkdir(os.path.join(temp_dir, 'dir_empty'))
-        edq.util.dirent.copy_contents(TEST_BASE_DIR, temp_dir)
-
-        return temp_dir
+        return create_test_dir('edq_test_dirent_')
 
     def _check_existing_paths(self, base_dir, raw_paths):
         """

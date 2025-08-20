@@ -2,7 +2,7 @@
 Infrastructure for testing CLI tools using a JSON file which describes a test case,
 which is essentially an invocation of a CLI tool and the expected output.
 
-The test case file must be a `.txt` file that live in TEST_CASES_DIR.
+The test case file must be a `.txt` file that live in the test cases dir.
 The file contains two parts (separated by a line with just TEST_CASE_SEP):
 the first part which is a JSON object (see below for available keys),
 and a second part which is the expected text output (stdout).
@@ -28,15 +28,10 @@ import edq.util.dirent
 import edq.util.json
 import edq.util.pyimport
 
-THIS_DIR: str = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-BASE_TESTDATA_DIR: str = os.path.join(THIS_DIR, "testdata", "cli")
-TEST_CASES_DIR: str = os.path.join(BASE_TESTDATA_DIR, "tests")
-DATA_DIR: str = os.path.join(BASE_TESTDATA_DIR, "data")
-
 TEST_CASE_SEP: str = '---'
 DATA_DIR_ID: str = '__DATA_DIR__'
 TEMP_DIR_ID: str = '__TEMP_DIR__'
-REL_DIR_ID: str = '__REL_DIR__'
+BASE_DIR_ID: str = '__BASE_DIR__'
 
 DEFAULT_ASSERTION_FUNC_NAME: str = 'edq.testing.asserts.content_equals_normalize'
 
@@ -48,6 +43,7 @@ class CLITestInfo:
     def __init__(self,
             test_name: str,
             base_dir: str,
+            data_dir: str,
             temp_dir: str,
             cli: typing.Union[str, None] = None,
             arguments: typing.Union[typing.List[str], None] = None,
@@ -57,16 +53,45 @@ class CLITestInfo:
             stderr_assertion_func: typing.Union[str, None] = None,
             expected_stdout: str = '',
             expected_stderr: str = '',
+            split_stdout_stderr: bool = False,
             strip_error_output: bool = True,
+            extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             **kwargs: typing.Any) -> None:
+        self.skip_reasons: typing.List[str] = []
+        """
+        Reasons that this test will be skipped.
+        Any entries in this list indicate that the test should be skipped.
+        """
+
+        self.platform_skip_pattern: typing.Union[str, None] = platform_skip
+        """
+        A pattern to check if the test should be skipped on the current platform.
+        Will be used in `re.search()` against `sys.platform`.
+        """
+
+        if ((platform_skip is not None) and re.search(platform_skip, sys.platform)):
+            self.skip_reasons.append(f"not available on platform: '{sys.platform}'")
+
         self.test_name: str = test_name
         """ The name of this test. """
 
         self.base_dir: str = base_dir
-        """ The base directory for this test (usually the dir the CLI test file lives. """
+        """
+        The base directory for this test (usually the dir the CLI test file lives.
+        This is the expansion for `__BASE_DIR__` paths.
+        """
+
+        self.data_dir: str = data_dir
+        """
+        A directory that additional testing data lives in.
+        This is the expansion for `__DATA_DIR__` paths.
+        """
 
         self.temp_dir: str = temp_dir
-        """ A temp directory that this test has access to. """
+        """
+        A temp directory that this test has access to.
+        This is the expansion for `__TEMP_DIR__` paths.
+        """
 
         edq.util.dirent.mkdir(temp_dir)
 
@@ -76,8 +101,11 @@ class CLITestInfo:
         self.module_name: str = cli
         """ The name of the module to invoke. """
 
-        self.module: typing.Any = edq.util.pyimport.import_name(self.module_name)
+        self.module: typing.Any = None
         """ The module to invoke. """
+
+        if (not self.should_skip()):
+            self.module = edq.util.pyimport.import_name(self.module_name)
 
         if (arguments is None):
             arguments = []
@@ -88,19 +116,16 @@ class CLITestInfo:
         self.error: bool = error
         """ Whether or not this test is expected to be an error (raise an exception). """
 
-        self.platform_skip: typing.Union[str, None] = platform_skip
-        """ If the current platform matches this regular expression, then the test will be skipped. """
-
         self.stdout_assertion_func: typing.Union[edq.testing.asserts.StringComparisonAssertion, None] = None
         """ The assertion func to compare the expected and actual stdout of the CLI. """
 
-        if (stdout_assertion_func is not None):
+        if ((stdout_assertion_func is not None) and (not self.should_skip())):
             self.stdout_assertion_func = edq.util.pyimport.fetch(stdout_assertion_func)
 
         self.stderr_assertion_func: typing.Union[edq.testing.asserts.StringComparisonAssertion, None] = None
         """ The assertion func to compare the expected and actual stderr of the CLI. """
 
-        if (stderr_assertion_func is not None):
+        if ((stderr_assertion_func is not None) and (not self.should_skip())):
             self.stderr_assertion_func = edq.util.pyimport.fetch(stderr_assertion_func)
 
         self.expected_stdout: str = expected_stdout
@@ -113,11 +138,32 @@ class CLITestInfo:
             self.expected_stdout = self.expected_stdout.strip()
             self.expected_stderr = self.expected_stderr.strip()
 
+        self.split_stdout_stderr: bool = split_stdout_stderr
+        """
+        Split stdout and stderr into different strings for testing.
+        By default, these two will be combined.
+        If both are non-empty, then they will be joined like: f"{stdout}\n{TEST_CASE_SEP}\n{stderr}".
+        Otherwise, only the non-empty one will be present with no separator.
+        Any stdout assertions will be applied to the combined text.
+        """
+
         # Make any path normalizations over the arguments and expected output.
         self.expected_stdout = self._expand_paths(self.expected_stdout)
         self.expected_stderr = self._expand_paths(self.expected_stderr)
         for (i, argument) in enumerate(self.arguments):
             self.arguments[i] = self._expand_paths(argument)
+
+        if (extra_options is None):
+            extra_options = {}
+
+        self.extra_options: typing.Union[typing.Dict[str, typing.Any], None] = extra_options
+        """
+        A place to store additional options.
+        Extra top-level options will cause tests to error.
+        """
+
+        if (len(kwargs) > 0):
+            raise ValueError(f"Found unknown CLI test options: '{kwargs}'.")
 
     def _expand_paths(self, text: str) -> str:
         """
@@ -126,9 +172,9 @@ class CLITestInfo:
         """
 
         replacements = [
-            (DATA_DIR_ID, DATA_DIR),
+            (DATA_DIR_ID, self.data_dir),
             (TEMP_DIR_ID, self.temp_dir),
-            (REL_DIR_ID, self.base_dir),
+            (BASE_DIR_ID, self.base_dir),
         ]
 
         for (key, target_dir) in replacements:
@@ -136,8 +182,18 @@ class CLITestInfo:
 
         return text
 
+    def should_skip(self) -> bool:
+        """ Check if this test should be skipped. """
+
+        return (len(self.skip_reasons) > 0)
+
+    def skip_message(self) -> str:
+        """ Get a message displaying the reasons this test should be skipped. """
+
+        return f"This test has been skipped because of the following: {self.skip_reasons}."
+
     @staticmethod
-    def load_path(path: str, test_name: str, base_temp_dir: str) -> 'CLITestInfo':
+    def load_path(path: str, test_name: str, base_temp_dir: str, data_dir: str) -> 'CLITestInfo':
         """ Load a CLI test file and extract the test info. """
 
         options, expected_stdout = read_test_file(path)
@@ -147,7 +203,7 @@ class CLITestInfo:
         base_dir = os.path.dirname(os.path.abspath(path))
         temp_dir = os.path.join(base_temp_dir, test_name)
 
-        return CLITestInfo(test_name, base_dir, temp_dir, **options)
+        return CLITestInfo(test_name, base_dir, data_dir, temp_dir, **options)
 
 def read_test_file(path: str) -> typing.Tuple[typing.Dict[str, typing.Any], str]:
     """ Read a test case file and split the output into JSON data and text. """
@@ -189,14 +245,14 @@ def replace_path_pattern(text: str, key: str, target_dir: str) -> str:
 
     return text
 
-def _get_test_method(test_name: str, path: str) -> typing.Callable:
+def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callable:
     """ Get a test method that represents the test case at the given path. """
 
     def __method(self: edq.testing.unittest.BaseTest) -> None:
-        test_info = CLITestInfo.load_path(path, test_name, getattr(self, BASE_TEMP_DIR_ATTR))
+        test_info = CLITestInfo.load_path(path, test_name, getattr(self, BASE_TEMP_DIR_ATTR), data_dir)
 
-        if ((test_info.platform_skip is not None) and re.search(test_info.platform_skip, sys.platform)):
-            self.skipTest(f"Test is not available on {sys.platform}.")
+        if (test_info.should_skip()):
+            self.skipTest(test_info.skip_message())
 
         old_args = sys.argv
         sys.argv = [test_info.module.__file__] + test_info.arguments
@@ -223,6 +279,12 @@ def _get_test_method(test_name: str, path: str) -> typing.Callable:
         finally:
             sys.argv = old_args
 
+        if (not test_info.split_stdout_stderr):
+            if ((len(stdout_text) > 0) and (len(stderr_text) > 0)):
+                stdout_text = f"{stdout_text}\n{TEST_CASE_SEP}\n{stderr_text}"
+            elif (len(stderr_text) > 0):
+                stdout_text = stderr_text
+
         if (test_info.stdout_assertion_func is not None):
             test_info.stdout_assertion_func(self, test_info.expected_stdout, stdout_text)
 
@@ -231,7 +293,7 @@ def _get_test_method(test_name: str, path: str) -> typing.Callable:
 
     return __method
 
-def add_test_paths(target_class: type, paths: typing.List[str]) -> None:
+def add_test_paths(target_class: type, data_dir: str, paths: typing.List[str]) -> None:
     """ Add tests from the given test files. """
 
     # Attach a temp directory to the testing class so all tests can share a common base temp dir.
@@ -242,12 +304,12 @@ def add_test_paths(target_class: type, paths: typing.List[str]) -> None:
         test_name = 'test_cli__' + os.path.splitext(os.path.basename(path))[0]
 
         try:
-            setattr(target_class, test_name, _get_test_method(test_name, path))
+            setattr(target_class, test_name, _get_test_method(test_name, path, data_dir))
         except Exception as ex:
             raise ValueError(f"Failed to parse test case '{path}'.") from ex
 
-def discover_test_cases(target_class: type) -> None:
+def discover_test_cases(target_class: type, test_cases_dir: str, data_dir: str) -> None:
     """ Look in the text cases directory for any test cases and add them as test methods to the test class. """
 
-    paths = list(sorted(glob.glob(os.path.join(TEST_CASES_DIR, "**", "*.txt"), recursive = True)))
-    add_test_paths(target_class, paths)
+    paths = list(sorted(glob.glob(os.path.join(test_cases_dir, "**", "*.txt"), recursive = True)))
+    add_test_paths(target_class, data_dir, paths)
