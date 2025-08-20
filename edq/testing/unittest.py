@@ -18,9 +18,7 @@ class BaseTest(unittest.TestCase):
         """
         Like unittest.TestCase.assertDictEqual(),
         but will try to convert each comparison argument to a dict if it is not already,
-        and uses an assertion message containing the full JSON representation of the arguments.
-
-        If a custom message is provided, it will replace the default JSON-based message.
+        and uses an default assertion message containing the full JSON representation of the arguments.
         """
 
         if (not isinstance(a, dict)):
@@ -45,8 +43,7 @@ class BaseTest(unittest.TestCase):
 
     def assertJSONListEqual(self, a: typing.List[typing.Any], b: typing.List[typing.Any], msg: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
-        Call assertDictEqual(), but supply a message containing the full JSON representation of the arguments.
-        If a custom message is provided, it will replace the default JSON-based message.
+        Call assertDictEqual(), but supply a default message containing the full JSON representation of the arguments.
         """
 
         a_json = edq.util.json.dumps(a, indent = 4)

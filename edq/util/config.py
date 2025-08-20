@@ -21,13 +21,12 @@ class ConfigSource:
         """ Path of a config's source. """
 
     def __eq__(self, other: object) -> bool:
-        """ Check for equality between ConfigSource objects. """
+        if (not isinstance(other, ConfigSource)):
+            raise TypeError(f"Cannot compare ConfigSource with '{type(other)}'")
 
         return ((self.label == other.label) and (self.path == other.path)) # type: ignore[attr-defined]
 
     def __str__(self) -> str:
-        """ Return a human-readable string representation of the ConfigSource object. """
-
         return f"({self.label}, {self.path})"
 
 def get_tiered_config(
