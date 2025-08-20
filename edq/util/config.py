@@ -15,18 +15,18 @@ class ConfigSource:
 
     def __init__(self, label: str, path: typing.Union[str, None] = None):
         self.label = label
-        """ Label of a config. """
+        """ Label of a config."""
 
         self.path = path
-        """ Source path of a config. """
+        """ Path of a config's source. """
 
     def __eq__(self, other: object) -> bool:
-        """ Check for equality. """
+        """ Check for equality between ConfigSource objects. """
 
         return ((self.label == other.label) and (self.path == other.path)) # type: ignore[attr-defined]
 
     def __str__(self) -> str:
-        """ Return a human-readable string representation of ConfigSource object. """
+        """ Return a human-readable string representation of the ConfigSource object. """
 
         return f"({self.label}, {self.path})"
 
@@ -131,7 +131,7 @@ def _get_local_config_path(
         if (os.path.isfile(legacy_config_file_name)):
             return os.path.abspath(legacy_config_file_name)
 
-    #  The case where a provided config file is located in any ancestor directory on the path to root.
+    # Case where the provided config file is found in an ancestor directory up to the root or cutoff limit.
     parent_dir = os.path.dirname(os.getcwd())
     return _get_ancestor_config_file_path(
         parent_dir,
