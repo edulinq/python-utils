@@ -22,7 +22,7 @@ class ConfigSource:
 
     def __eq__(self, other: object) -> bool:
         if (not isinstance(other, ConfigSource)):
-            raise TypeError(f"Cannot compare ConfigSource with '{type(other)}'")
+            return False
 
         return ((self.label == other.label) and (self.path == other.path)) # type: ignore[attr-defined]
 
