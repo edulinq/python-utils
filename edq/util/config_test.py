@@ -99,7 +99,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
         The placeholder 'TEMP_DIR' is overwritten during testing with the actual path to the directory.
         """
 
-        # []
+        # [(work directory, expected config, expected source, extra arguments, error substring), ...]
         test_cases = [
             # No Config
             (

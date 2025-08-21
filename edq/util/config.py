@@ -117,8 +117,7 @@ def _get_local_config_path(
 
     If no config file is found, returns None.
 
-    The cutoff parameter limits the search depth, preventing detection of
-    config file in higher-level directories during testing.
+    The cutoff parameter limits the search depth, preventing detection of config file in higher-level directories during testing.
     """
 
     # The case where provided config file is in current directory.
