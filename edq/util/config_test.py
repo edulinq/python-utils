@@ -18,6 +18,15 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
         # [(work directory, expected config, expected source, extra arguments), ...]
         test_cases = [
+            # No Config
+            (
+                "empty-dir",
+                {},
+                {},
+                {},
+                None
+            ),
+
             # Global Config: Custom global config path.
             (
                 "empty-dir",
@@ -241,10 +250,69 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     ),
                 },
                 {
-                    "global_config_path": os.path.join("global", edq.util.config.DEFAULT_CONFIG_FILENAME),
+                    "global_config_path": os.path.join("TEMP_DIR", "global", edq.util.config.DEFAULT_CONFIG_FILENAME),
                 },
                 None
             ),
+
+            # Global + CLI Bare Options
+            (
+                "empty-dir",
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                },
+                {
+                    "cli_arguments": {
+                        "user": "user@test.edulinq.org",
+                    },
+                    "global_config_path": os.path.join("TEMP_DIR", "global", edq.util.config.DEFAULT_CONFIG_FILENAME),
+
+                },
+                None
+            ),
+
+            # CLI Bare Options + Local
+            (
+                "simple",
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                },
+                {
+                    "cli_arguments": {
+                        "user": "user@test.edulinq.org"
+                    },
+                },
+                None
+            ),
+
+
+            # CLI Provided Config + Global Config
+            (
+                "empty-dir",
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.util.config.ConfigSource(
+                        label = "<cli config file>",
+                        path = os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
+                    ),
+                },
+                {
+                    "cli_arguments": {
+                        edq.util.config.CONFIG_PATHS_KEY: [os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)]
+                    },
+                    "global_config_path": os.path.join("TEMP_DIR", "global", edq.util.config.DEFAULT_CONFIG_FILENAME),
+                },
+                None
+            ),
+
 
             # CLI Provided Config + Local Config
             (
@@ -284,6 +352,85 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 None
             ),
 
+            # CLI Bare Options + CLI Provided Config + Global Config
+            (
+                "empty-dir",
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                },
+                {
+                    "cli_arguments": {
+                         "user": "user@test.edulinq.org",
+                        edq.util.config.CONFIG_PATHS_KEY: [os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)]
+                    },
+                    "global_config_path": os.path.join("TEMP_DIR", "global", edq.util.config.DEFAULT_CONFIG_FILENAME),
+                },
+                None
+            ),
+
+            # CLI Bare Options + CLI Provided Config + Local Config
+            (
+                "simple",
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                },
+                {
+                    "cli_arguments": {
+                         "user": "user@test.edulinq.org",
+                        edq.util.config.CONFIG_PATHS_KEY: [os.path.join("TEMP_DIR", "old-name", "config.json")],
+                    },
+                },
+                None
+            ),
+
+            # CLI Bare Options +  Local Config + Global Config
+            (
+                "simple",
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                },
+                {
+                    "cli_arguments": {
+                        "user": "user@test.edulinq.org",
+                    },
+                    "global_config_path": os.path.join("TEMP_DIR", "global", edq.util.config.DEFAULT_CONFIG_FILENAME),
+                },
+                None
+            ),
+
+            # CLI Provided Config + Local Config + Global Config
+            (
+                "simple",
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.util.config.ConfigSource(
+                        label = "<cli config file>",
+                        path = os.path.join("TEMP_DIR", "old-name", "config.json")
+                    ),
+                },
+                {
+                    "cli_arguments": {
+                        edq.util.config.CONFIG_PATHS_KEY: [os.path.join("TEMP_DIR", "old-name", "config.json")],
+                    },
+                    "global_config_path": os.path.join("TEMP_DIR", "global", edq.util.config.DEFAULT_CONFIG_FILENAME),
+                },
+                None
+            ),
+
+
+
+
             # CLI Bare Options + CLI Provided Config + Local Config + Global Config
             (
                 os.path.join("nested", "nest1", "nest2b"),
@@ -314,15 +461,6 @@ class TestConfig(edq.testing.unittest.BaseTest):
             ),
 
             # Edge Cases
-
-            # No Config
-            (
-                "empty-dir",
-                {},
-                {},
-                {},
-                None
-            ),
 
             # Global Config: Empty Config JSON
             (
