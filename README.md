@@ -31,10 +31,10 @@ This is customizable and may differ depending on the tool being used.
 Configuration options can come from several places, with later sources overriding earlier ones:
 
 #### Global Configuration
-- **Path:** `<platform-specific user config location>/edq-config.json`
-- This is the "proper" place to store user-related configuration, according to [platformdirs](https://github.com/tox-dev/platformdirs).
-- Best suited for login credentials or persistent user preferences.
-- Run any CLI tool with `--help` to see the exact path on your platform.
+**Path:** `<platform-specific user config location>/edq-config.json`
+This is the "proper" place to store user-related configuration, according to [platformdirs](https://github.com/tox-dev/platformdirs).
+Best suited for login credentials or persistent user preferences.
+Run any CLI tool with `--help` to see the exact path on your platform.
 
 #### Local Configuration
 If an `edq-config.json` exists in the current working directory, it will be loaded.
