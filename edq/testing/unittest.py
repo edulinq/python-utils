@@ -18,7 +18,7 @@ class BaseTest(unittest.TestCase):
         """
         Like unittest.TestCase.assertDictEqual(),
         but will try to convert each comparison argument to a dict if it is not already,
-        and uses an default assertion message containing the full JSON representation of the arguments.
+        and uses a default assertion message containing the full JSON representation of the arguments.
         """
 
         if (not isinstance(a, dict)):

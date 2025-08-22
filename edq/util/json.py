@@ -109,7 +109,8 @@ def load_path(
     """
 
     if (os.path.isdir(path)):
-        raise IsADirectoryError(f"{path} is a directory, not a file")
+        raise IsADirectoryError(f"Cannot open JSON file, expected a file but got a directory at '{path}'.")
+
     try:
         with open(path, 'r', encoding = encoding) as file:
             return load(file, strict = strict, **kwargs)

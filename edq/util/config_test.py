@@ -13,7 +13,6 @@ def creat_test_dir(temp_dir_prefix: str) -> str:
     Creat a temp dir and populate it with dirents for testing.
 
     This test data directory is laid out as:
-
     .
     ├── custom-name
     |   └── custom-edq-config.json
@@ -78,14 +77,14 @@ def creat_test_dir(temp_dir_prefix: str) -> str:
     edq.util.dirent.mkdir(simple_config_dir_path)
     edq.util.dirent.write_file(
         os.path.join(simple_config_dir_path, edq.util.config.DEFAULT_CONFIG_FILENAME),
-        '{\n\t"user": "user@test.edulinq.org",\n}'
+        '{\n"user": "user@test.edulinq.org",\n}'
     )
 
     malformatted_config_dir_path = os.path.join(temp_dir, "malformatted")
     edq.util.dirent.mkdir(malformatted_config_dir_path)
     edq.util.dirent.write_file(
         os.path.join(malformatted_config_dir_path, edq.util.config.DEFAULT_CONFIG_FILENAME),
-        "{\n\tuser: user@test.edulinq.org\n}"
+        "{\nuser: user@test.edulinq.org\n}"
     )
 
     return temp_dir
@@ -112,7 +111,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
             # Global Config
 
-            # Custom global config path.
+            # Custom Global Config Path
             (
                 "empty-dir",
                 {
@@ -120,7 +119,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<global config file>",
+                        label = edq.util.config.CONFIG_SOURCE_GLOBAL,
                         path = os.path.join("TEMP_DIR", "global", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     ),
                 },
@@ -184,7 +183,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<local config file>",
+                        label = edq.util.config.CONFIG_SOURCE_LOCAL,
                         path = os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     ),
                 },
@@ -200,7 +199,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<local config file>",
+                        label = edq.util.config.CONFIG_SOURCE_LOCAL,
                         path = os.path.join("TEMP_DIR", "custom-name", "custom-edq-config.json")
                     ),
                 },
@@ -218,7 +217,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<local config file>",
+                        label = edq.util.config.CONFIG_SOURCE_LOCAL,
                         path = os.path.join("TEMP_DIR", "old-name", "config.json")
                     ),
                 },
@@ -236,7 +235,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "server": edq.util.config.ConfigSource(
-                        label = "<local config file>",
+                        label = edq.util.config.CONFIG_SOURCE_LOCAL,
                         path = os.path.join("TEMP_DIR", "nested", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     ),
                 },
@@ -249,7 +248,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 os.path.join("old-name", "nest1", "nest2"),
                 {},
                 {},
-                {},
+                {
+                    "legacy_config_file_name": "config.json",
+                },
                 None
             ),
 
@@ -288,7 +289,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<local config file>",
+                        label = edq.util.config.CONFIG_SOURCE_LOCAL,
                         path = os.path.join("TEMP_DIR", "nested", "nest1", "nest2b", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     )
                 },
@@ -309,11 +310,11 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<cli config file>",
+                        label = edq.util.config.CONFIG_SOURCE_CLI,
                         path = os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     ),
                     "server": edq.util.config.ConfigSource(
-                        label = "<cli config file>",
+                        label = edq.util.config.CONFIG_SOURCE_CLI,
                         path = os.path.join("TEMP_DIR", "nested", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     ),
                 },
@@ -336,7 +337,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<cli config file>",
+                        label = edq.util.config.CONFIG_SOURCE_CLI,
                         path = os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     ),
                 },
@@ -412,7 +413,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                    "user": edq.util.config.ConfigSource(label = edq.util.config.CONFIG_SOURCE_CLI_BARE),
                 },
                 {
                     "cli_arguments": {
@@ -429,7 +430,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                    "user": edq.util.config.ConfigSource(label = edq.util.config.CONFIG_SOURCE_CLI_BARE),
                 },
                 {
                     "cli_arguments": {
@@ -453,7 +454,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<local config file>",
+                        label = edq.util.config.CONFIG_SOURCE_LOCAL,
                         path = os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     ),
                 },
@@ -471,7 +472,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<cli config file>",
+                        label = edq.util.config.CONFIG_SOURCE_CLI,
                         path = os.path.join("TEMP_DIR", "simple", edq.util.config.DEFAULT_CONFIG_FILENAME)
                     ),
                 },
@@ -491,7 +492,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                    "user": edq.util.config.ConfigSource(label = edq.util.config.CONFIG_SOURCE_CLI_BARE),
                 },
                 {
                     "cli_arguments": {
@@ -511,7 +512,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<cli config file>",
+                        label = edq.util.config.CONFIG_SOURCE_CLI,
                         path = os.path.join("TEMP_DIR", "custom-name", "custom-edq-config.json")
                     ),
                 },
@@ -530,7 +531,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                    "user": edq.util.config.ConfigSource(label = edq.util.config.CONFIG_SOURCE_CLI_BARE),
                 },
                 {
                     "cli_arguments": {
@@ -547,7 +548,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                    "user": edq.util.config.ConfigSource(label = edq.util.config.CONFIG_SOURCE_CLI_BARE),
                 },
                 {
                     "cli_arguments": {
@@ -566,7 +567,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                    "user": edq.util.config.ConfigSource(label = edq.util.config.CONFIG_SOURCE_CLI_BARE),
                 },
                 {
                     "cli_arguments": {
@@ -585,7 +586,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                    "user": edq.util.config.ConfigSource(label = edq.util.config.CONFIG_SOURCE_CLI_BARE),
                 },
                 {
                     "cli_arguments": {
@@ -604,7 +605,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<cli config file>",
+                        label = edq.util.config.CONFIG_SOURCE_CLI,
                         path = os.path.join("TEMP_DIR", "custom-name", "custom-edq-config.json")
                     ),
                 },
@@ -624,7 +625,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.util.config.ConfigSource(label = "<cli argument>"),
+                    "user": edq.util.config.ConfigSource(label = edq.util.config.CONFIG_SOURCE_CLI_BARE),
                 },
                 {
                     "cli_arguments": {
@@ -644,10 +645,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.util.config.ConfigSource(
-                        label = "<cli config file>",
+                        label = edq.util.config.CONFIG_SOURCE_CLI,
                         path = os.path.join("TEMP_DIR", "custom-name", "custom-edq-config.json")
                     ),
-                    "pass": edq.util.config.ConfigSource(label = "<cli argument>"),
+                    "pass": edq.util.config.ConfigSource(label = edq.util.config.CONFIG_SOURCE_CLI_BARE),
                 },
                 {
                     "cli_arguments": {
