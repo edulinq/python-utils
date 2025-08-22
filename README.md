@@ -36,22 +36,19 @@ Configuration options can come from several places, with later sources overwriti
 
 The default place a global config is looked for is `<platform-specific user config location>/edq-config.json`.
 This is considered to be the "proper" place to store user-related configuration, according to [platformdirs](https://github.com/tox-dev/platformdirs).
-The location where a global config will be looked for can be changed by passing a path to --global-config trough the command line.
+The location where a global config will be looked for can be changed by passing a path to `--global-config` trough the command line.
 This type of config is best suited for login credentials or persistent user preferences.
 Run any CLI tool with `--help` to see the exact path on your platform.
 
 #### Local Configuration
-
-If an `edq-config.json` exists in the current working directory, it will be loaded.
 
 Local configuration files can be found in different locations.
 The first file found will be used, and other locations will not be searched.
 
 ##### Search order for a local config file:
 
-1. `./edq-config.json`
-2. `./legacy-config.json`
-   *(applies only if the config system is set to support a custome legacy file name)*
+1. An `edq-config.json` in the current directory.
+2. If the config system is set to support a custom legacy file, it will look for the custom file in the current directory.
 3. An `edq-config.json` file located in any ancestor directory on the path to root (or up to a cutoff limit if one is specified).
 
 #### CLI-Specified Config Files
