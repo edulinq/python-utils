@@ -48,7 +48,7 @@ The first file found will be used, and other locations will not be searched.
 ##### Search order for a local config file:
 
 1. An `edq-config.json` in the current directory.
-2. If the config system is set to support a custom legacy file, it will look for the custom file in the current directory.
+2. A custom legacy file in the current directory. If the config system is set to support a custom legacy file.
 3. An `edq-config.json` file located in any ancestor directory on the path to root (or up to a cutoff limit if one is specified).
 
 #### CLI-Specified Config Files
