@@ -20,7 +20,7 @@ pip3 install .
 ## Configuration
 
 Many EduLinq tools share a common configuration system.
-This system provides a consistent way to supply options to the CLI tool being used.
+This system provides a consistent way to supply configuration options to the CLI tool being used.
 While each CLI tool may require additional options, the configuration loading process is the same across the EduLinq ecosystem.
 
 By default, the config file is named `edq-config.json`.
@@ -30,13 +30,13 @@ For the purposes of this documentation we are going to use the default config fi
 
 ### Configuration Sources
 
-Configuration options can come from several places, with later sources overwriting earlier ones:
+Configuration options can come from several places, with later sources overwriting earlier ones.
 
 #### Global Configuration
 
 The default place a global config is looked for is `<platform-specific user config location>/edq-config.json`.
 This is considered to be the "proper" place to store user-related configuration, according to [platformdirs](https://github.com/tox-dev/platformdirs).
-The location where a global config will be looked for can be changed by passing a path to `--global-config` trough the command line.
+The location where a global config will be looked for can be changed by passing a path to `--global-config` through the command line.
 This type of config is best suited for login credentials or persistent user preferences.
 Run any CLI tool with `--help` to see the exact path on your platform.
 
@@ -48,13 +48,13 @@ The first file found will be used, and other locations will not be searched.
 ##### Search order for a local config file:
 
 1. An `edq-config.json` in the current directory.
-2. A custom legacy file in the current directory. If the config system is set to support a custom legacy file.
+2. A legacy file in the current directory. If the config system is set to support a specified legacy file.
 3. An `edq-config.json` file located in any ancestor directory on the path to root (or up to a cutoff limit if one is specified).
 
 #### CLI-Specified Config Files
 
 Any files passed via `--config` will be loaded in the order they appear on the command line.
-Latter files will override options from previous ones.
+Later files will override options from previous ones.
 
 #### Bare CLI Options
 
