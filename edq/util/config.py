@@ -7,13 +7,13 @@ import platformdirs
 import edq.util.dirent
 import edq.util.json
 
-CONFIG_SOURCE_LOCAL: str = "<local config file>"
 CONFIG_SOURCE_GLOBAL: str = "<global config file>"
+CONFIG_SOURCE_LOCAL: str = "<local config file>"
 CONFIG_SOURCE_CLI: str = "<cli config file>"
 CONFIG_SOURCE_CLI_BARE: str = "<cli argument>"
 
 CONFIG_PATHS_KEY: str = 'config_paths'
-DEFAULT_CONFIG_FILENAME = "edq-config.json"
+DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 
 class ConfigSource:
     """ A class for storing config source information. """
@@ -100,7 +100,7 @@ def _load_config_file(
         config_path: str,
         config: typing.Dict[str, str],
         sources: typing.Dict[str, ConfigSource],
-        source_label: str
+        source_label: str,
     ) -> None:
     """ Loads config variables and the source from the given config JSON file. """
 
@@ -112,7 +112,7 @@ def _load_config_file(
 def _get_local_config_path(
         config_file_name: str,
         legacy_config_file_name: typing.Union[str, None] = None,
-        local_config_root_cutoff: typing.Union[str, None] = None
+        local_config_root_cutoff: typing.Union[str, None] = None,
     ) -> typing.Union[str, None]:
     """
     Search for a config file in hierarchical order.
@@ -140,13 +140,13 @@ def _get_local_config_path(
     return _get_ancestor_config_file_path(
         parent_dir,
         config_file_name = config_file_name,
-        local_config_root_cutoff = local_config_root_cutoff
+        local_config_root_cutoff = local_config_root_cutoff,
     )
 
 def _get_ancestor_config_file_path(
         current_directory: str,
         config_file_name: str,
-        local_config_root_cutoff: typing.Union[str, None] = None
+        local_config_root_cutoff: typing.Union[str, None] = None,
     ) -> typing.Union[str, None]:
     """
     Search through the parent directories (until root or a given cutoff directory(inclusive)) for a config file.

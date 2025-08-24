@@ -5,9 +5,6 @@ import edq.util.config
 import edq.util.dirent
 import edq.util.json
 
-THIS_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-CONFIGS_DIR = os.path.join(THIS_DIR, "testdata", "configs")
-
 def creat_test_dir(temp_dir_prefix: str) -> str:
     """
     Creat a temp dir and populate it with dirents for testing.
