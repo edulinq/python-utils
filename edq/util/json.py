@@ -7,6 +7,7 @@ and strict when writing (using vanilla JSON).
 import abc
 import enum
 import json
+import os
 import typing
 
 import json5
@@ -106,6 +107,9 @@ def load_path(
     If strict is set, then use standard Python JSON,
     otherwise use JSON5.
     """
+
+    if (os.path.isdir(path)):
+        raise IsADirectoryError(f"Cannot open JSON file, expected a file but got a directory at '{path}'.")
 
     try:
         with open(path, 'r', encoding = encoding) as file:
