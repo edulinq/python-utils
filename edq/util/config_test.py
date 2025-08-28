@@ -69,7 +69,6 @@ def creat_test_dir(temp_dir_prefix: str) -> str:
         os.path.join(nested_dir_path, "nest1", "nest2b", edq.util.config.DEFAULT_CONFIG_FILENAME),
     )
 
-    # Malformed JSONs
     simple_config_dir_path = os.path.join(temp_dir, "simple")
     edq.util.dirent.mkdir(simple_config_dir_path)
     edq.util.dirent.write_file(

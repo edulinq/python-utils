@@ -14,7 +14,7 @@ class BaseTest(unittest.TestCase):
     maxDiff = None
     """ Don't limit the size of diffs. """
 
-    def assertJSONDictEqual(self, a: typing.Any, b: typing.Any, msg: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
+    def assertJSONDictEqual(self, a: typing.Any, b: typing.Any, message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
         Like unittest.TestCase.assertDictEqual(),
         but will try to convert each comparison argument to a dict if it is not already,
@@ -36,12 +36,12 @@ class BaseTest(unittest.TestCase):
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
 
-        if (msg is None):
-            msg = FORMAT_STR % (a_json, b_json)
+        if (message is None):
+            message = FORMAT_STR % (a_json, b_json)
 
-        super().assertDictEqual(a, b, msg = msg)
+        super().assertDictEqual(a, b, msg = message)
 
-    def assertJSONListEqual(self, a: typing.List[typing.Any], b: typing.List[typing.Any], msg: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
+    def assertJSONListEqual(self, a: typing.List[typing.Any], b: typing.List[typing.Any], message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
         Call assertDictEqual(), but supply a default message containing the full JSON representation of the arguments.
         """
@@ -49,10 +49,10 @@ class BaseTest(unittest.TestCase):
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
 
-        if (msg is None):
-            msg = FORMAT_STR % (a_json, b_json)
+        if (message is None):
+            message = FORMAT_STR % (a_json, b_json)
 
-        super().assertListEqual(a, b, msg = msg)
+        super().assertListEqual(a, b, msg = message)
 
     def format_error_string(self, ex: typing.Union[BaseException, None]) -> str:
         """
