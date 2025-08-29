@@ -20,8 +20,8 @@ pip3 install .
 ## Configuration System
 
 This project provides a configuration system that supplies configuration options to a command line interface (CLI) tool.
-Specify a different file name when calling the configuration system to change it.
 For this documentation, the default file name (`edq-config.json`) is used.
+Specify a different file name when calling the configuration system to change the default.
 
 ### Configuration Sources
 
@@ -51,7 +51,7 @@ The first file found will be used, and other locations will not be searched.
 Local config search order:
 1. `edq-config.json` in the current directory.
 2. A legacy file in the current directory (only if the config system supports a specified legacy file).
-3. `edq-config.json` in any ancestor directory on the path to root (or up to a cutoff limit, if specified in the config system).
+3. `edq-config.json` in any ancestor directory on the path to root (or up to a cutoff limit, if specified to the config system).
 
 #### CLI-Specified Config Files
 
@@ -62,4 +62,4 @@ Later files will override options from previous ones.
 
 Options passed directly on the command line (e.g., `--user`, `--token`, `--server`).
 These always override every other configuration source.
-The configuration system can be set to ignore specific CLI keys when applying overrides, if needed.
+The configuration system can be set to ignore specific CLI options when applying overrides, if needed.
