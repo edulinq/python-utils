@@ -41,7 +41,6 @@ According to [platformdirs](https://github.com/tox-dev/platformdirs), this locat
 You can change the global config location by passing a path to `--global-config` in the command line.
 This type of config is best suited for login credentials or persistent user preferences.
 Run any CLI tool with `--help` to see the exact path for your platform.
-A global config may look like:
 
 #### Local Configuration
 
