@@ -20,19 +20,21 @@ pip3 install .
 ## Configuration System
 
 This project provides a configuration system that supplies configuration options to a command line interface (CLI) tool.
-The configuration file is named `edq-config.json` by default. Specify a different file name when calling the configuration system to change it.
+Specify a different file name when calling the configuration system to change it.
 For this documentation, the default file name (`edq-config.json`) is used.
 
 ### Configuration Sources
 
-Configuration options can come from several places. Later sources overwrite earlier ones. The table below explains the sources:
+Configuration options can be set in multiple places.
+If the same option is set in more than one place, the value from the later source overrides the earlier ones.
+The table below shows the order in which sources are applied, from top to bottom.
 
 | Sources | Description |
 | :-------: | :----------- |
-| Global | The default global configuration file, `edq-config.json`, lives in the platform-specific user configuration directory, as recommended by [platformdirs](https://github.com/tox-dev/platformdirs). Use the `--global-config` option to change its location.|
-| Local | The search stops when it finds a match. The system resolves local config in this order: `edq-config.json` in the current directory, a supported legacy file in the current directory, then the nearest ancestor `edq-config.json`.|
-| CLI | When multiple config files are passed with `--config-file`, the system loads them sequentially. Options in later files override those in earlier ones.|
-| CLI Bear | Command-line options (e.g., `--user`, `--token`, `--server`) override all other configuration sources unless specific keys are configured to be ignored.|
+| Global | Global config file defaults to a platform-specific user location and can be changed with the `--global-config` option.|
+| Local | Local configuration is loaded from the first matching file found, starting in the current directory and moving up to ancestor directories.|
+| CLI | Files passed with `--config-file` are loaded in order, with later files overriding earlier ones.|
+| CLI Bear | Command-line options override all other configuration sources.|
 
 #### Global Configuration
 
@@ -40,7 +42,7 @@ The global config file defaults to `<platform-specific user config location>/edq
 According to [platformdirs](https://github.com/tox-dev/platformdirs), this location serves as the proper place to store user-related configuration.
 You can change the global config location by passing a path to `--global-config` in the command line.
 This type of config is best suited for login credentials or persistent user preferences.
-Run any CLI tool with `--help` to see the exact path for your platform.
+Run any CLI tool with `--help` to see the exact path for the current platform under the flag `--config-file`.
 
 #### Local Configuration
 
