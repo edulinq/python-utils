@@ -14,12 +14,11 @@ class BaseTest(unittest.TestCase):
     maxDiff = None
     """ Don't limit the size of diffs. """
 
-    def assertJSONDictEqual(self, a: typing.Any, b: typing.Any) -> None:  # pylint: disable=invalid-name
+    def assertJSONDictEqual(self, a: typing.Any, b: typing.Any, message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
         Like unittest.TestCase.assertDictEqual(),
         but will try to convert each comparison argument to a dict if it is not already,
-        and uses an assertion message containing the full JSON representation of the arguments.
-
+        and uses a default assertion message containing the full JSON representation of the arguments.
         """
 
         if (not isinstance(a, dict)):
@@ -37,17 +36,23 @@ class BaseTest(unittest.TestCase):
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
 
-        super().assertDictEqual(a, b, FORMAT_STR % (a_json, b_json))
+        if (message is None):
+            message = FORMAT_STR % (a_json, b_json)
 
-    def assertJSONListEqual(self, a: typing.List[typing.Any], b: typing.List[typing.Any]) -> None:  # pylint: disable=invalid-name
+        super().assertDictEqual(a, b, msg = message)
+
+    def assertJSONListEqual(self, a: typing.List[typing.Any], b: typing.List[typing.Any], message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
-        Call assertListEqual(), but supply a message containing the full JSON representation of the arguments.
+        Call assertDictEqual(), but supply a default message containing the full JSON representation of the arguments.
         """
 
         a_json = edq.util.json.dumps(a, indent = 4)
         b_json = edq.util.json.dumps(b, indent = 4)
 
-        super().assertListEqual(a, b, FORMAT_STR % (a_json, b_json))
+        if (message is None):
+            message = FORMAT_STR % (a_json, b_json)
+
+        super().assertListEqual(a, b, msg = message)
 
     def format_error_string(self, ex: typing.Union[BaseException, None]) -> str:
         """
