@@ -37,7 +37,7 @@ For example, a configuration file containing the `user` and `token` options migh
 ```
 
 The table below lists configuration sources in the order they are evaluated, from the first source at the top row to the last source at the bottom row.
-All sources are processed in the order show in the table: if an option appears only in one source, it is included as is.
+All sources are processed in the order shown in the table: if an option appears only in one source, it is included as is.
 If the same option appears in multiple sources, the value from the later source in the table overrides the earlier one.
 
 | Sources  | Description |
@@ -68,7 +68,7 @@ Local configuration files are searched in multiple locations, first file found i
 Once a file is located, the search for local configuration stops.
 Local config search order:
 1. `edq-config.json` in the current directory.
-2. A legacy file in the current directory (only if a specified legacy file is passed to the configuration system).
+2. A legacy file in the current directory (only if a legacy file is passed to the configuration system).
 3. `edq-config.json` in any ancestor directory on the path to root (or up to a cutoff directory limit, if specified to the configuration system).
 
 #### CLI-Specified Config Files
@@ -78,14 +78,14 @@ Later files will override options from previous ones.
 
 Below is an example of a CLI specified configuration path:
 ```
-cli-tool <command> --config-file /path/to/file/<file-name>.json
+cli-tool <command> --config-file <file-name>.json --config-file ~/.secrets/<file-name>.json
 ```
 
 #### Bare CLI Options
 
 Options passed directly on the command line (e.g., `--user`, `--token`, `--server`).
 These always override every other configuration source.
-The configuration system skips specific CLI options when applying overrides if certain keys are passed to it.
+The configuration system ignores certain CLI options when applying overrides if specific skip-keys are provided.
 
 Below is an example of specifying a config option directly from the CLI:
 ```
