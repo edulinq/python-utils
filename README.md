@@ -37,14 +37,14 @@ For example, a configuration file containing the `user` and `token` options migh
 ```
 
 The table below lists the configuration sources in the order they are evaluated.
-All sources are processed in the order shown in the table: if an option appears only in one source, it is included as is.
-If the same option appears in multiple sources, the value from the later source in the table overrides the earlier one.
+All sources are processed in the order shown in the table.
+When there are multiple sources, the value from the later source in the table overrides the earlier one.
 
 | Source   | Description |
 | :-----:  | :---------- |
-| Global   | Global configuration file defaults to a platform-specific user location and can be changed with the `--global-config` option. |
+| Global   | The global configuration file path is a platform-specific user location by default. |
 | Local    | Local configuration is loaded from the first matching file found, starting in the current directory and moving up to ancestor directories until root. |
-| CLI File | Files passed with `--config-file` are loaded in order, with later files overriding earlier ones. |
+| CLI File | Files passed with `--file` are loaded in order, with later files overriding earlier ones. |
 | CLI      | Command-line options override all other configuration sources. |
 
 The system produces an error if a global or local configuration file is unreadable (but not missing), or if a CLI-specified file is unreadable or missing.
@@ -53,9 +53,8 @@ The system produces an error if a global or local configuration file is unreadab
 
 The global configuration file defaults to `<platform-specific user configuration location>/edq-config.json`.
 The configuration location is chosen according to the [XDG standard](https://en.wikipedia.org/wiki/Freedesktop.org#Base_Directory_Specification) (implemented by [platformdirs](https://github.com/tox-dev/platformdirs)).
-The global configuration location can be changed by passing a path to `--global-config` to the command line.
-This type of configuration is best suited for login credentials or persistent user preferences.
-Run any CLI command with `--help` to see the exact path for the current platform under the flag `--global-config`.
+The default global configuration location can be changed by passing a path to `--global` through the command line.
+This type of configuration is best suited for options that follow the user across multiple projects.
 
 #### Local Configuration
 
@@ -67,7 +66,7 @@ The Local config search order is:
 
 #### CLI-Specified Config Files
 
-Any files passed via `--config-file` will be loaded in the order they appear on the command line.
+Any files passed via `--file` will be loaded in the order they appear on the command line.
 Later files will override options from previous ones.
 
 Below is an example of a CLI specified configuration path:
@@ -75,12 +74,26 @@ Below is an example of a CLI specified configuration path:
 python3 -m edq.cli.config.list --config-file <file-name>.json --config-file ~/.secrets/<file-name>.json
 ```
 
-#### Bare CLI Options
+#### CLI Configuration
 
-Options passed directly on the command line (e.g., `--user`, `--token`, `--server`).
-These always override every other configuration source.
+Configuration options are structured as `key` and `value` pairs.
+Keys cannot contain the "=" character.
+Configuration options are passed to the command line by the `--config`/`-c` flag in this format `-c <key>=<value>`.
+The provided value overrides the key’s value from configuration files.
 
 Below is an example of specifying a config option directly from the CLI:
 ```
-python3 -m edq.cli.config.list --user=edq-user --token=12345
+python3 -m edq.cli.config.list -c user=edq-user -c token=12345
 ```
+
+#### CLI Config Options
+
+The table below lists all the default configuration CLI options available.
+
+| CLI Option     | Description |
+| :------------: | :---------- |
+|`--global`      | For writing options: writes to the default global file path, or to the specified file if provided. For reading options: loads global configuration from the default global file path, or from the specified file if provided. When `--help` is used, the exact default global file path for the current platform will be displayed under this flag. |
+| `--local`      | For writing options: writes to the first local file found (check local config section for [search order.](#local-configuration)). If none exists, creates an `edq-config.json` in the current directory and writes to it. For reading options: loads local configuration as described in [local configuration section](#local-configuration) |
+|`--file`        | For writing options: writes to the specified file. For reading options: loads CLI file config options from the specified file. |
+| `--config`/`-c`| For providing additional CLI configuration parameters when running any config command. |
+| `--help`       | Displays a help message with detailed descriptions of each option. |
