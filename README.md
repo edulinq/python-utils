@@ -92,8 +92,8 @@ The table below lists all the default configuration CLI options available.
 
 | CLI Option     | Description |
 | :------------: | :---------- |
-|`--global`      | For writing options: writes to the default global file path, or to the specified file if provided. For reading options: loads global configuration from the default global file path, or from the specified file if provided. When `--help` is used, the exact default global file path for the current platform will be displayed under this flag. |
-| `--local`      | For writing options: writes to the first local file found (check local config section for [search order.](#local-configuration)). If none exists, creates an `edq-config.json` in the current directory and writes to it. For reading options: loads local configuration as described in [local configuration section](#local-configuration) |
+|`--global`      | For writing options: writes to the default global file path, or to the specified file if provided. For reading options: loads only global configuration from the default global file path, or from the specified file if provided. When `--help` is used, the exact default global file path for the current platform will be displayed under this flag. |
+| `--local`      | For writing options: writes to the first local file found (check local config section for [search order.](#local-configuration)). If none exists, creates an `edq-config.json` in the current directory and writes to it. For reading options: loads only local configuration as described in [local configuration section](#local-configuration) |
 |`--file`        | For writing options: writes to the specified file. For reading options: loads CLI file config options from the specified file. |
 | `--config`/`-c`| For providing additional CLI configuration parameters when running any config command. |
 | `--help`       | Displays a help message with detailed descriptions of each option. |
