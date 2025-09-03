@@ -90,10 +90,12 @@ python3 -m edq.cli.config.list -c user=edq-user -c token=12345
 
 The table below lists all the default configuration CLI options available.
 
-| CLI Option     | Description |
+| CLI Option      | Description |
 | :------------: | :---------- |
-|`--global`      | For writing options: writes to the default global file path, or to the specified file if provided. For reading options: loads only global configuration from the default global file path, or from the specified file if provided. When `--help` is used, the exact default global file path for the current platform will be displayed under this flag. |
-| `--local`      | For writing options: writes to the first local file found (check local config section for [search order.](#local-configuration)). If none exists, creates an `edq-config.json` in the current directory and writes to it. For reading options: loads only local configuration as described in [local configuration section](#local-configuration) |
-|`--file`        | For writing options: writes to the specified file. For reading options: loads CLI file config options from the specified file. |
-| `--config`/`-c`| For providing additional CLI configuration parameters when running any config command. |
-| `--help`       | Displays a help message with detailed descriptions of each option. |
+|`--config-global`| Loads only global configuration from the default global file path, or from the specified file if provided. When `--help` is used, the exact default global file path for the current platform will be displayed under this flag. |
+|`--global`       | Writes or deletes from the default global file path. |
+| `--local`       | Writes or deletes from the first local config file found (check local config section for [search order.](#local-configuration)). If no local config file is found, an `edq-config.json` file is created in the current directory, and the specified configuration option is written to it. |
+|`--config-file`  | For writing options: writes to the specified file. For reading options: loads [CLI file](#cli-specified-config-files) config options from the specified file. |
+| `--config`      | For providing additional CLI configuration parameters when running any config command. |
+| `--show-origin` | Shows where each configuration's value was obtained from. |
+| `--help`        | Displays a help message with detailed descriptions of each option. |
