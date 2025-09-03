@@ -11,6 +11,7 @@ import argparse
 import typing
 
 import edq.core.log
+import edq.core.config
 
 @typing.runtime_checkable
 class PreParseFunction(typing.Protocol):
@@ -108,5 +109,6 @@ def get_default_parser(description: str) -> Parser:
     parser = Parser(description = description)
 
     parser.register_callbacks('log', edq.core.log.set_cli_args, edq.core.log.init_from_args)
+    parser.register_callbacks('config', edq.core.config.set_cli_args, edq.core.config.config_from_parsed_args)
 
     return parser
