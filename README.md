@@ -37,14 +37,14 @@ For example, a configuration file containing the `user` and `token` options migh
 ```
 
 The table below lists the configuration sources in the order they are evaluated.
-All sources are processed in the order shown in the table.
-When there are multiple sources, the value from the later source in the table overrides the earlier one.
+All sources are processed in the order shown in the table. 
+The value from the later source in the table overrides the earlier one if there are multiple sources.
 
 | Source   | Description |
 | :-----:  | :---------- |
 | Global   | The global configuration file path is a platform-specific user location by default. |
 | Local    | Local configuration is loaded from the first matching file found, starting in the current directory and moving up to ancestor directories until root. |
-| CLI File | Files passed with `--file` are loaded in order, with later files overriding earlier ones. |
+| CLI File | Files passed with `--config-file` are loaded in order, with later files overriding earlier ones. |
 | CLI      | Command-line options override all other configuration sources. |
 
 The system produces an error if a global or local configuration file is unreadable (but not missing), or if a CLI-specified file is unreadable or missing.
@@ -53,7 +53,7 @@ The system produces an error if a global or local configuration file is unreadab
 
 The global configuration file defaults to `<platform-specific user configuration location>/edq-config.json`.
 The configuration location is chosen according to the [XDG standard](https://en.wikipedia.org/wiki/Freedesktop.org#Base_Directory_Specification) (implemented by [platformdirs](https://github.com/tox-dev/platformdirs)).
-The default global configuration location can be changed by passing a path to `--global` through the command line.
+The default global configuration location can be changed by passing a path to `--config-global` through the command line.
 This type of configuration is best suited for options that follow the user across multiple projects.
 
 #### Local Configuration
@@ -62,11 +62,11 @@ Local configuration files are searched in multiple locations, the first file fou
 The Local config search order is:
 1. `edq-config.json` in the current directory.
 2. A legacy file in the current directory (only if a legacy file is preconfigured).
-3. `edq-config.json` in any ancestor directory on the path to root .
+3. `edq-config.json` in any ancestor directory on the path to root.
 
 #### CLI-Specified Config Files
 
-Any files passed via `--file` will be loaded in the order they appear on the command line.
+Any files passed via `--config-file` will be loaded in the order they appear on the command line.
 Later files will override options from previous ones.
 
 Below is an example of a CLI specified configuration path:
@@ -76,26 +76,26 @@ python3 -m edq.cli.config.list --config-file <file-name>.json --config-file ~/.s
 
 #### CLI Configuration
 
-Configuration options are structured as `key` and `value` pairs.
+Configuration options are structured as key value pairs.
 Keys cannot contain the "=" character.
-Configuration options are passed to the command line by the `--config`/`-c` flag in this format `-c <key>=<value>`.
-The provided value overrides the key’s value from configuration files.
+Configuration options are passed to the command line by the `--config` flag in this format `--config <key>=<value>`.
+The provided values overrides the values from configuration files.
 
 Below is an example of specifying a config option directly from the CLI:
 ```
-python3 -m edq.cli.config.list -c user=edq-user -c token=12345
+python3 -m edq.cli.config.list --config user=edq-user --config token=12345
 ```
 
 #### CLI Config Options
 
 The table below lists all the default configuration CLI options available.
 
-| CLI Option      | Description |
-| :------------: | :---------- |
-|`--config-global`| Loads only global configuration from the default global file path, or from the specified file if provided. When `--help` is used, the exact default global file path for the current platform will be displayed under this flag. |
-|`--global`       | Writes or deletes from the default global file path. |
-| `--local`       | Writes or deletes from the first local config file found (check local config section for [search order.](#local-configuration)). If no local config file is found, an `edq-config.json` file is created in the current directory, and the specified configuration option is written to it. |
-|`--config-file`  | For writing options: writes to the specified file. For reading options: loads [CLI file](#cli-specified-config-files) config options from the specified file. |
-| `--config`      | For providing additional CLI configuration parameters when running any config command. |
-| `--show-origin` | Shows where each configuration's value was obtained from. |
-| `--help`        | Displays a help message with detailed descriptions of each option. |
+| CLI Option       | Description |
+| :-------------:  | :---------- |
+|`--config-global` | Loads only global configuration from the default global file path, or from the specified file if provided. When `--help` is used, the exact default global file path for the current platform will be displayed under this flag. |
+|`--global`        | Writes or deletes from the default global file path. |
+| `--local`        | Writes or deletes from the first local config file found (check local config section for [search order.](#local-configuration)). If no local config file is found, an `edq-config.json` file is created in the current directory, and the specified configuration option is written to it. |
+|`--config-file`   | For writing options: writes to the specified file. For reading options: loads [CLI file](#cli-specified-config-files) config options from the specified file. |
+| `--config`       | For providing additional CLI configuration parameters when running any config command. |
+| `--show-origin`  | Shows where each configuration's value was obtained from. |
+| `--help`         | Displays a help message with detailed descriptions of each option. |
