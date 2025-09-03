@@ -25,14 +25,14 @@ The configuration system follows a tiered order, allowing options to be specifie
 ### Configuration Sources
 
 In addition to CLI options, the configuration system loads options from [JSON](https://en.wikipedia.org/wiki/JSON) files located across multiple directories.
-By default, config files are named `edq-config.json`.
+By default, configuration files are named `edq-config.json`.
 This value is customizable, but this document will assume the default is used.
 
-For example, a configuration file containing the `user` and `token` options might look like this:
+For example, a configuration file containing the `user` and `pass` options might look like this:
 ```
 {
     "user": "edq-user",
-    "token": "1234567890"
+    "pass": "1234567890"
 }
 ```
 
@@ -81,9 +81,9 @@ Keys cannot contain the "=" character.
 Configuration options are passed to the command line by the `--config` flag in this format `--config <key>=<value>`.
 The provided values overrides the values from configuration files.
 
-Below is an example of specifying a config option directly from the CLI:
+Below is an example of specifying a configuration option directly from the CLI:
 ```
-python3 -m edq.cli.config.list --config user=edq-user --config token=12345
+python3 -m edq.cli.config.list --config user=edq-user --config pass=1234567890
 ```
 
 #### CLI Config Options
@@ -92,10 +92,10 @@ The table below lists all the default configuration CLI options available.
 
 | CLI Option       | Description |
 | :-------------:  | :---------- |
-|`--config-global` | Loads only global configuration from the default global file path, or from the specified file if provided. When `--help` is used, the exact default global file path for the current platform will be displayed under this flag. |
-|`--global`        | Writes or deletes from the default global file path. |
-| `--local`        | Writes or deletes from the first local config file found (check local config section for [search order.](#local-configuration)). If no local config file is found, an `edq-config.json` file is created in the current directory, and the specified configuration option is written to it. |
-|`--config-file`   | For writing options: writes to the specified file. For reading options: loads [CLI file](#cli-specified-config-files) config options from the specified file. |
-| `--config`       | For providing additional CLI configuration parameters when running any config command. |
+|`--config-global` | Loads global configuration options from the file provided instead of the default global configuration file path. |
+|`--global`        | Writes to or removes from the default global configuration file path. |
+| `--local`        | Writes to or removes from the first local configuration file found (check local configuration section for [search order.](#local-configuration)). If no local configuration file is found, an `edq-config.json` file is created in the current directory, and the specified configuration option is written to it. |
+|`--config-file`   | For writing options: writes to the specified file. For reading options: loads [CLI specified file](#cli-specified-config-files) configuration options from the specified file. |
+| `--config`       | For providing additional CLI configuration parameters to a CLI command. |
 | `--show-origin`  | Shows where each configuration's value was obtained from. |
-| `--help`         | Displays a help message with detailed descriptions of each option. |
+| `--help`         | Displays a help message with detailed descriptions of each option. Shows the exact default global configuration file path for the current platform. |
