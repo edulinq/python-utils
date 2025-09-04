@@ -50,7 +50,7 @@ The system produces an error if a global or local configuration file is unreadab
 
 #### Global Configuration
 
-Global configuration are options that are user specific and stick with the user between projects like login credentials.
+Global configuration are options that are user specific and stick with the user between projects, they are well suited for options like login credentials.
 The global configuration file defaults to `<platform-specific user configuration location>/edq-config.json`.
 The configuration location is chosen according to the [XDG standard](https://en.wikipedia.org/wiki/Freedesktop.org#Base_Directory_Specification) (implemented by [platformdirs](https://github.com/tox-dev/platformdirs)). 
 Below are examples of user-specific configuration file paths for different operating systems:
@@ -66,7 +66,7 @@ python3 -m edq.cli.config.list --config-global ~/work/edq-config.json
 ```
 
 #### Local Configuration
-Local configurations are options scoped to a specific project or directory. They are best used for options relevant only to the work within that context.
+Local configuration are options that are specific to a project or directory, they are useful for options relevant only to the work within that context.
 Local configuration files are searched in multiple locations, the first file found is used.
 The local config search order is:
 1. `edq-config.json` in the current directory.
@@ -74,7 +74,7 @@ The local config search order is:
 3. `edq-config.json` in any ancestor directory on the path to root (including root itself).
 
 #### CLI-Specified Config Files
-CLI config files are options specified on the command line via a file, they are useful when you have a common set of options to apply but don't always apply for a user/project, 
+CLI config files are options specified on the command line via a file, they are useful when you have a common set of options to apply but don't always apply for a user/project,
 for example when you want to login to an alternate user account.
 Any files passed via `--config-file` will be loaded in the order they appear on the command line.
 Options from later files override options from previous files.
@@ -85,7 +85,7 @@ python3 -m edq.cli.config.list --config-file ./edq-config.json --config-file ~/.
 ```
 
 #### CLI Configuration
-CLI configurations are configuration options specified directly on the command line, they are useful for quick configuration overrides without editing files.
+CLI configurations are options specified directly on the command line, they are useful for quick configuration overrides without editing files.
 Configuration options are passed to the command line by the `--config` flag in this format `--config <key>=<value>`.
 The provided values overrides the values from configuration files.
 Configuration options are structured as key value pairs and keys cannot contain the "=" character.
@@ -118,7 +118,7 @@ For specifying a configuration option directly from the CLI:
 python3 -m edq.cli.config.list --config <key>=<value>
 ```
 
-For a CLI specified configuration path:
+For specifying a configuration file path from the CLI:
 ```sh
 python3 -m edq.cli.config.list --config-file <path>
 ```
