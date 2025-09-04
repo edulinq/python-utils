@@ -19,7 +19,7 @@ pip3 install .
 
 ## Configuration System
 
-This project provides a configuration system that supplies options (e.g., user name, password) to a command-line interface ([CLI](https://en.wikipedia.org/wiki/Command-line_interface)) tool.
+This project provides a configuration system that supplies options (e.g., username, password) to a command-line interface (CLI) tool.
 The configuration system follows a tiered order, allowing options to be specified and overridden from both files and command-line options.
 
 ### Configuration Sources
@@ -29,40 +29,43 @@ By default, configuration files are named `edq-config.json`.
 This value is customizable, but this document will assume the default is used.
 
 For example, a configuration file containing the `user` and `pass` options might look like this:
-```
+```json
 {
-    "user": "edq-user",
-    "pass": "1234567890"
+    "user": "alice",
+    "pass": "password123"
 }
 ```
 
-The table below lists the configuration sources in the order they are evaluated.
-All sources are processed in the order shown in the table. 
+The table below summarizes the configuration sources in the order they are evaluated.
 The value from the later source in the table overrides the earlier one if there are multiple sources.
 
 | Source   | Description |
-| :-----:  | :---------- |
-| Global   | The global configuration file path is a platform-specific user location by default. |
-| Local    | Local configuration is loaded from the first matching file found, starting in the current directory and moving up to ancestor directories until root. |
-| CLI File | Files passed with `--config-file` are loaded in order, with later files overriding earlier ones. |
-| CLI      | Command-line options override all other configuration sources. |
+| :-----   | :---------- |
+| Global   | Configurations that are loaded from a file in a user-specific path, platform-dependent location. |
+| Local    | Configurations that are loaded from a file in the current or nearest ancestor directory. |
+| CLI File | Configurations that are loaded from one or more explicitly provided configuration files through the CLI. |
+| CLI      | Configurations that are loaded from the command line. |
 
 The system produces an error if a global or local configuration file is unreadable (but not missing), or if a CLI-specified file is unreadable or missing.
 
 #### Global Configuration
 
 The global configuration file defaults to `<platform-specific user configuration location>/edq-config.json`.
-The configuration location is chosen according to the [XDG standard](https://en.wikipedia.org/wiki/Freedesktop.org#Base_Directory_Specification) (implemented by [platformdirs](https://github.com/tox-dev/platformdirs)).
+The configuration location is chosen according to the [XDG standard](https://en.wikipedia.org/wiki/Freedesktop.org#Base_Directory_Specification) (implemented by [platformdirs](https://github.com/tox-dev/platformdirs)). Below are examples of user-specific application configuration file paths for different operating systems:
+ - Linux -- `~/.config/edq-config.json`
+ - Mac -- `~/Library/Application Support/edq-config.json`
+ - Windows -- `C:\Documents and Settings\<User>\Application Data\edq-config.json`
+
 The default global configuration location can be changed by passing a path to `--config-global` through the command line.
-This type of configuration is best suited for options that follow the user across multiple projects.
+This type of configuration is best suited for options that follow the user across multiple projects e.g., login credentials.
 
 #### Local Configuration
 
 Local configuration files are searched in multiple locations, the first file found is used.
-The Local config search order is:
+The local config search order is:
 1. `edq-config.json` in the current directory.
 2. A legacy file in the current directory (only if a legacy file is preconfigured).
-3. `edq-config.json` in any ancestor directory on the path to root.
+3. `edq-config.json` in any ancestor directory on the path to root (including root itself).
 
 #### CLI-Specified Config Files
 
@@ -70,32 +73,27 @@ Any files passed via `--config-file` will be loaded in the order they appear on 
 Later files will override options from previous ones.
 
 Below is an example of a CLI specified configuration path:
-```
-python3 -m edq.cli.config.list --config-file <file-name>.json --config-file ~/.secrets/<file-name>.json
+```sh
+python3 -m edq.cli.config.list --config-file edq-config.json --config-file ~/.secrets/edq-config.json
 ```
 
 #### CLI Configuration
 
-Configuration options are structured as key value pairs.
-Keys cannot contain the "=" character.
 Configuration options are passed to the command line by the `--config` flag in this format `--config <key>=<value>`.
 The provided values overrides the values from configuration files.
+Configuration options are structured as key value pairs and keys cannot contain the "=" character.
 
 Below is an example of specifying a configuration option directly from the CLI:
-```
+```sh
 python3 -m edq.cli.config.list --config user=edq-user --config pass=1234567890
 ```
 
 #### CLI Config Options
 
-The table below lists all the default configuration CLI options available.
+CLI tools using this library will have the CLI options listed in the table below:
 
 | CLI Option       | Description |
-| :-------------:  | :---------- |
-|`--config-global` | Loads global configuration options from the file provided instead of the default global configuration file path. |
-|`--global`        | Writes to or removes from the default global configuration file path. |
-| `--local`        | Writes to or removes from the first local configuration file found (check local configuration section for [search order.](#local-configuration)). If no local configuration file is found, an `edq-config.json` file is created in the current directory, and the specified configuration option is written to it. |
+| :--------------  | :---------- |
+|`--config-global` | Override the global config file location. |
 |`--config-file`   | For writing options: writes to the specified file. For reading options: loads [CLI specified file](#cli-specified-config-files) configuration options from the specified file. |
-| `--config`       | For providing additional CLI configuration parameters to a CLI command. |
-| `--show-origin`  | Shows where each configuration's value was obtained from. |
-| `--help`         | Displays a help message with detailed descriptions of each option. Shows the exact default global configuration file path for the current platform. |
+| `--help`         | Displays standard help text and the default global configuration file path for the current platform. |
