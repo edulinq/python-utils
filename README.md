@@ -62,7 +62,7 @@ The default global configuration location can be changed by passing a path to `-
 
 Below is an example command for specifying a global configuration path from the CLI:
 ```sh
-python3 -m edq.cli.config.list --config-global  ~/.config/my-edq-config.json
+python3 -m edq.cli.config.list --config-global  ~/.config/custom-config.json
 ```
 
 #### Local Configuration
@@ -110,7 +110,7 @@ The following are some basic usage commands for common CLI options.
 
 For specifying a global configuration path from the CLI:
 ```sh
-python3 -m edq.cli.config.list --config-global ~/.config/my-edq-config.json
+python3 -m edq.cli.config.list --config-global ~/.config/custom-config.json
 ```
 
 For specifying a configuration file path from the CLI:
