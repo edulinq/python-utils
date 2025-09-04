@@ -52,8 +52,8 @@ The system produces an error if a global or local configuration file is unreadab
 
 The global configuration file defaults to `<platform-specific user configuration location>/edq-config.json`.
 The configuration location is chosen according to the [XDG standard](https://en.wikipedia.org/wiki/Freedesktop.org#Base_Directory_Specification) (implemented by [platformdirs](https://github.com/tox-dev/platformdirs)). Below are examples of user-specific configuration file paths for different operating systems:
- - Linux -- `~/.config/edq-config.json`
- - Mac -- `~/Library/Application\ Support/edq-config.json`
+ - Linux -- `/Users/<user>/.config/edq-config.json`
+ - Mac -- `/Users/<user>/Library/Application\ Support/edq-config.json`
  - Windows -- `C:\Users\<user>\AppData\Local\edq-config.json`
 
 The default global configuration location can be changed by passing a path to `--config-global` through the command line.
@@ -72,7 +72,7 @@ The local config search order is:
 Any files passed via `--config-file` will be loaded in the order they appear on the command line.
 Later files will override options from previous ones.
 
-Below is an example of a CLI specified configuration path:
+Below is an example of a CLI specified configuration paths:
 ```sh
 python3 -m edq.cli.config.list --config-file ./edq-config.json --config-file ~/.secrets/edq-config.json
 ```
