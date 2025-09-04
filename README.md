@@ -51,7 +51,8 @@ The system produces an error if a global or local configuration file is unreadab
 #### Global Configuration
 
 The global configuration file defaults to `<platform-specific user configuration location>/edq-config.json`.
-The configuration location is chosen according to the [XDG standard](https://en.wikipedia.org/wiki/Freedesktop.org#Base_Directory_Specification) (implemented by [platformdirs](https://github.com/tox-dev/platformdirs)). Below are examples of user-specific configuration file paths for different operating systems:
+The configuration location is chosen according to the [XDG standard](https://en.wikipedia.org/wiki/Freedesktop.org#Base_Directory_Specification) (implemented by [platformdirs](https://github.com/tox-dev/platformdirs)). 
+Below are examples of user-specific configuration file paths for different operating systems:
  - Linux -- `/Users/<user>/.config/edq-config.json`
  - Mac -- `/Users/<user>/Library/Application\ Support/edq-config.json`
  - Windows -- `C:\Users\<user>\AppData\Local\edq-config.json`
