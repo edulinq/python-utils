@@ -95,6 +95,6 @@ The table below lists all the default configuration CLI options available for CL
 | CLI Option       | Description |
 | :--------------  | :---------- |
 |`--config-global` | Override the global config file location. |
-|`--config-file`   | For writing options: writes to the specified file. For reading options: loads [CLI specified file](#cli-specified-config-files) configuration options from the specified file. |
-| `--config` | For providing additional CLI configuration parameters to a CLI command. |
+|`--config-file`   | Load [CLI specified file](#cli-specified-config-files) configuration options from the specified file. |
+| `--config`       | For providing additional CLI configuration parameters to a CLI command. |
 | `--help`         | Displays standard help text and the default global configuration file path for the current platform. |
