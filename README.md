@@ -41,10 +41,10 @@ The value from the later source in the table overrides the earlier one if there 
 
 | Source   | Description |
 | :-----   | :---------- |
-| Global   | Configuration options that are loaded from a file in a user-specific location, which is platform-dependent. |
-| Local    | Configuration options that are loaded from a file in the current or nearest ancestor directory. |
-| CLI File | Configuration options that are loaded from one or more explicitly provided configuration files through the CLI. |
-| CLI      | Configuration options that are loaded from the command line. |
+| Global   | Configuration that is loaded from a file in a user-specific location, which is platform-dependent. |
+| Local    | Configuration that is loaded from a file in the current or nearest ancestor directory. |
+| CLI File | Configuration that is loaded from one or more explicitly provided configuration files through the CLI. |
+| CLI      | Configuration that is loaded from the command line. |
 
 The system produces an error if a global or local configuration file is unreadable (but not missing), or if a CLI-specified file is unreadable or missing.
 
