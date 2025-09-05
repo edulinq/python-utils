@@ -199,7 +199,7 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
         action = 'store_true', help = "Shows where each configuration's value was obtained from.")
 
     parser.add_argument('--config-global', dest = 'global_config_path',
-        action = 'store', type = str, default = DEFAULT_GLOBAL_CONFIG_PATH ,
+        action = 'store', type = str, default = DEFAULT_GLOBAL_CONFIG_PATH,
         help = 'Path to the global configuration file (default: %(default)s).')
 
     parser.add_argument('--config', dest = 'config',
@@ -207,7 +207,7 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
         help = "Specify configuration options as key=value pairs. "
             + "Multiple options can be specified, values set here override values from config files."
     )
-    
+
 def config_from_parsed_args(
         parser: argparse.ArgumentParser,
         args: argparse.Namespace,
