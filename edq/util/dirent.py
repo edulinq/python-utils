@@ -41,6 +41,8 @@ def get_temp_path(prefix: str = '', suffix: str = '', rm: bool = True) -> str:
     while ((path is None) or exists(path)):
         path = os.path.join(tempfile.gettempdir(), prefix + str(uuid.uuid4()) + suffix)
 
+    path = os.path.realpath(path)
+
     if (rm):
         atexit.register(remove, path)
 
