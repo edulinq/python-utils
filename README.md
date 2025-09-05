@@ -67,7 +67,7 @@ python3 -m edq.cli.config.list --config-global  ~/.config/custom-config.json
 
 #### Local Configuration
 
-Local configuration are options that are specific to a project or directory, like a projects build directory.
+Local configuration are options that are specific to a project or directory, like a project's build directory.
 Local configuration files are searched in multiple locations, the first file found is used.
 The local config search order is:
 1. `edq-config.json` in the current directory.
@@ -77,7 +77,7 @@ The local config search order is:
 #### CLI-Specified Config Files
 
 CLI config files are options specified on the command line via a file.
-These are useful for a common set of options you don’t need every time, such as login credential for different user.
+These are useful for a common set of options you don’t need every time, such as login credentials for different user.
 Any files passed via `--config-file` will be loaded in the order they appear on the command line.
 Options from later files override options from previous files.
 
@@ -106,5 +106,5 @@ The table below lists common configuration CLI options available for CLI tools u
 | :--------------  | :---------- |
 |`--config-global` | Override the global config file location. |
 |`--config-file`   | Load configuration options from a CLI specified file. |
-| `--config`       | Provide additional CLI options to a CLI command. |
+| `--config`       | Provide additional options to a CLI command. |
 | `--help`         | Display standard help text and the default global configuration file path for the current platform. |
