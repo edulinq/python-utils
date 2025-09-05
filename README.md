@@ -67,7 +67,7 @@ python3 -m edq.cli.config.list --config-global  ~/.config/custom-config.json
 
 #### Local Configuration
 
-Local configuration are options that are specific to a project or directory, these are well suited for options like project ID.
+Local configuration are options that are specific to a project or directory, like a projects build directory.
 Local configuration files are searched in multiple locations, the first file found is used.
 The local config search order is:
 1. `edq-config.json` in the current directory.
@@ -77,7 +77,7 @@ The local config search order is:
 #### CLI-Specified Config Files
 
 CLI config files are options specified on the command line via a file.
-These are useful for a common set of options you don’t need every time, such as logging in as a different user.
+These are useful for a common set of options you don’t need every time, such as login credential for different user.
 Any files passed via `--config-file` will be loaded in the order they appear on the command line.
 Options from later files override options from previous files.
 
@@ -88,7 +88,7 @@ python3 -m edq.cli.config.list --config-file ./edq-config.json --config-file ~/.
 
 #### CLI Configuration
 
-CLI configurations are options specified directly on the command line, these are useful for quick option overrides without editing files.
+CLI configurations are options specified directly on the command line, these are useful for quick option overrides without editing config files.
 Configuration options are passed to the command line by the `--config` flag in this format `<key>=<value>`.
 The provided values overrides the values from configuration files.
 Configuration options are structured as key value pairs and keys cannot contain the "=" character.
@@ -106,5 +106,5 @@ The table below lists common configuration CLI options available for CLI tools u
 | :--------------  | :---------- |
 |`--config-global` | Override the global config file location. |
 |`--config-file`   | Load configuration options from a CLI specified file. |
-| `--config`       | Provide configuration options to a CLI command. |
+| `--config`       | Provide additional CLI options to a CLI command. |
 | `--help`         | Display standard help text and the default global configuration file path for the current platform. |
