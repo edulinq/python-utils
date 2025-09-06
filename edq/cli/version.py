@@ -16,6 +16,7 @@ def run_cli(args: argparse.Namespace) -> int:
 
 def main() -> int:
     """ Get a parser, parse the args, and call run. """
+
     return run_cli(_get_parser().parse_args())
 
 def _get_parser() -> edq.core.argparser.Parser:

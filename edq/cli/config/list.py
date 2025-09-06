@@ -1,10 +1,13 @@
+import argparse
 import sys
 
 import edq.core.argparser
 
 DESCRIPTION = "List your current configuration options."
 
-def run(args):
+def run_cli(args: argparse.Namespace) -> int:
+    """ Run the CLI. """
+
     config_list = []
     for (key, value) in args._config.items():
         config_str = f"{key}\t{value}"
@@ -17,8 +20,15 @@ def run(args):
     print("\n".join(config_list))
     return 0
 
-def main():
-    return run(edq.core.argparser.get_default_parser(DESCRIPTION).parse_args())
+def main() -> int:
+    """ Get a parser, parse the args, and call run. """
+
+    return run_cli(_get_parser().parse_args())
+
+def _get_parser() -> edq.core.argparser.Parser:
+    """ Get the parser. """
+
+    return edq.core.argparser.get_default_parser(DESCRIPTION)
 
 if (__name__ == '__main__'):
     sys.exit(main())
