@@ -10,8 +10,8 @@ while post-callbacks are generally intended to act on the results of parsing.
 import argparse
 import typing
 
-import edq.core.log
 import edq.core.config
+import edq.core.log
 
 @typing.runtime_checkable
 class PreParseFunction(typing.Protocol):
