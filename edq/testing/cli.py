@@ -30,6 +30,7 @@ import edq.util.pyimport
 
 TEST_CASE_SEP: str = '---'
 DATA_DIR_ID: str = '__DATA_DIR__'
+ABS_DATA_DIR_ID: str = '__ABS_DATA_DIR__'
 TEMP_DIR_ID: str = '__TEMP_DIR__'
 BASE_DIR_ID: str = '__BASE_DIR__'
 
@@ -175,6 +176,7 @@ class CLITestInfo:
             (DATA_DIR_ID, self.data_dir),
             (TEMP_DIR_ID, self.temp_dir),
             (BASE_DIR_ID, self.base_dir),
+            (ABS_DATA_DIR_ID, os.path.abspath(self.data_dir))
         ]
 
         for (key, target_dir) in replacements:

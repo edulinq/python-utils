@@ -1,0 +1,10 @@
+{
+    "cli": "edq.cli.config.list",
+    "arguments": [
+        "--config-file", "__DATA_DIR__(config/simple.json)",
+        "--config-global", "__DATA_DIR__(config/empty.json)",
+        "--show-origin",
+    ]
+}
+---
+user	user@test.edulinq.org	__ABS_DATA_DIR__(config/simple.json)

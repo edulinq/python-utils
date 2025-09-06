@@ -182,39 +182,33 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     Set common CLI arguments for configuration.
     """
 
-    parser.add_argument('--config-file', dest = 'config_paths',
-        action = 'append', type = str, default = None,
-        help = "A JSON config file with your submission/authentication details. "
-            + "Can be specified multiple times with later values overriding earlier ones. "
-            + "Config values can be specified in multiple places"
-            + "(with later values overriding earlier values): "
-            + f"First '{DEFAULT_GLOBAL_CONFIG_PATH}' or a global config specified with --config-global, "
-            + f"then '{DEFAULT_CONFIG_FILENAME}' in the current directory or the path to root. "
-            + "Then any files specified using --config-file in the order they were specified, "
-            + "and finally any variables specified directly on the command line either directly as a dedicated CLI flag (like --user) "
-            + "or as a configuration key-value pair to the CLI’s --config option."
-    )
-
-    parser.add_argument("--show-origin", dest = 'show_origin',
-        action = 'store_true', help = "Shows where each configuration's value was obtained from.")
-
     parser.add_argument('--config-global', dest = 'global_config_path',
         action = 'store', type = str, default = DEFAULT_GLOBAL_CONFIG_PATH,
-        help = 'Path to the global configuration file (default: %(default)s).')
+        help = 'Override the default global config file path (default: %(default)s).',
+    )
+
+    parser.add_argument('--config-file', dest = 'config_paths',
+        action = 'append', type = str, default = None,
+        help = "Load config options from a JSON file. "
+        + "When this flag is given multiple times files are applied in the order provided, and later files override earlier ones. "
+        + "This will override options form both global and local configs."
+    )
 
     parser.add_argument('--config', dest = 'config',
         action = 'append', type = str, default = None,
-        help = "Specify configuration options as key=value pairs. "
-            + "Multiple options can be specified, values set here override values from config files."
+        help = "Provide additional options to a CLI command. "
+        + "Specify configuration options as <key>=<value> pairs. "
+        + "This will override options form all config files."
     )
 
 def config_from_parsed_args(
         parser: argparse.ArgumentParser,
         args: argparse.Namespace,
-        extra_state: typing.Dict[str, typing.Any]) -> None:
+        extra_state: typing.Dict[str, typing.Any]
+    ) -> None:
     """
     Take in args from a parser that was passed to set_cli_args(),
-    and gets the tired configurations with the appropriate parameters, and attaches it to args
+    and gets the tired configurations with the appropriate parameters, and attaches it to args.
     """
 
     (config_dict, sources_dict) = get_tiered_config(
@@ -227,7 +221,8 @@ def config_from_parsed_args(
             'global_config_path',
             'log_level',
             'quiet',
-            'debug'
+            'debug',
+            'config',
         ]
     )
 

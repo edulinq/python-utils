@@ -26,9 +26,16 @@ def main() -> int:
     return run_cli(_get_parser().parse_args())
 
 def _get_parser() -> edq.core.argparser.Parser:
-    """ Get the parser. """
+    """ Get the parser and add addition flags. """
 
-    return edq.core.argparser.get_default_parser(DESCRIPTION)
+    parser = edq.core.argparser.get_default_parser(DESCRIPTION)
+
+    parser.add_argument("--show-origin", dest = 'show_origin',
+        action = 'store_true',
+        help = "Display where each configuration's value was obtained from.",
+    )
+
+    return parser
 
 if (__name__ == '__main__'):
     sys.exit(main())
