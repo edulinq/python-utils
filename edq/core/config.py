@@ -13,6 +13,7 @@ CONFIG_SOURCE_CLI: str = "<cli config file>"
 CONFIG_SOURCE_CLI_BARE: str = "<cli argument>"
 
 CONFIG_PATHS_KEY: str = 'config_paths'
+CONFIGS_KEY: str = 'config'
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 DEFAULT_GLOBAL_CONFIG_PATH: str = platformdirs.user_config_dir(DEFAULT_CONFIG_FILENAME)
 
@@ -39,7 +40,6 @@ def get_tiered_config(
         config_file_name: str = DEFAULT_CONFIG_FILENAME,
         legacy_config_file_name: typing.Union[str, None] = None,
         global_config_path: typing.Union[str, None] = None,
-        skip_keys: typing.Union[list, None] = None,
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
     ) -> typing.Tuple[typing.Dict[str, str], typing.Dict[str, ConfigSource]]:
@@ -50,9 +50,6 @@ def get_tiered_config(
 
     if (global_config_path is None):
         global_config_path = platformdirs.user_config_dir(config_file_name)
-
-    if (skip_keys is None):
-        skip_keys = [CONFIG_PATHS_KEY]
 
     if (cli_arguments is None):
         cli_arguments = {}
@@ -79,21 +76,22 @@ def get_tiered_config(
         _load_config_file(local_config_path, config, sources, CONFIG_SOURCE_LOCAL)
 
     # Check the config file specified on the command-line.
-    config_paths = cli_arguments.get(CONFIG_PATHS_KEY, [])
+    config_paths = cli_arguments.get(CONFIG_PATHS_KEY, None)
     if (config_paths is not None):
         for path in config_paths:
             _load_config_file(path, config, sources, CONFIG_SOURCE_CLI)
 
-    # Finally, any command-line options.
-    for (key, value) in cli_arguments.items():
-        if (key in skip_keys):
-            continue
+    # Finally, any command-line config options.
+    cli_configs = cli_arguments.get(CONFIGS_KEY, None)
+    if (cli_configs is not None):
+        for cli_config in cli_configs:
+            (key, value) = cli_config.split("=")
 
-        if ((value is None) or (value == '')):
-            continue
+            if ((value is None) or (value == '')):
+                continue
 
-        config[key] = value
-        sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI_BARE)
+            config[key] = value
+            sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI_BARE)
 
     return config, sources
 
@@ -214,16 +212,6 @@ def config_from_parsed_args(
     (config_dict, sources_dict) = get_tiered_config(
         global_config_path = args.global_config_path,
         cli_arguments = args,
-        skip_keys = [
-            'local',
-            'show_origin',
-            edq.core.config.CONFIG_PATHS_KEY,
-            'global_config_path',
-            'log_level',
-            'quiet',
-            'debug',
-            'config',
-        ]
     )
 
     setattr(args, "_config", config_dict)
