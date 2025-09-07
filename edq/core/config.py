@@ -76,13 +76,13 @@ def get_tiered_config(
         _load_config_file(local_config_path, config, sources, CONFIG_SOURCE_LOCAL)
 
     # Check the config file specified on the command-line.
-    config_paths = cli_arguments.get(CONFIG_PATHS_KEY, None)
+    config_paths = cli_arguments.get(CONFIG_PATHS_KEY, [])
     if (config_paths is not None):
         for path in config_paths:
             _load_config_file(path, config, sources, CONFIG_SOURCE_CLI)
 
     # Finally, any command-line config options.
-    cli_configs = cli_arguments.get(CONFIGS_KEY, None)
+    cli_configs = cli_arguments.get(CONFIGS_KEY, [])
     if (cli_configs is not None):
         for cli_config in cli_configs:
             (key, value) = cli_config.split("=")
@@ -188,25 +188,26 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     parser.add_argument('--config-file', dest = 'config_paths',
         action = 'append', type = str, default = None,
         help = "Load config options from a JSON file. "
-        + "When this flag is given multiple times files are applied in the order provided, and later files override earlier ones. "
+        + "This flag can be specified multiple times. "
+        + "Files are applied in the order provided and later files override earlier ones. "
         + "This will override options form both global and local configs."
     )
 
     parser.add_argument('--config', dest = 'config',
         action = 'append', type = str, default = None,
-        help = "Provide additional options to a CLI command. "
-        + "Specify configuration options as <key>=<value> pairs. "
+        help = "Provide configuration options to a CLI command. "
+        + "Specify options as <key>=<value> pairs. "
         + "This will override options form all config files."
     )
 
-def config_from_parsed_args(
+def attach_config_to_args(
         parser: argparse.ArgumentParser,
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any]
     ) -> None:
     """
     Take in args from a parser that was passed to set_cli_args(),
-    and gets the tired configurations with the appropriate parameters, and attaches it to args.
+    and get the tired configuration with the appropriate parameters, and attache it to args.
     """
 
     (config_dict, sources_dict) = get_tiered_config(
