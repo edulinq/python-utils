@@ -9,8 +9,8 @@ import edq.util.json
 
 CONFIG_SOURCE_GLOBAL: str = "<global config file>"
 CONFIG_SOURCE_LOCAL: str = "<local config file>"
-CONFIG_SOURCE_CLI: str = "<cli config file>"
-CONFIG_SOURCE_CLI_BARE: str = "<cli argument>"
+CONFIG_SOURCE_CLI_FILE: str = "<cli config file>"
+CONFIG_SOURCE_CLI: str = "<cli argument>"
 
 CONFIG_PATHS_KEY: str = 'config_paths'
 CONFIGS_KEY: str = 'config'
@@ -79,7 +79,7 @@ def get_tiered_config(
     config_paths = cli_arguments.get(CONFIG_PATHS_KEY, [])
     if (config_paths is not None):
         for path in config_paths:
-            _load_config_file(path, config, sources, CONFIG_SOURCE_CLI)
+            _load_config_file(path, config, sources, CONFIG_SOURCE_CLI_FILE)
 
     # Finally, any command-line config options.
     cli_configs = cli_arguments.get(CONFIGS_KEY, [])
@@ -91,7 +91,7 @@ def get_tiered_config(
                 continue
 
             config[key] = value
-            sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI_BARE)
+            sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
 
     return config, sources
 
@@ -203,7 +203,7 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
 def attach_config_to_args(
         parser: argparse.ArgumentParser,
         args: argparse.Namespace,
-        extra_state: typing.Dict[str, typing.Any]
+        extra_state: typing.Dict[str, typing.Any],
     ) -> None:
     """
     Take in args from a parser that was passed to set_cli_args(),

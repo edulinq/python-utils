@@ -3,7 +3,7 @@ import sys
 
 import edq.core.argparser
 
-DESCRIPTION = "List your current configuration options."
+DESCRIPTION = "List current configuration options."
 
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """

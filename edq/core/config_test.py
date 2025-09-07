@@ -315,11 +315,11 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.core.config.ConfigSource(
-                        label = edq.core.config.CONFIG_SOURCE_CLI,
+                        label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
                         path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                     "server": edq.core.config.ConfigSource(
-                        label = edq.core.config.CONFIG_SOURCE_CLI,
+                        label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
                         path = os.path.join(temp_dir, "nested", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -342,7 +342,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.core.config.ConfigSource(
-                        label = edq.core.config.CONFIG_SOURCE_CLI,
+                        label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
                         path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -425,7 +425,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI_BARE),
+                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
                 None,
             ),
@@ -466,7 +466,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.core.config.ConfigSource(
-                        label = edq.core.config.CONFIG_SOURCE_CLI,
+                        label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
                         path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -488,7 +488,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI_BARE),
+                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
                 None,
             ),
@@ -508,7 +508,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.core.config.ConfigSource(
-                        label = edq.core.config.CONFIG_SOURCE_CLI,
+                        label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
                         path = os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                     ),
                 },
@@ -529,7 +529,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI_BARE),
+                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
                 None,
             ),
@@ -551,7 +551,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI_BARE),
+                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
                 None,
             ),
@@ -574,7 +574,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI_BARE),
+                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
                 None,
             ),
@@ -594,7 +594,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI_BARE),
+                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
                 None,
             ),
@@ -615,7 +615,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.core.config.ConfigSource(
-                        label = edq.core.config.CONFIG_SOURCE_CLI,
+                        label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
                         path = os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                     ),
                 },
@@ -639,7 +639,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI_BARE),
+                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
                 None,
             ),
@@ -664,10 +664,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.core.config.ConfigSource(
-                        label = edq.core.config.CONFIG_SOURCE_CLI,
+                        label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
                         path = os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                     ),
-                    "pass": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI_BARE),
+                    "pass": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
                 None,
             ),

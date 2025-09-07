@@ -176,7 +176,7 @@ class CLITestInfo:
             (DATA_DIR_ID, self.data_dir),
             (TEMP_DIR_ID, self.temp_dir),
             (BASE_DIR_ID, self.base_dir),
-            (ABS_DATA_DIR_ID, os.path.abspath(self.data_dir))
+            (ABS_DATA_DIR_ID, os.path.abspath(self.data_dir)),
         ]
 
         for (key, target_dir) in replacements:

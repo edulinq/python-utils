@@ -3,7 +3,7 @@
     "arguments": [
         "--config", "user=user@test.edulinq.org",
         "--config-global", "__DATA_DIR__(configs/empty/edq-config.json)",
-    ]
+    ],
 }
 ---
 user	user@test.edulinq.org
