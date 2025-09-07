@@ -26,7 +26,7 @@ def main() -> int:
     return run_cli(_get_parser().parse_args())
 
 def _get_parser() -> edq.core.argparser.Parser:
-    """ Get the parser and add addition flags. """
+    """ Get a parser and add addition flags. """
 
     parser = edq.core.argparser.get_default_parser(DESCRIPTION)
 
