@@ -12,7 +12,7 @@ CONFIG_SOURCE_LOCAL: str = "<local config file>"
 CONFIG_SOURCE_CLI_FILE: str = "<cli config file>"
 CONFIG_SOURCE_CLI: str = "<cli argument>"
 
-CONFIG_PATHS_KEY: str = 'config_paths'
+CONFIG_PATHS_KEY: str = 'config_path'
 CONFIGS_KEY: str = 'config'
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 DEFAULT_GLOBAL_CONFIG_PATH: str = platformdirs.user_config_dir(DEFAULT_CONFIG_FILENAME)
@@ -185,18 +185,20 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
         help = 'Override the default global config file path (default: %(default)s).',
     )
 
-    parser.add_argument('--config-file', dest = 'config_paths',
+    parser.add_argument('--config-file', dest = CONFIG_PATHS_KEY,
         action = 'append', type = str, default = None,
         help = "Load config options from a JSON file. "
         + "This flag can be specified multiple times. "
         + "Files are applied in the order provided and later files override earlier ones. "
-        + "This will override options form both global and local configs."
+        + "This will override options form both global and local config files."
     )
 
-    parser.add_argument('--config', dest = 'config',
+    parser.add_argument('--config', dest = CONFIGS_KEY,
         action = 'append', type = str, default = None,
-        help = "Provide configuration options to a CLI command. "
+        help = "Load configuration options from the CLI command. "
         + "Specify options as <key>=<value> pairs. "
+        + "This flag can be specified multiple times. "
+        + "The options are applied in the order provided and later options override earlier ones. "
         + "This will override options form all config files."
     )
 
