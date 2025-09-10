@@ -9,11 +9,13 @@ import edq.util.json
 
 CONFIG_SOURCE_GLOBAL: str = "<global config file>"
 CONFIG_SOURCE_LOCAL: str = "<local config file>"
-CONFIG_SOURCE_CLI: str = "<cli config file>"
-CONFIG_SOURCE_CLI_BARE: str = "<cli argument>"
+CONFIG_SOURCE_CLI_FILE: str = "<cli config file>"
+CONFIG_SOURCE_CLI: str = "<cli argument>"
 
-CONFIG_PATHS_KEY: str = 'config_paths'
+CONFIG_PATHS_KEY: str = 'config_path'
+CONFIGS_KEY: str = 'config'
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
+DEFAULT_GLOBAL_CONFIG_PATH: str = platformdirs.user_config_dir(DEFAULT_CONFIG_FILENAME)
 
 class ConfigSource:
     """ A class for storing config source information. """
@@ -38,7 +40,6 @@ def get_tiered_config(
         config_file_name: str = DEFAULT_CONFIG_FILENAME,
         legacy_config_file_name: typing.Union[str, None] = None,
         global_config_path: typing.Union[str, None] = None,
-        skip_keys: typing.Union[list, None] = None,
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
     ) -> typing.Tuple[typing.Dict[str, str], typing.Dict[str, ConfigSource]]:
@@ -49,9 +50,6 @@ def get_tiered_config(
 
     if (global_config_path is None):
         global_config_path = platformdirs.user_config_dir(config_file_name)
-
-    if (skip_keys is None):
-        skip_keys = [CONFIG_PATHS_KEY]
 
     if (cli_arguments is None):
         cli_arguments = {}
@@ -79,20 +77,25 @@ def get_tiered_config(
 
     # Check the config file specified on the command-line.
     config_paths = cli_arguments.get(CONFIG_PATHS_KEY, [])
-    if (config_paths is not None):
-        for path in config_paths:
-            _load_config_file(path, config, sources, CONFIG_SOURCE_CLI)
+    for path in config_paths:
+        _load_config_file(path, config, sources, CONFIG_SOURCE_CLI_FILE)
 
-    # Finally, any command-line options.
-    for (key, value) in cli_arguments.items():
-        if (key in skip_keys):
-            continue
+    # Finally, any command-line config options.
+    cli_configs = cli_arguments.get(CONFIGS_KEY, [])
+    for cli_config in cli_configs:
+        if ("=" not in cli_config):
+            raise ValueError(f"The provided '{cli_config}' config option does not match the expected format.")
 
-        if ((value is None) or (value == '')):
-            continue
+        (key, value) = cli_config.split("=", maxsplit = 1)
+
+        key = key.strip()
+        value = value.strip()
+
+        if (key == ""):
+            raise ValueError(f"The provided '{cli_config}' config option has an empty key.")
 
         config[key] = value
-        sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI_BARE)
+        sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
 
     return config, sources
 
@@ -175,3 +178,48 @@ def _get_ancestor_config_file_path(
         current_directory = parent_dir
 
     return None
+
+def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, typing.Any]) -> None:
+    """
+    Set common CLI arguments for configuration.
+    """
+
+    parser.add_argument('--config-global', dest = 'global_config_path',
+        action = 'store', type = str, default = DEFAULT_GLOBAL_CONFIG_PATH,
+        help = 'Override the default global config file path (default: %(default)s).',
+    )
+
+    parser.add_argument('--config-file', dest = CONFIG_PATHS_KEY,
+        action = 'append', type = str, default = [],
+        help = ('Load config options from a JSON file.'
+            + ' This flag can be specified multiple times.'
+            + ' Files are applied in the order provided and later files override earlier ones.'
+            + ' This will override options form both global and local config files.')
+    )
+
+    parser.add_argument('--config', dest = CONFIGS_KEY,
+        action = 'append', type = str, default = [],
+        help = ('Load configuration options from the CLI command.'
+            + ' Specify options as <key>=<value> pairs. '
+            + ' This flag can be specified multiple times.'
+            + ' The options are applied in the order provided and later options override earlier ones.'
+            + ' This will override options form all config files.')
+    )
+
+def load_config_into_args(
+        parser: argparse.ArgumentParser,
+        args: argparse.Namespace,
+        extra_state: typing.Dict[str, typing.Any],
+    ) -> None:
+    """
+    Take in args from a parser that was passed to set_cli_args(),
+    and get the tired configuration with the appropriate parameters, and attache it to args.
+    """
+
+    (config_dict, sources_dict) = get_tiered_config(
+        global_config_path = args.global_config_path,
+        cli_arguments = args,
+    )
+
+    setattr(args, "_config", config_dict)
+    setattr(args, "_config_sources", sources_dict)
