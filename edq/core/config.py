@@ -203,7 +203,7 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
             + ' This will override options form all config files.')
     )
 
-def attach_config_to_args(
+def load_config_into_args(
         parser: argparse.ArgumentParser,
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any],
