@@ -10,25 +10,27 @@ import edq.core.argparser
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
-    config_list = []
+    configs_list = []
+
+    if (not args.skip_header):
+        header = "Key\tValue"
+        if (args.show_origin):
+            header = header + "\tOrigin"
+        configs_list.append(header)
+
     for (key, value) in args._config.items():
-        config = [key, value]
+        config_list = [key, value]
         if (args.show_origin):
             config_source_obj = args._config_sources.get(key)
 
-            if (config_source_obj.path is None):
-                config.append(config_source_obj.label)
-            else:
-                config.append(config_source_obj.path)
+            origin = config_source_obj.path
+            if (origin is None):
+                origin = config_source_obj.label
+            config_list.append(origin)
 
-        config_list.append("\t".join(config))
+        configs_list.append("\t".join(config_list))
 
-    if (not args.skip_header):
-        config_list.insert(0, "Key\tValue")
-        if (args.show_origin):
-            config_list[0] = config_list[0] + "\tOrigin"
-
-    print("\n".join(config_list))
+    print("\n".join(configs_list))
     return 0
 
 def main() -> int:
@@ -48,7 +50,7 @@ def _get_parser() -> edq.core.argparser.Parser:
 
     parser.add_argument("--skip-header", dest = 'skip_header',
         action = 'store_true',
-        help = "Skip headers when displaying configs.",
+        help = 'Skip headers when displaying configs.',
     )
 
     return parser
