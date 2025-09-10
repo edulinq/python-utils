@@ -8,5 +8,6 @@
     ],
 }
 ---
+Key	Value	Origin
 user	user@test.edulinq.org	__ABS_DATA_DIR__(configs/simple/edq-config.json)
-pass	pass123	None
+pass	pass123	<cli argument>

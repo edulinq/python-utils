@@ -77,21 +77,22 @@ def get_tiered_config(
 
     # Check the config file specified on the command-line.
     config_paths = cli_arguments.get(CONFIG_PATHS_KEY, [])
-    if (config_paths is not None):
-        for path in config_paths:
-            _load_config_file(path, config, sources, CONFIG_SOURCE_CLI_FILE)
+    for path in config_paths:
+        _load_config_file(path, config, sources, CONFIG_SOURCE_CLI_FILE)
 
     # Finally, any command-line config options.
     cli_configs = cli_arguments.get(CONFIGS_KEY, [])
-    if (cli_configs is not None):
-        for cli_config in cli_configs:
-            (key, value) = cli_config.split("=")
+    for cli_config in cli_configs:
+        if ("=" not in cli_config):
+            raise ValueError("The provided config option does not match the expected format.")
 
-            if ((value is None) or (value == '')):
-                continue
+        (key, value) = cli_config.split("=", maxsplit = 1)
 
-            config[key] = value
-            sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
+        if (value == ''):
+            continue
+
+        config[key] = value
+        sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
 
     return config, sources
 
@@ -186,20 +187,20 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     )
 
     parser.add_argument('--config-file', dest = CONFIG_PATHS_KEY,
-        action = 'append', type = str, default = None,
-        help = "Load config options from a JSON file. "
-        + "This flag can be specified multiple times. "
-        + "Files are applied in the order provided and later files override earlier ones. "
-        + "This will override options form both global and local config files."
+        action = 'append', type = str, default = [],
+        help = ("Load config options from a JSON file."
+            + " This flag can be specified multiple times."
+            + " Files are applied in the order provided and later files override earlier ones."
+            + " This will override options form both global and local config files.")
     )
 
     parser.add_argument('--config', dest = CONFIGS_KEY,
-        action = 'append', type = str, default = None,
-        help = "Load configuration options from the CLI command. "
-        + "Specify options as <key>=<value> pairs. "
-        + "This flag can be specified multiple times. "
-        + "The options are applied in the order provided and later options override earlier ones. "
-        + "This will override options form all config files."
+        action = 'append', type = str, default = [],
+        help = ("Load configuration options from the CLI command."
+            + " Specify options as <key>=<value> pairs. "
+            + " This flag can be specified multiple times."
+            + " The options are applied in the order provided and later options override earlier ones."
+            + " This will override options form all config files.")
     )
 
 def attach_config_to_args(
