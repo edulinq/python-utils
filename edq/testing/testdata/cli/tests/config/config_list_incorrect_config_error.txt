@@ -1,0 +1,10 @@
+{
+    "cli": "edq.cli.config.list",
+    "arguments": [
+        "--config-global", "__DATA_DIR__(configs/empty/edq-config.json)",
+        "--config", "passpass123",
+    ],
+    "error": "True"
+}
+---
+builtins.ValueError: The provided 'passpass123' config option does not match the expected format.

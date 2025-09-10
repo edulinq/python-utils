@@ -84,12 +84,15 @@ def get_tiered_config(
     cli_configs = cli_arguments.get(CONFIGS_KEY, [])
     for cli_config in cli_configs:
         if ("=" not in cli_config):
-            raise ValueError("The provided config option does not match the expected format.")
+            raise ValueError(f"The provided '{cli_config}' config option does not match the expected format.")
 
         (key, value) = cli_config.split("=", maxsplit = 1)
 
-        if (value == ''):
-            continue
+        key = key.strip()
+        value = value.strip()
+
+        if (key == ""):
+            raise ValueError(f"The provided '{cli_config}' config option has an empty key.")
 
         config[key] = value
         sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)

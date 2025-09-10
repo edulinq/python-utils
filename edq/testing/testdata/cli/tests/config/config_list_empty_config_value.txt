@@ -2,11 +2,9 @@
     "cli": "edq.cli.config.list",
     "arguments": [
         "--config-global", "__DATA_DIR__(configs/empty/edq-config.json)",
-        "--config-file", "__DATA_DIR__(configs/simple/edq-config.json)",
-        "--config", "pass=pass123",
+        "--config", "pass=",
     ],
 }
 ---
 Key	Value
-pass	pass123
-user	user@test.edulinq.org
+pass	

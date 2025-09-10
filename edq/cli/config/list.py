@@ -7,16 +7,12 @@ import sys
 
 import edq.core.argparser
 
+CONFIG_FIELD_SEPARATOR: str = "\t"
+
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
     configs_list = []
-
-    if (not args.skip_header):
-        header = "Key\tValue"
-        if (args.show_origin):
-            header = header + "\tOrigin"
-        configs_list.append(header)
 
     for (key, value) in args._config.items():
         config_list = [key, value]
@@ -26,9 +22,19 @@ def run_cli(args: argparse.Namespace) -> int:
             origin = config_source_obj.path
             if (origin is None):
                 origin = config_source_obj.label
+
             config_list.append(origin)
 
-        configs_list.append("\t".join(config_list))
+        configs_list.append(CONFIG_FIELD_SEPARATOR.join(config_list))
+
+    configs_list.sort()
+
+    if (not args.skip_header):
+        header = ["Key", "Value"]
+        if (args.show_origin):
+            header.append("Origin")
+
+        configs_list.insert(0, (CONFIG_FIELD_SEPARATOR.join(header)))
 
     print("\n".join(configs_list))
     return 0
