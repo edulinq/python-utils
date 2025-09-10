@@ -409,7 +409,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "Failed to read JSON file",
             ),
 
-            # CLI Bare Options:
+            # CLI Options:
 
             # CLI arguments only (direct key: value).
             (
@@ -428,6 +428,74 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
                 None,
+            ),
+
+            # Empty Config Key
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.CONFIGS_KEY: [
+                            "=user@test.edulinq.org",
+                        ],
+                    },
+                },
+                {},
+                {},
+                "The provided '=user@test.edulinq.org' config option has an empty key."
+            ),
+
+            # Empty Config Value
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.CONFIGS_KEY: [
+                            "user=",
+                        ],
+                    },
+                },
+                {
+                    "user": "",
+                },
+                {
+                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
+                },
+                None,
+            ),
+
+            # Separator In Config Value
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.CONFIGS_KEY: [
+                            "pass=password=1234",
+                        ],
+                    },
+                },
+                {
+                    "pass": "password=1234",
+                },
+                {
+                    "pass": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
+                },
+                None,
+            ),
+
+            # Invalid Config Option Format
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.CONFIGS_KEY: [
+                            "useruser@test.edulinq.org",
+                        ],
+                    },
+                },
+                {},
+                {},
+                "The provided 'useruser@test.edulinq.org' config option does not match the expected format",
             ),
 
             # Combinations
@@ -654,13 +722,13 @@ class TestConfig(edq.testing.unittest.BaseTest):
                             os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                         ],
                         edq.core.config.CONFIGS_KEY: [
-                            "pass=user",
+                            "pass=password1234",
                         ],
                     },
                 },
                 {
                     "user": "user@test.edulinq.org",
-                    "pass": "user",
+                    "pass": "password1234",
                 },
                 {
                     "user": edq.core.config.ConfigSource(
