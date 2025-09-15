@@ -19,8 +19,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
         for (i, exchange) in enumerate(self._server.get_exchanges()):
             base_name = os.path.splitext(os.path.basename(exchange.source_path))[0]
             with self.subTest(msg = f"Case {i} ({base_name}):"):
-                # TEST
-                print(edq.util.json.dumps(exchange, indent = 4))
+                self.assert_exchange(exchange, exchange)
 
 
         ''' TEST

@@ -6,7 +6,10 @@ import time
 import typing
 import urllib.parse
 
+import requests
+
 import edq.testing.unittest
+import edq.util.dirent
 import edq.util.json
 import edq.util.net
 
@@ -24,16 +27,20 @@ class HTTPExchange(edq.util.json.DictConverter):
     The request and response making up a full HTTP exchange.
     """
 
+    # TEST - Response body has not been worked out.
+
     def __init__(self,
             method: str = 'GET',
             url: typing.Union[str, None] = None,
             url_path: typing.Union[str, None] = None,
             url_anchor: typing.Union[str, None] = None,
             parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            files: typing.Union[typing.List[str], None] = None,
             headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            response_code: int = http.HTTPStatus.OK,
             response_headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
             response_body: typing.Union[typing.Any, None] = None,
-            json_response: bool = False,
+            json_body: bool = False,
             read_write: bool = False,
             modify_exchange: typing.Union[str, None] = None,
             source_path: typing.Union[str, None] = None,
@@ -66,11 +73,20 @@ class HTTPExchange(edq.util.json.DictConverter):
         With the exception of files, all parameters should be placed here.
         """
 
+        if (files is None):
+            files = []
+
+        # TEST
+        self.files: typing.List[str] = files
+
         if (headers is None):
             headers = {}
 
         self.headers: typing.Dict[str, typing.Any] = headers
         """ Headers in the request. """
+
+        self.response_code: int = response_code
+        """ The HTTP status code of the response. """
 
         if (response_headers is None):
             response_headers = {}
@@ -84,7 +100,7 @@ class HTTPExchange(edq.util.json.DictConverter):
         The response that should be sent in this exchange.
         """
 
-        self.json_response: bool = json_response
+        self.json_body: bool = json_body
         """ Indicates that the response is JSON and should be converted to/from a string. """
 
         self.read_write: bool = read_write
@@ -127,11 +143,15 @@ class HTTPExchange(edq.util.json.DictConverter):
             url_path = url_path.strip()
             if (url_path == ''):
                 url_path = None
+            else:
+                url_path = url_path.lstrip('/')
 
         if (url_anchor is not None):
             url_anchor = url_anchor.strip()
             if (url_anchor == ''):
                 url_anchor = None
+            else:
+                url_anchor = url_anchor.lstrip('#')
 
         if (parameters is None):
             parameters = {}
@@ -143,18 +163,22 @@ class HTTPExchange(edq.util.json.DictConverter):
 
             # Handle the path.
 
-            if ((url_path is not None) and (url_path != parts.path)):
-                raise ValueError(f"Mismatched URL paths where supplied implicitly ('{parts.path}') and explicitly ('{url_path}').")
+            path = parts.path.lstrip('/')
 
-            url_path = parts.path
+            if ((url_path is not None) and (url_path != path)):
+                raise ValueError(f"Mismatched URL paths where supplied implicitly ('{path}') and explicitly ('{url_path}').")
+
+            url_path = path
 
             # Check the optional anchor/fragment.
 
             if (parts.fragment != ''):
-                if ((url_anchor is not None) and (url_anchor != parts.fragment)):
-                    raise ValueError(f"Mismatched URL anchors where supplied implicitly ('{parts.fragment}') and explicitly ('{url_anchor}').")
+                fragment = parts.fragment.lstrip('#')
 
-                url_anchor = parts.fragment
+                if ((url_anchor is not None) and (url_anchor != fragment)):
+                    raise ValueError(f"Mismatched URL anchors where supplied implicitly ('{fragment}') and explicitly ('{url_anchor}').")
+
+                url_anchor = fragment
 
             # Check for any parameters.
 
@@ -165,7 +189,6 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         return url_path, url_anchor, parameters
 
-    # TEST
     def match(self, query: 'HTTPExchange',
             match_headers: bool = False,
             params_to_skip: typing.Union[typing.List[str], None] = None,
@@ -177,11 +200,71 @@ class HTTPExchange(edq.util.json.DictConverter):
         This method is often invoked the see if an incoming HTTP request (the query) matches an existing exchange.
         """
 
+        # TEST - Headers. Just add them in to the parameters?
+
         if (params_to_skip is None):
             params_to_skip = []
 
-        # TEST
-        return False
+        query_keys = set(query.parameters.keys()) - set(params_to_skip)
+        target_keys = set(self.parameters.keys()) - set(params_to_skip)
+
+        if (len(query_keys) != len(target_keys)):
+            return False
+
+        for key in sorted(query_keys):
+            query_value = query.parameters[key]
+            target_value = self.parameters[key]
+
+            if (query_value != target_value):
+                return False
+
+        return True
+
+    def get_url(self) -> str:
+        """ Get the URL path and anchor combined. """
+
+        url = self.url_path
+
+        if (self.url_anchor is not None):
+            url += ('#' + self.url_anchor)
+
+        return url
+
+    def make_request(self, base_url: str, raise_on_status: bool = True) -> requests.Response:
+        """ Perform the HTTP request described by this exchange. """
+
+        url = f"{base_url}/{self.get_url()}"
+        response = requests.request(self.method, url, headers = self.headers, data = self.parameters)
+
+        if (raise_on_status):
+            response.raise_for_status()
+
+        return response
+
+    def match_response(self, response: requests.Response) -> typing.Tuple[bool, typing.Union[str, None]]:
+        """
+        Check if this exchange matches the given response.
+        If they match, `(True, None)` will be returned.
+        If they do not match, `(True, <hint>)` will be returned, where `<hint>` points to where the mismatch is.
+        """
+
+        if (self.response_code != response.status_code):
+            return False, f"http status code does match (expected: {self.response_code}, actual: {response.status_code})"
+
+        body = None
+        if (self.json_body):
+            body = response.json()
+        else:
+            body = response.text
+
+        if (self.response_body != body):
+            return False, 'body does not match'
+
+        # TEST - Match Headers
+
+        # TEST - Match Files
+
+        return True, None
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return vars(self)
@@ -253,7 +336,7 @@ class HTTPTestServer():
 
         # Created a nested handler to bind this server object to the handler.
         class NestedHTTPHandler(_TestHTTPHandler):
-            server = self
+            _server = self
 
         self.port = edq.util.net.find_open_port()
         self._http_server = http.server.HTTPServer(('', self.port), NestedHTTPHandler)
@@ -323,19 +406,27 @@ class HTTPTestServer():
         if (match_options is None):
             match_options = {}
 
+        hint_display = query.url_path
         target = self._exchanges
+
         if (query.url_path not in target):
-            return None, f"Could not find matching URL path for '{query.url_path}'."
+            return None, f"Could not find matching URL path for '{hint_display}'."
 
+        hint_display = f"{query.url_path}#{query.url_anchor}"
         target = target[query.url_path]
+
         if (query.url_anchor not in target):
-            return None, f"Found URL path, but could not find matching anchor for '{query.url_path}#{query.anchor}'."
+            return None, f"Found URL path, but could not find matching anchor for '{hint_display}'."
 
+        hint_display = f"{query.url_path}#{query.url_anchor} ({query.method})"
         target = target[query.url_anchor]
-        if (query.method not in target):
-            return None, f"Found URL, but could not find matching method ('{query.method}') for '{query.url_path}#{query.anchor}'."
 
-        target = target[exchange.method]
+        if (query.method not in target):
+            return None, f"Found URL, but could not find matching method for '{hint_display}'."
+
+        params = list(sorted(query.parameters.keys()))
+        hint_display = f"{query.url_path}#{query.url_anchor} ({query.method}, param keys = {params})"
+        target = target[query.method]
 
         full_match_options = self._match_options.copy()
         full_match_options.update(match_options)
@@ -344,7 +435,7 @@ class HTTPTestServer():
             if (exchange.match(query, **full_match_options)):
                 return exchange, None
 
-        return None, f"Found matching URL and method, but could not find matching params for '{query.url_path}#{query.anchor}' ({query.method})."
+        return None, f"Found matching URL and method, but could not find matching params for '{hint_display}'."
 
     def load_exchange(self, exchange: HTTPExchange) -> None:
         """ Load an exchange into this server. """
@@ -378,7 +469,7 @@ class HTTPTestServer():
             self.load_exchange_file(path)
 
 class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
-    server: typing.Union[HTTPTestServer, None] = None
+    _server: typing.Union[HTTPTestServer, None] = None
     """ The test server this handler is being used for. """
 
     # Quiet logs.
@@ -386,39 +477,75 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
         return
 
     def do_POST(self):
+        if (self._server is None):
+            raise ValueError("Server has not been initialized.")
+
         request_data, request_files = edq.util.net.parse_POST_data(self)
 
-        # TEST
+        exchange = self._get_exchange('POST', parameters = request_data, files = request_files)
 
-        print('---')
-        print(request_data)
-        print(request_files)
-        print('---')
+        code = exchange.response_code
+        headers = exchange.response_headers
+        payload = exchange.response_body
 
-    def do_POST(self):
+        if (payload is None):
+            payload = ''
+
+        self.send_response(code)
+        for (key, value) in headers:
+            self.send_header(key, value)
+        self.end_headers()
+
+        self.wfile.write(payload.encode(edq.util.dirent.DEFAULT_ENCODING))
+
+    def do_GET(self):
+        if (self._server is None):
+            raise ValueError("Server has not been initialized.")
+
         raw_content = urllib.parse.urlparse(self.path).query
         request_data = urllib.parse.parse_qs(raw_content)
 
-        # TEST
+        exchange = self._get_exchange('GET', parameters = request_data)
 
-        print('---')
-        print(request_data)
-        print('---')
+        code = exchange.response_code
+        headers = exchange.response_headers
+        payload = exchange.response_body
+
+        if (payload is None):
+            payload = ''
+
+        self.send_response(code)
+        for (key, value) in headers:
+            self.send_header(key, value)
+        self.end_headers()
+
+        self.wfile.write(payload.encode(edq.util.dirent.DEFAULT_ENCODING))
+
+    def _get_exchange(self, method: str,
+            parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            files: typing.Union[typing.List[str], None] = None,
+            ) -> HTTPExchange:
+        """ Get the matching exchange or raise an error. """
+
+        query = HTTPExchange(method = method,
+                url = self.path, headers = self.headers,
+                parameters = parameters, files = files)
+
+        exchange, hint = self._server.lookup_exchange(query)
+        if (exchange is None):
+            raise ValueError(f"Failed to lookup exchange: '{hint}'.")
+
+        return exchange
 
 class HTTPServerTest(edq.testing.unittest.BaseTest):
     """
     A unit test class that requires a testing HTTP server to be running.
     """
 
-    # TEST - port
-
     _server: typing.Union[HTTPTestServer, None] = None
 
     @classmethod
     def setUpClass(cls):
-        # TEST
-        print('TEST - Class, ', cls)
-
         HTTPServerTest._server = HTTPTestServer()
         cls.setup_server(HTTPServerTest._server)
         HTTPServerTest._server.start()
@@ -432,14 +559,31 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
     def setup_server(cls, server: HTTPTestServer) -> None:
         """ An opportunity for child classes to configure the test server before starting it. """
 
-    # TEST
-    # @staticmethod
-    # def modify_request(request):
-
     def get_server_url(self) -> str:
         """ Get the URL for this test's test server. """
 
-        if (HTTPServerTest._server.port is None):
+        if (self._server.port is None):
             raise ValueError("Test server port has not been set.")
 
         return f"http://127.0.0.1:{HTTPServerTest._server.port}"
+
+    def assert_exchange(self, request: HTTPExchange, response: HTTPExchange,
+            base_url: typing.Union[str, None] = None,
+            ) -> requests.Response:
+        """
+        Assert that the result of making the provided request matches the provided response.
+        The same HTTPExchange may be supplied for both the request and response.
+        By default, the server's URL will be used as the base URL.
+        The full response will be returned (if no assertion is raised).
+        """
+
+        if (base_url is None):
+            base_url = self.get_server_url()
+
+        full_response = request.make_request(base_url)
+
+        match, hint = response.match_response(full_response)
+        if (not match):
+            raise AssertionError(f"Exchange does not match: '{hint}'.")
+
+        return full_response
