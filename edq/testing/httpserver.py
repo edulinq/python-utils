@@ -26,6 +26,7 @@ class HTTPExchange(edq.util.json.DictConverter):
 
     def __init__(self,
             method: str = 'GET',
+            url: typing.Union[str, None] = None,
             url_path: typing.Union[str, None] = None,
             url_anchor: typing.Union[str, None] = None,
             parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
@@ -35,9 +36,8 @@ class HTTPExchange(edq.util.json.DictConverter):
             json_response: bool = False,
             read_write: bool = False,
             modify_exchange: typing.Union[str, None] = None,
+            source_path: typing.Union[str, None] = None,
             **kwargs: typing.Any) -> None:
-        # TEST - Parse URL components from path? Error if non-empty componnet exists for parsed and given items.
-
         method = method.upper()
         if (method not in ALLOWED_METHODS):
             raise ValueError(f"Got unknown/disallowed method: '{method}'.")
@@ -45,9 +45,7 @@ class HTTPExchange(edq.util.json.DictConverter):
         self.method: str = method
         """ The HTTP method for this exchange. """
 
-        url_path = url_path.strip()
-        if (url_path == ''):
-            raise ValueError("URL path cannot be empty.")
+        url_path, url_anchor, parameters = self._parse_url_components(url, url_path, url_anchor, parameters)
 
         self.url_path: str = url_path
         """
@@ -55,16 +53,10 @@ class HTTPExchange(edq.util.json.DictConverter):
         Only the path (not domain, port, params, anchor, etc) should be included.
         """
 
-        if (url_anchor is not None):
-            url_anchor = url_anchor.strip()
-
-        self.url_anchor: typeing.Union[str, None] = url_anchor
+        self.url_anchor: typing.Union[str, None] = url_anchor
         """
         The anchor portion of the request URL (if it exists).
         """
-
-        if (parameters is None):
-            parameters = {}
 
         self.parameters: typing.Dict[str, typing.Any] = parameters
         """
@@ -106,6 +98,73 @@ class HTTPExchange(edq.util.json.DictConverter):
         self.modify_exchange: typing.Union[str, None] = modify_exchange
         """ If supplied, call this function to modify this exchange before saving. """
 
+        self.source_path: typing.Union[str, None] = source_path
+        """
+        The path that this exchange was loaded from (if it was loaded from a file).
+        This value should never be serialized, but can be useful for testing.
+        """
+
+    def _parse_url_components(self,
+            url: typing.Union[str, None] = None,
+            url_path: typing.Union[str, None] = None,
+            url_anchor: typing.Union[str, None] = None,
+            parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Tuple[str, typing.Union[str, None], typing.Dict[str, typing.Any]]:
+        """
+        Parse out all URL-based components from raw inputs.
+        The URL's path and anchor can either be supplied separately, or as part of the full given URL.
+        If content is present in both places, they much match (or an error will be raised).
+        Query parameters may be provided in the full URL,
+        but will be overwritten by any that are provided separately.
+        Any information from the URL aside from the path, anchor/fragment, and query will be ignored.
+        Note that path parameters (not query parameters) will be ignored.
+        The final url path, url anchor, and parameters will be returned.
+        """
+
+        # Do base initialization and cleanup.
+
+        if (url_path is not None):
+            url_path = url_path.strip()
+            if (url_path == ''):
+                url_path = None
+
+        if (url_anchor is not None):
+            url_anchor = url_anchor.strip()
+            if (url_anchor == ''):
+                url_anchor = None
+
+        if (parameters is None):
+            parameters = {}
+
+        # Parse the URL (if present).
+
+        if ((url is not None) and (url.strip() != '')):
+            parts = urllib.parse.urlparse(url)
+
+            # Handle the path.
+
+            if ((url_path is not None) and (url_path != parts.path)):
+                raise ValueError(f"Mismatched URL paths where supplied implicitly ('{parts.path}') and explicitly ('{url_path}').")
+
+            url_path = parts.path
+
+            # Check the optional anchor/fragment.
+
+            if (parts.fragment != ''):
+                if ((url_anchor is not None) and (url_anchor != parts.fragment)):
+                    raise ValueError(f"Mismatched URL anchors where supplied implicitly ('{parts.fragment}') and explicitly ('{url_anchor}').")
+
+                url_anchor = parts.fragment
+
+            # Check for any parameters.
+
+            url_params = urllib.parse.parse_qs(parts.query)
+            for (key, value) in url_params.items():
+                if (key not in parameters):
+                    parameters[key] = value
+
+        return url_path, url_anchor, parameters
+
     # TEST
     def match(self, query: 'HTTPExchange',
             match_headers: bool = False,
@@ -115,7 +174,7 @@ class HTTPExchange(edq.util.json.DictConverter):
         Check if this exchange matches the query exchange.
         Note that this is not an equality check,
         as a query if often missing the response components.
-        This method is often invoked the see if an incoming HTTP request (the query) matches an existing exahnge.
+        This method is often invoked the see if an incoming HTTP request (the query) matches an existing exchange.
         """
 
         if (params_to_skip is None):
@@ -173,6 +232,21 @@ class HTTPTestServer():
 
         self._match_options: typing.Dict[str, typing.Any] = match_options.copy()
         """ Options to use when matching HTTP exchanges. """
+
+    def get_exchanges(self) -> typing.List[HTTPExchange]:
+        """
+        Get a shallow list of all the exchanges in this server.
+        Ordering is not guaranteed.
+        """
+
+        exchanges = []
+
+        for url_exchanges in self._exchanges.values():
+            for anchor_exchanges in url_exchanges.values():
+                for method_exchanges in anchor_exchanges.values():
+                    exchanges += method_exchanges
+
+        return exchanges
 
     def start(self) -> None:
         """ Start this server in a thread and return the port. """
@@ -294,7 +368,9 @@ class HTTPTestServer():
         target.append(exchange)
 
     def load_exchange_file(self, path: str) -> None:
-        self.load_exchange(edq.util.json.load_object_path(path, HTTPExchange))
+        exchange = edq.util.json.load_object_path(path, HTTPExchange)
+        exchange.source_path = os.path.abspath(path)
+        self.load_exchange(exchange)
 
     def load_exchanges_dir(self, base_dir: str, extension: str = '.json') -> None:
         paths = list(sorted(glob.glob(os.path.join(base_dir, "**", f"*{extension}"), recursive = True)))

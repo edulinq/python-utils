@@ -13,18 +13,15 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
         edq.testing.httpserver.HTTPServerTest.setup_server(server)
         server.load_exchanges_dir(TEST_EXCHANGES_DIR)
 
-        # TEST
-        print('TEST')
+    def test_exchanges_base(self):
+        """ Test making a request with each of the exchanges. """
 
-    # TEST
-    def test_base(self):
-        """ Test basic server operations. """
+        for (i, exchange) in enumerate(self._server.get_exchanges()):
+            base_name = os.path.splitext(os.path.basename(exchange.source_path))[0]
+            with self.subTest(msg = f"Case {i} ({base_name}):"):
+                # TEST
+                print(edq.util.json.dumps(exchange, indent = 4))
 
-        # TEST
-        print('---')
-        print(edq.util.json.dumps(self._server._exchanges, indent = 4))
-        print('---')
-        return
 
         ''' TEST
         # [(path, write kwargs, read kwargs, write contents, expected contents, error substring), ...]
