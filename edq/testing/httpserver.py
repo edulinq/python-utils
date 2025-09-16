@@ -184,6 +184,11 @@ class HTTPExchange(edq.util.json.DictConverter):
 
             url_params = urllib.parse.parse_qs(parts.query)
             for (key, value) in url_params.items():
+                # urllib.parse.parse_qs() will always return values as lists.
+                # If there is only one item, then pull that value out of the list.
+                if (len(value) == 1):
+                    value = value[0]
+
                 if (key not in parameters):
                     parameters[key] = value
 
@@ -191,34 +196,65 @@ class HTTPExchange(edq.util.json.DictConverter):
 
     def match(self, query: 'HTTPExchange',
             match_headers: bool = False,
+            headers_to_skip: typing.Union[typing.List[str], None] = None,
             params_to_skip: typing.Union[typing.List[str], None] = None,
-            **kwargs: typing.Any) -> bool:
+            **kwargs: typing.Any) -> typing.Tuple[bool, typing.Union[str, None]]:
         """
         Check if this exchange matches the query exchange.
+        If they match, `(True, None)` will be returned.
+        If they do not match, `(False, <hint>)` will be returned, where `<hint>` points to where the mismatch is.
+
         Note that this is not an equality check,
-        as a query if often missing the response components.
+        as a query exchange is often missing the response components.
         This method is often invoked the see if an incoming HTTP request (the query) matches an existing exchange.
         """
 
-        # TEST - Headers. Just add them in to the parameters?
+        if (query.method != self.method):
+            return False, f"HTTP method does not match (query = {query.method}, target = {self.method})."
+
+        if (query.url_path != self.url_path):
+            return False, f"URL path does not match (query = {query.url_path}, target = {self.url_path})."
+
+        if (query.url_anchor != self.url_anchor):
+            return False, f"URL anchor does not match (query = {query.url_anchor}, target = {self.url_anchor})."
+
+        if (headers_to_skip is None):
+            headers_to_skip = []
 
         if (params_to_skip is None):
             params_to_skip = []
 
-        query_keys = set(query.parameters.keys()) - set(params_to_skip)
-        target_keys = set(self.parameters.keys()) - set(params_to_skip)
+        if (match_headers):
+            match, hint = self._match_dict('header', self.headers, query.headers, headers_to_skip)
+            if (not match):
+                return False, hint
+
+        match, hint = self._match_dict('parameter', self.parameters, query.parameters, params_to_skip)
+        if (not match):
+            return False, hint
+
+        return True, None
+
+    def _match_dict(self, label: str,
+            target_dict: typing.Dict[str, typing.Any], query_dict: typing.Dict[str, typing.Any],
+            keys_to_skip: typing.List[str],
+            ) -> typing.Tuple[bool, typing.Union[str, None]]:
+        """ A subcheck in match(), specifically for a dictionary. """
+
+        query_keys = set(query_dict.keys()) - set(keys_to_skip)
+        target_keys = set(target_dict.keys()) - set(keys_to_skip)
 
         if (len(query_keys) != len(target_keys)):
-            return False
+            return False, f"Number of {label}s does not match (query = {len(query_keys)}, target = {len(target_keys)})."
 
         for key in sorted(query_keys):
-            query_value = query.parameters[key]
-            target_value = self.parameters[key]
+            query_value = query_dict[key]
+            target_value = target_dict[key]
 
             if (query_value != target_value):
-                return False
+                return False, f"{label.title()} '{key}' has a non-matching value (query = '{query_value}', target = '{target_value}')."
 
-        return True
+        return True, None
 
     def get_url(self) -> str:
         """ Get the URL path and anchor combined. """
@@ -245,7 +281,7 @@ class HTTPExchange(edq.util.json.DictConverter):
         """
         Check if this exchange matches the given response.
         If they match, `(True, None)` will be returned.
-        If they do not match, `(True, <hint>)` will be returned, where `<hint>` points to where the mismatch is.
+        If they do not match, `(False, <hint>)` will be returned, where `<hint>` points to where the mismatch is.
         """
 
         if (self.response_code != response.status_code):
@@ -432,7 +468,8 @@ class HTTPTestServer():
         full_match_options.update(match_options)
 
         for exchange in target:
-            if (exchange.match(query, **full_match_options)):
+            match, _ = exchange.match(query, **full_match_options)
+            if (match):
                 return exchange, None
 
         return None, f"Found matching URL and method, but could not find matching params for '{hint_display}'."
