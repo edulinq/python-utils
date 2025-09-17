@@ -56,9 +56,8 @@ def parse_POST_data(requestHandler: http.server.BaseHTTPRequestHandler) -> typin
     length = int(requestHandler.headers['Content-Length'])
     raw_content = requestHandler.rfile.read(length)
 
-    if (content_type == 'application/x-www-form-urlencoded'):
-        request = urllib.parse.parse_qs(raw_content.decode(edq.util.dirent.DEFAULT_ENCODING))
-        data = json.loads(request[autograder.api.constants.API_REQUEST_JSON_KEY][0])
+    if (content_type in ['', 'application/x-www-form-urlencoded']):
+        data = parse_query_string(raw_content.decode(edq.util.dirent.DEFAULT_ENCODING).strip())
         return data, files
 
     if (content_type.startswith('multipart/form-data')):
@@ -68,6 +67,13 @@ def parse_POST_data(requestHandler: http.server.BaseHTTPRequestHandler) -> typin
         for part in decoder.parts:
             values = parse_content_dispositions(part.headers)
 
+            # TEST
+            print('---')
+            print(values)
+            print(part)
+            print('---')
+
+            ''' TEST
             if (values.get('name', ()) == autograder.api.constants.API_REQUEST_JSON_KEY):
                 data = json.loads(part.text)
             else:
@@ -78,6 +84,7 @@ def parse_POST_data(requestHandler: http.server.BaseHTTPRequestHandler) -> typin
 
                 # TEST
                 files[filename] = values
+            '''
 
         return data, files
 
@@ -110,3 +117,18 @@ def parse_content_dispositions(headers):
             values[cd_key] = cd_value
 
     return values
+
+def parse_query_string(text: str,
+        replace_single_lists: bool = True,
+        ) -> typing.Dict[str, typing.Any]:
+    """
+    Parse a query string (like urllib.parse.parse_qs()), and normalize the result.
+    If specified, lists with single values (as returned from urllib.parse.parse_qs()) will be replaced with the single value.
+    """
+
+    results = urllib.parse.parse_qs(text)
+    for (key, value) in results.items():
+        if (replace_single_lists and (len(value) == 1)):
+            results[key] = value[0]
+
+    return results

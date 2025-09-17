@@ -1,5 +1,5 @@
 {
     "method": "GET",
     "url": "simple",
-    "response_body": "foo"
+    "response_body": "simple"
 }

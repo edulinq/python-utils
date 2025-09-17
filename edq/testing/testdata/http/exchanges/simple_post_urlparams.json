@@ -1,0 +1,5 @@
+{
+    "method": "POST",
+    "url": "simple?a=1&b=2",
+    "response_body": "simple_post_params <variant>"
+}

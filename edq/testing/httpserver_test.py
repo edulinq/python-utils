@@ -1,4 +1,5 @@
 import os
+import typing
 
 import edq.testing.httpserver
 
@@ -18,6 +19,8 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
 
         # {<file basename no ext>: exchange, ...}
         exchanges = {os.path.splitext(os.path.basename(exchange.source_path))[0]: exchange for exchange in self._server.get_exchanges()}
+
+        # TEST - Cases for POST: multipart vs urlencoded
 
         # [(target, query, match?, hint substring), ...]
         test_cases = [
@@ -98,6 +101,13 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                 None,
             ),
             (
+                exchanges['simple_post_params'],
+                exchanges['simple_post_urlparams'],
+                {},
+                True,
+                None,
+            ),
+            (
                 exchanges['specialcase_listparams_url'],
                 exchanges['specialcase_listparams_explicit'],
                 {},
@@ -107,7 +117,9 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             (
                 exchanges['simple'],
                 exchanges['simple_headers'],
-                {},
+                {
+                    'match_headers': False,
+                },
                 True,
                 None,
             ),
@@ -121,6 +133,13 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                     method = 'POST',
                     url = 'simple',
                 ),
+                {},
+                False,
+                'method does not match',
+            ),
+            (
+                exchanges['simple'],
+                exchanges['simple_post'],
                 {},
                 False,
                 'method does not match',
@@ -158,6 +177,20 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                     url = 'simple',
                     parameters = {'a': '1'},
                 ),
+                {},
+                False,
+                'Number of parameters does not match',
+            ),
+            (
+                exchanges['simple_post'],
+                exchanges['simple_post_params'],
+                {},
+                False,
+                'Number of parameters does not match',
+            ),
+            (
+                exchanges['simple_post'],
+                exchanges['simple_post_urlparams'],
                 {},
                 False,
                 'Number of parameters does not match',

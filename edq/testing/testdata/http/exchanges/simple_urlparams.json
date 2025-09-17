@@ -1,5 +1,5 @@
 {
     "method": "GET",
     "url": "simple?a=1&b=2",
-    "response_body": "foo"
+    "response_body": "simple_params <variant>"
 }

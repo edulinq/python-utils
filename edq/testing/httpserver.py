@@ -22,6 +22,23 @@ ALLOWED_METHODS: typing.List[str] = [
     'PUT'
 ]
 
+AUTOMATIC_REQUEST_HEADERS: typing.List[str] = [
+    'Host',
+    'User-Agent',
+    'Accept-Encoding',
+    'Accept',
+    'Connection',
+    'Content-Length',
+    'Content-Type',
+]
+""" These headers may automatically be added to requests in this module. """
+
+AUTOMATIC_RESPONSE_HEADERS: typing.List[str] = [
+    'Date',
+    'Server',
+]
+""" These headers may automatically be added to responses from the server. """
+
 class HTTPExchange(edq.util.json.DictConverter):
     """
     The request and response making up a full HTTP exchange.
@@ -182,20 +199,15 @@ class HTTPExchange(edq.util.json.DictConverter):
 
             # Check for any parameters.
 
-            url_params = urllib.parse.parse_qs(parts.query)
+            url_params = edq.util.net.parse_query_string(parts.query)
             for (key, value) in url_params.items():
-                # urllib.parse.parse_qs() will always return values as lists.
-                # If there is only one item, then pull that value out of the list.
-                if (len(value) == 1):
-                    value = value[0]
-
                 if (key not in parameters):
                     parameters[key] = value
 
         return url_path, url_anchor, parameters
 
     def match(self, query: 'HTTPExchange',
-            match_headers: bool = False,
+            match_headers: bool = True,
             headers_to_skip: typing.Union[typing.List[str], None] = None,
             params_to_skip: typing.Union[typing.List[str], None] = None,
             **kwargs: typing.Any) -> typing.Tuple[bool, typing.Union[str, None]]:
@@ -225,34 +237,40 @@ class HTTPExchange(edq.util.json.DictConverter):
             params_to_skip = []
 
         if (match_headers):
-            match, hint = self._match_dict('header', self.headers, query.headers, headers_to_skip)
+            match, hint = self._match_dict('header', query.headers, self.headers, headers_to_skip)
             if (not match):
                 return False, hint
 
-        match, hint = self._match_dict('parameter', self.parameters, query.parameters, params_to_skip)
+        match, hint = self._match_dict('parameter', query.parameters, self.parameters, params_to_skip)
         if (not match):
             return False, hint
 
         return True, None
 
     def _match_dict(self, label: str,
-            target_dict: typing.Dict[str, typing.Any], query_dict: typing.Dict[str, typing.Any],
-            keys_to_skip: typing.List[str],
+            query_dict: typing.Dict[str, typing.Any],
+            target_dict: typing.Dict[str, typing.Any],
+            keys_to_skip: typing.Union[typing.List[str], None] = None,
+            query_label: str = 'query',
+            target_label: str = 'target',
             ) -> typing.Tuple[bool, typing.Union[str, None]]:
         """ A subcheck in match(), specifically for a dictionary. """
+
+        if (keys_to_skip is None):
+            keys_to_skip = []
 
         query_keys = set(query_dict.keys()) - set(keys_to_skip)
         target_keys = set(target_dict.keys()) - set(keys_to_skip)
 
         if (len(query_keys) != len(target_keys)):
-            return False, f"Number of {label}s does not match (query = {len(query_keys)}, target = {len(target_keys)})."
+            return False, f"Number of {label}s does not match ({query_label} = {len(query_keys)}, {target_label} = {len(target_keys)})."
 
         for key in sorted(query_keys):
             query_value = query_dict[key]
             target_value = target_dict[key]
 
             if (query_value != target_value):
-                return False, f"{label.title()} '{key}' has a non-matching value (query = '{query_value}', target = '{target_value}')."
+                return False, f"{label.title()} '{key}' has a non-matching value ({query_label} = '{query_value}', {target_label} = '{target_value}')."
 
         return True, None
 
@@ -270,14 +288,19 @@ class HTTPExchange(edq.util.json.DictConverter):
         """ Perform the HTTP request described by this exchange. """
 
         url = f"{base_url}/{self.get_url()}"
-        response = requests.request(self.method, url, headers = self.headers, data = self.parameters)
+        if (self.method == 'GET'):
+            response = requests.request(self.method, url, headers = self.headers, params = self.parameters)
+        else:
+            response = requests.request(self.method, url, headers = self.headers, data = self.parameters)
 
         if (raise_on_status):
             response.raise_for_status()
 
         return response
 
-    def match_response(self, response: requests.Response) -> typing.Tuple[bool, typing.Union[str, None]]:
+    def match_response(self, response: requests.Response,
+            headers_to_skip: typing.Union[typing.List[str], None] = None,
+            ) -> typing.Tuple[bool, typing.Union[str, None]]:
         """
         Check if this exchange matches the given response.
         If they match, `(True, None)` will be returned.
@@ -296,7 +319,12 @@ class HTTPExchange(edq.util.json.DictConverter):
         if (self.response_body != body):
             return False, 'body does not match'
 
-        # TEST - Match Headers
+        match, hint = self._match_dict('header', response.headers, self.response_headers,
+                keys_to_skip = headers_to_skip,
+                query_label = 'response', target_label = 'exchange')
+
+        if (not match):
+            return False, hint
 
         # TEST - Match Files
 
@@ -323,9 +351,6 @@ class HTTPTestServer():
     then an error will be raised.
     """
 
-    # TEST - Option for matching against headers?
-    # TEST - Option for matching without specific params.
-
     def __init__(self, match_options: typing.Union[typing.Dict[str, typing.Any], None] = None) -> None:
         self.port: typing.Union[None, int] = None
         """
@@ -347,7 +372,9 @@ class HTTPTestServer():
         """
 
         if (match_options is None):
-            match_options = {}
+            match_options = {
+                'headers_to_skip': AUTOMATIC_REQUEST_HEADERS + AUTOMATIC_RESPONSE_HEADERS,
+            }
 
         self._match_options: typing.Dict[str, typing.Any] = match_options.copy()
         """ Options to use when matching HTTP exchanges. """
@@ -448,31 +475,42 @@ class HTTPTestServer():
         if (query.url_path not in target):
             return None, f"Could not find matching URL path for '{hint_display}'."
 
-        hint_display = f"{query.url_path}#{query.url_anchor}"
+        hint_display = query.url_path
+        if (query.url_anchor is not None):
+            hint_display = f"{query.url_path}#{query.url_anchor}"
+
         target = target[query.url_path]
 
         if (query.url_anchor not in target):
             return None, f"Found URL path, but could not find matching anchor for '{hint_display}'."
 
-        hint_display = f"{query.url_path}#{query.url_anchor} ({query.method})"
+        hint_display = f"{hint_display} ({query.method})"
         target = target[query.url_anchor]
 
         if (query.method not in target):
             return None, f"Found URL, but could not find matching method for '{hint_display}'."
 
         params = list(sorted(query.parameters.keys()))
-        hint_display = f"{query.url_path}#{query.url_anchor} ({query.method}, param keys = {params})"
+        hint_display = f"{hint_display}, (param keys = {params})"
         target = target[query.method]
 
         full_match_options = self._match_options.copy()
         full_match_options.update(match_options)
 
-        for exchange in target:
-            match, _ = exchange.match(query, **full_match_options)
+        hints = []
+        for (i, exchange) in enumerate(target):
+            match, hint = exchange.match(query, **full_match_options)
             if (match):
                 return exchange, None
 
-        return None, f"Found matching URL and method, but could not find matching params for '{hint_display}'."
+            # Collect hints for non-matches.
+            label = exchange.source_path
+            if (label is None):
+                label = str(i)
+
+            hints.append(f"{label}: {hint}")
+
+        return None, f"Found matching URL and method, but could not find matching headers/params for '{hint_display}' (non-matching hints: {hints})."
 
     def load_exchange(self, exchange: HTTPExchange) -> None:
         """ Load an exchange into this server. """
@@ -539,8 +577,8 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
         if (self._server is None):
             raise ValueError("Server has not been initialized.")
 
-        raw_content = urllib.parse.urlparse(self.path).query
-        request_data = urllib.parse.parse_qs(raw_content)
+        url_parts = urllib.parse.urlparse(self.path)
+        request_data = edq.util.net.parse_query_string(url_parts.query)
 
         exchange = self._get_exchange('GET', parameters = request_data)
 
@@ -619,7 +657,7 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
 
         full_response = request.make_request(base_url)
 
-        match, hint = response.match_response(full_response)
+        match, hint = response.match_response(full_response, **self._server._match_options)
         if (not match):
             raise AssertionError(f"Exchange does not match: '{hint}'.")
 

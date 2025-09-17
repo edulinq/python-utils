@@ -4,5 +4,5 @@
     "headers": {
         "a": "1"
     },
-    "response_body": "foo"
+    "response_body": "simple_headers"
 }

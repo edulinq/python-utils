@@ -1,9 +1,9 @@
 {
-    "method": "GET",
+    "method": "POST",
     "url": "simple",
     "parameters": {
         "a": "1",
         "b": "2"
     },
-    "response_body": "simple_params <variant>"
+    "response_body": "simple_post_params <variant>"
 }
