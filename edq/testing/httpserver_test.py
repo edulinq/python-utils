@@ -14,14 +14,141 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
         edq.testing.httpserver.HTTPServerTest.setup_server(server)
         server.load_exchanges_dir(TEST_EXCHANGES_DIR)
 
+    def test_exchange_validation(self):
+        """ Test validation of exchanges. """
+
+        # [(kwargs, expected, error substring), ...]
+        test_cases = [
+            (
+                {
+                    'method': 'GET',
+                    'url': 'simple',
+                },
+                edq.testing.httpserver.HTTPExchange(
+                    method = 'GET',
+                    url = 'simple',
+                ),
+                None,
+            ),
+
+            (
+                {
+                    'method': 'ZZZ',
+                    'url': 'simple',
+                },
+                None,
+                'unknown/disallowed method',
+            ),
+
+            (
+                {
+                },
+                None,
+                'URL path cannot be empty',
+            ),
+
+            (
+                {
+                    'url': 'foo?a=b#c',
+                },
+                edq.testing.httpserver.HTTPExchange(
+                    url_path = 'foo',
+                    url_anchor = 'c',
+                    parameters = {
+                        'a': 'b',
+                    },
+                ),
+                None,
+            ),
+
+            (
+                {
+                    'url': 'for',
+                    'url_path': 'bar',
+                },
+                None,
+                'Mismatched URL paths',
+            ),
+
+            (
+                {
+                    'url': 'for#a',
+                    'url_anchor': 'b',
+                },
+                None,
+                'Mismatched URL anchors',
+            ),
+
+            (
+                {
+                    'url': 'foo',
+                    'files': [
+                        {
+                            'path': 'test.txt',
+                        }
+                    ],
+                },
+                edq.testing.httpserver.HTTPExchange(
+                    url_path = 'foo',
+                    files = [
+                        edq.testing.httpserver.FileInfo(name = 'test.txt', path = 'test.txt'),
+                    ]
+                ),
+                None,
+            ),
+
+            (
+                {
+                    'url': 'foo',
+                    'files': [
+                        {
+                            'content': '',
+                        }
+                    ],
+                },
+                None,
+                'No name was provided for file',
+            ),
+
+            (
+                {
+                    'url': 'foo',
+                    'files': [
+                        {
+                            'name': 'foo.txt',
+                        }
+                    ],
+                },
+                None,
+                'File must have either path or content',
+            ),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (kwargs, expected, error_substring) = test_case
+
+            with self.subTest(msg = f"Case {i}:"):
+                try:
+                    actual = edq.testing.httpserver.HTTPExchange(**kwargs)
+                except Exception as ex:
+                    error_string = self.format_error_string(ex)
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{error_string}'.")
+
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
+                    continue
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
+                self.assertJSONDictEqual(expected, actual)
+
     def test_exchange_matching_base(self):
         """ Test matching exchanges against queries. """
 
         # {<file basename no ext>: exchange, ...}
         exchanges = {os.path.splitext(os.path.basename(exchange.source_path))[0]: exchange for exchange in self._server.get_exchanges()}
-
-        # TEST - Cases with redundant URL components (mismatches).
-        # TEST - Cases for POST: multipart vs urlencoded
 
         # [(target, query, match?, hint substring), ...]
         test_cases = [

@@ -59,13 +59,16 @@ class FileInfo(edq.util.json.DictConverter):
             name = os.path.basename(self.path)
 
         if (name is None):
-            raise ValueError("No name was provided for this file.")
+            raise ValueError("No name was provided for file.")
 
         self.name: str = name
         """ The name for this file used in an HTTP request. """
 
         self.content: typing.Union[str, bytes, None] = content
         """ The contents of this file. """
+
+        if ((self.path is None) and (self.content is None)):
+            raise ValueError("File must have either path or content specified.")
 
     def resolve_path(self, base_dir: str) -> None:
         """ Resolve this path relative to the given base dir. """
@@ -89,8 +92,6 @@ class HTTPExchange(edq.util.json.DictConverter):
     The request and response making up a full HTTP exchange.
     """
 
-    # TEST - Response body has not been worked out.
-
     def __init__(self,
             method: str = 'GET',
             url: typing.Union[str, None] = None,
@@ -101,14 +102,13 @@ class HTTPExchange(edq.util.json.DictConverter):
             headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
             response_code: int = http.HTTPStatus.OK,
             response_headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            response_body: typing.Union[typing.Any, None] = None,
+            response_body: typing.Union[str, None] = None,
             json_body: bool = False,
             read_write: bool = False,
-            modify_exchange: typing.Union[str, None] = None,
             source_path: typing.Union[str, None] = None,
             extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             **kwargs: typing.Any) -> None:
-        method = method.upper()
+        method = str(method).upper()
         if (method not in ALLOWED_METHODS):
             raise ValueError(f"Got unknown/disallowed method: '{method}'.")
 
@@ -173,8 +173,7 @@ class HTTPExchange(edq.util.json.DictConverter):
         self.response_headers: typing.Dict[str, typing.Any] = response_headers
         """ Headers in the response. """
 
-        # TODO - Limit type? string, blob, list, dict
-        self.response_body: typing.Any = response_body
+        self.response_body: typing.Union[str, None] = response_body
         """
         The response that should be sent in this exchange.
         """
@@ -188,10 +187,6 @@ class HTTPExchange(edq.util.json.DictConverter):
         This field may be ignored by test servers,
         but may be observed by tools that generate or validate test data.
         """
-
-        # TEST - This needs to be a reflection reference.
-        self.modify_exchange: typing.Union[str, None] = modify_exchange
-        """ If supplied, call this function to modify this exchange before saving. """
 
         self.source_path: typing.Union[str, None] = source_path
         """
@@ -277,6 +272,9 @@ class HTTPExchange(edq.util.json.DictConverter):
             for (key, value) in url_params.items():
                 if (key not in parameters):
                     parameters[key] = value
+
+        if (url_path is None):
+            raise ValueError('URL path cannot be empty, it must be explicitly set via `url_path`, or indirectly via `url`.')
 
         return url_path, url_anchor, parameters
 
