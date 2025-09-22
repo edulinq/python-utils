@@ -1,3 +1,4 @@
+import email.message
 import errno
 import http.server
 import socket
@@ -43,20 +44,22 @@ def find_open_port(
             # Unknown error.
             raise ex
 
-    raise ValueError("Could not find open port in [%d, %d]." % (start_port, end_port))
+    raise ValueError(f"Could not find open port in [{start_port}, {end_port}].")
 
-def parse_request_body_data(requestHandler: http.server.BaseHTTPRequestHandler) -> typing.Tuple[typing.Dict[str, typing.Any], typing.Dict[str, bytes]]:
+def parse_request_body_data(
+        request_handler: http.server.BaseHTTPRequestHandler,
+        ) -> typing.Tuple[typing.Dict[str, typing.Any], typing.Dict[str, bytes]]:
     """ Parse data and files from an HTTP request body. """
 
-    data = {}
-    files = {}
+    data: typing.Dict[str, typing.Any] = {}
+    files: typing.Dict[str, bytes] = {}
 
-    length = int(requestHandler.headers.get('Content-Length', 0))
+    length = int(request_handler.headers.get('Content-Length', 0))
     if (length == 0):
         return data, files
 
-    content_type = requestHandler.headers.get('Content-Type', '')
-    raw_content = requestHandler.rfile.read(length)
+    content_type = request_handler.headers.get('Content-Type', '')
+    raw_content = request_handler.rfile.read(length)
 
     if (content_type in ['', 'application/x-www-form-urlencoded']):
         data = parse_query_string(raw_content.decode(edq.util.dirent.DEFAULT_ENCODING).strip())
@@ -87,17 +90,21 @@ def parse_request_body_data(requestHandler: http.server.BaseHTTPRequestHandler) 
 
         return data, files
 
-    raise ValueError("Unknown content type: '%s'." % (content_type))
+    raise ValueError(f"Unknown content type: '{content_type}'.")
 
-def parse_content_dispositions(headers):
+def parse_content_dispositions(headers: email.message.EmailMessage) -> typing.Dict[str, typing.Any]:
     """ Parse a request's content dispositions from headers. """
 
     values = {}
     for (key, value) in headers.items():
-        key = key.decode(edq.util.dirent.DEFAULT_ENCODING).strip()
-        value = value.decode(edq.util.dirent.DEFAULT_ENCODING)
+        if (isinstance(key, bytes)):
+            key = key.decode(edq.util.dirent.DEFAULT_ENCODING)
 
-        if (key.lower() != 'content-disposition'):
+        if (isinstance(value, bytes)):
+            value = value.decode(edq.util.dirent.DEFAULT_ENCODING)
+
+        key = key.strip().lower()
+        if (key != 'content-disposition'):
             continue
 
         # The Python stdlib recommends using the email library for this parsing,
@@ -127,6 +134,6 @@ def parse_query_string(text: str,
     results = urllib.parse.parse_qs(text)
     for (key, value) in results.items():
         if (replace_single_lists and (len(value) == 1)):
-            results[key] = value[0]
+            results[key] = value[0]  # type: ignore[assignment]
 
     return results

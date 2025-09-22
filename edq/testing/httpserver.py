@@ -16,6 +16,7 @@ import edq.util.net
 
 SERVER_THREAD_START_WAIT_SEC = 0.05
 SERVER_THREAD_REAP_WAIT_SEC = 0.15
+TIMEOUT_SECS = 1.0
 
 ALLOWED_METHODS: typing.List[str] = [
     'GET',
@@ -47,7 +48,7 @@ class FileInfo(edq.util.json.DictConverter):
             path: typing.Union[str, None] = None,
             name: typing.Union[str, None] = None,
             content: typing.Union[str, bytes, None] = None,
-            **kwargs) -> None:
+            **kwargs: typing.Any) -> None:
         # Normalize the path from POSIX-style to the system's style.
         if (path is not None):
             path = str(pathlib.PurePath(pathlib.PurePosixPath(path)))
@@ -73,7 +74,7 @@ class FileInfo(edq.util.json.DictConverter):
     def resolve_path(self, base_dir: str) -> None:
         """ Resolve this path relative to the given base dir. """
 
-        if (os.path.isabs(self.path)):
+        if ((self.path is None) or os.path.isabs(self.path)):
             return
 
         self.path = os.path.abspath(os.path.join(base_dir, self.path))
@@ -324,8 +325,8 @@ class HTTPExchange(edq.util.json.DictConverter):
             return False, hint
 
         # Check file names, not file content.
-        query_filenames = set([file.name for file in query.files])
-        target_filenames = set([file.name for file in self.files])
+        query_filenames = {file.name for file in query.files}
+        target_filenames = {file.name for file in self.files}
         if (query_filenames != target_filenames):
             return False, f"File names do not match (query = {query_filenames}, target = {target_filenames})."
 
@@ -354,7 +355,8 @@ class HTTPExchange(edq.util.json.DictConverter):
             target_value = target_dict[key]
 
             if (query_value != target_value):
-                return False, f"{label.title()} '{key}' has a non-matching value ({query_label} = '{query_value}', {target_label} = '{target_value}')."
+                comparison = f"{query_label} = '{query_value}', {target_label} = '{target_value}'"
+                return False, f"{label.title()} '{key}' has a non-matching value ({comparison})."
 
         return True, None
 
@@ -373,13 +375,23 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         files = []
         for file_info in self.files:
-            files.append((file_info.name, open(file_info.path, 'rb')))
+            content = file_info.content
+            if (content is None):
+                content = open(file_info.path, 'rb')  # type: ignore[assignment,arg-type]  # pylint: disable=consider-using-with
+
+            files.append((file_info.name, content))
 
         url = f"{base_url}/{self.get_url()}"
         if (self.method == 'GET'):
-            response = requests.request(self.method, url, headers = self.headers, files = files, params = self.parameters)
+            response = requests.request(self.method, url,
+                    headers = self.headers, files = files,
+                    params = self.parameters,
+                    timeout = TIMEOUT_SECS)
         else:
-            response = requests.request(self.method, url, headers = self.headers, files = files, data = self.parameters)
+            response = requests.request(self.method, url,
+                    headers = self.headers, files = files,
+                    data = self.parameters,
+                    timeout = TIMEOUT_SECS)
 
         if (raise_on_status):
             response.raise_for_status()
@@ -484,8 +496,9 @@ class HTTPTestServer():
     def start(self) -> None:
         """ Start this server in a thread and return the port. """
 
-        # Created a nested handler to bind this server object to the handler.
         class NestedHTTPHandler(_TestHTTPHandler):
+            """ An HTTP handler as a nested class to bind this server object to the handler. """
+
             _server = self
 
         self.port = edq.util.net.find_open_port()
@@ -494,8 +507,12 @@ class HTTPTestServer():
         # Use a barrier to ensure that the server thread has started.
         server_startup_barrier = threading.Barrier(2)
 
-        def _run_server(server, server_startup_barrier):
+        def _run_server(server: 'HTTPTestServer', server_startup_barrier: threading.Barrier) -> None:
             server_startup_barrier.wait()
+
+            if (server._http_server is None):
+                raise ValueError('Server was not initialized.')
+
             server._http_server.serve_forever(poll_interval = 0.1)
             server._http_server.server_close()
 
@@ -557,7 +574,7 @@ class HTTPTestServer():
             match_options = {}
 
         hint_display = query.url_path
-        target = self._exchanges
+        target: typing.Any = self._exchanges
 
         if (query.url_path not in target):
             return None, f"Could not find matching URL path for '{hint_display}'."
@@ -618,7 +635,7 @@ class HTTPTestServer():
         if (exchange is None):
             raise ValueError("Cannot load a None exchange.")
 
-        target = self._exchanges
+        target: typing.Any = self._exchanges
         if (exchange.url_path not in target):
             target[exchange.url_path] = {}
 
@@ -634,13 +651,20 @@ class HTTPTestServer():
         target.append(exchange)
 
     def load_exchange_file(self, path: str) -> None:
-        exchange = edq.util.json.load_object_path(path, HTTPExchange)
+        """
+        Load an exchange from a file.
+        This will also handle setting the exchanges source path and resolve the exchange's paths.
+        """
+
+        exchange = typing.cast(HTTPExchange, edq.util.json.load_object_path(path, HTTPExchange))
         exchange.source_path = os.path.abspath(path)
         exchange.resolve_paths(os.path.abspath(os.path.dirname(path)))
 
         self.load_exchange(exchange)
 
     def load_exchanges_dir(self, base_dir: str, extension: str = '.json') -> None:
+        """ Load all exchanges found (recursively) within a directory. """
+
         paths = list(sorted(glob.glob(os.path.join(base_dir, "**", f"*{extension}"), recursive = True)))
         for path in paths:
             self.load_exchange_file(path)
@@ -650,16 +674,22 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
     """ The test server this handler is being used for. """
 
     # Quiet logs.
-    def log_message(self, format, *args):
-        return
+    def log_message(self, format: str, *args: typing.Any) -> None:  # pylint: disable=redefined-builtin
+        pass
 
-    def do_POST(self):
+    def do_POST(self) -> None:  # pylint: disable=invalid-name
+        """ A handler for POST requests. """
+
         self._do_request('POST')
 
-    def do_GET(self):
+    def do_GET(self) -> None:  # pylint: disable=invalid-name
+        """ A handler for GET requests. """
+
         self._do_request('GET')
 
-    def _do_request(self, method: str):
+    def _do_request(self, method: str) -> None:
+        """ A common handler for multiple types of requests. """
+
         if (self._server is None):
             raise ValueError("Server has not been initialized.")
 
@@ -673,7 +703,7 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
         # Construct file info objects from the raw files.
         files = [FileInfo(name = name, content = content) for (name, content) in request_files.items()]
 
-        exchange = self._get_exchange(method, parameters = request_data, files = files)
+        exchange = self._get_exchange(method, parameters = request_data, files = files)  # type: ignore[arg-type]
 
         code = exchange.response_code
         headers = exchange.response_headers
@@ -683,7 +713,7 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
             payload = ''
 
         self.send_response(code)
-        for (key, value) in headers:
+        for (key, value) in headers.items():
             self.send_header(key, value)
         self.end_headers()
 
@@ -691,12 +721,16 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def _get_exchange(self, method: str,
             parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            files: typing.Union[typing.List[FileInfo], None] = None,
+            files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, str]]], None] = None,
             ) -> HTTPExchange:
         """ Get the matching exchange or raise an error. """
 
+        if (self._server is None):
+            raise ValueError("Server has not been initialized.")
+
         query = HTTPExchange(method = method,
-                url = self.path, headers = self.headers,
+                url = self.path,
+                headers = self.headers,  # type: ignore[arg-type]
                 parameters = parameters, files = files)
 
         exchange, hint = self._server.lookup_exchange(query)
@@ -713,14 +747,16 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
     _server: typing.Union[HTTPTestServer, None] = None
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         HTTPServerTest._server = HTTPTestServer()
         cls.setup_server(HTTPServerTest._server)
         HTTPServerTest._server.start()
 
     @classmethod
-    def tearDownClass(cls):
-        HTTPServerTest._server.stop()
+    def tearDownClass(cls) -> None:
+        if (HTTPServerTest._server is not None):
+            HTTPServerTest._server.stop()
+
         HTTPServerTest._server = None
 
     @classmethod
@@ -730,10 +766,13 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
     def get_server_url(self) -> str:
         """ Get the URL for this test's test server. """
 
+        if (self._server is None):
+            raise ValueError("Server has not been initialized.")
+
         if (self._server.port is None):
             raise ValueError("Test server port has not been set.")
 
-        return f"http://127.0.0.1:{HTTPServerTest._server.port}"
+        return f"http://127.0.0.1:{self._server.port}"
 
     def assert_exchange(self, request: HTTPExchange, response: HTTPExchange,
             base_url: typing.Union[str, None] = None,
@@ -744,6 +783,9 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
         By default, the server's URL will be used as the base URL.
         The full response will be returned (if no assertion is raised).
         """
+
+        if (self._server is None):
+            raise ValueError("Server has not been initialized.")
 
         if (base_url is None):
             base_url = self.get_server_url()
