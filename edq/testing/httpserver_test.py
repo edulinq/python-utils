@@ -20,6 +20,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
         # {<file basename no ext>: exchange, ...}
         exchanges = {os.path.splitext(os.path.basename(exchange.source_path))[0]: exchange for exchange in self._server.get_exchanges()}
 
+        # TEST - Cases with redundant URL components (mismatches).
         # TEST - Cases for POST: multipart vs urlencoded
 
         # [(target, query, match?, hint substring), ...]
@@ -92,28 +93,6 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                 None,
             ),
 
-            # Varaints
-            (
-                exchanges['simple_params'],
-                exchanges['simple_urlparams'],
-                {},
-                True,
-                None,
-            ),
-            (
-                exchanges['simple_post_params'],
-                exchanges['simple_post_urlparams'],
-                {},
-                True,
-                None,
-            ),
-            (
-                exchanges['specialcase_listparams_url'],
-                exchanges['specialcase_listparams_explicit'],
-                {},
-                True,
-                None,
-            ),
             (
                 exchanges['simple'],
                 exchanges['simple_headers'],
@@ -179,21 +158,21 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                 ),
                 {},
                 False,
-                'Number of parameters does not match',
+                'Parameter keys do not match',
             ),
             (
                 exchanges['simple_post'],
                 exchanges['simple_post_params'],
                 {},
                 False,
-                'Number of parameters does not match',
+                'Parameter keys do not match',
             ),
             (
                 exchanges['simple_post'],
                 exchanges['simple_post_urlparams'],
                 {},
                 False,
-                'Number of parameters does not match',
+                'Parameter keys do not match',
             ),
 
             # Missed param value.
@@ -220,7 +199,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                     'match_headers': True,
                 },
                 False,
-                'Number of headers does not match',
+                'Header keys do not match',
             ),
 
             # Missed header value.

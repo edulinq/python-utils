@@ -45,15 +45,17 @@ def find_open_port(
 
     raise ValueError("Could not find open port in [%d, %d]." % (start_port, end_port))
 
-# TEST - Files? Binary?
-def parse_POST_data(requestHandler: http.server.BaseHTTPRequestHandler) -> typing.Tuple[typing.Dict[str, typing.Any], typing.Dict[str, bytes]]:
-    """ Parse data and files from an HTTP POST request. """
+def parse_request_body_data(requestHandler: http.server.BaseHTTPRequestHandler) -> typing.Tuple[typing.Dict[str, typing.Any], typing.Dict[str, bytes]]:
+    """ Parse data and files from an HTTP request body. """
 
     data = {}
     files = {}
 
+    length = int(requestHandler.headers.get('Content-Length', 0))
+    if (length == 0):
+        return data, files
+
     content_type = requestHandler.headers.get('Content-Type', '')
-    length = int(requestHandler.headers['Content-Length'])
     raw_content = requestHandler.rfile.read(length)
 
     if (content_type in ['', 'application/x-www-form-urlencoded']):
@@ -64,33 +66,29 @@ def parse_POST_data(requestHandler: http.server.BaseHTTPRequestHandler) -> typin
         decoder = requests_toolbelt.multipart.decoder.MultipartDecoder(
             raw_content, content_type, encoding = edq.util.dirent.DEFAULT_ENCODING)
 
-        for part in decoder.parts:
-            values = parse_content_dispositions(part.headers)
+        for multipart_section in decoder.parts:
+            values = parse_content_dispositions(multipart_section.headers)
 
-            # TEST
-            print('---')
-            print(values)
-            print(part)
-            print('---')
+            name = values.get('name', None)
+            if (name is None):
+                raise ValueError("Could not find name for multipart section.")
 
-            ''' TEST
-            if (values.get('name', ()) == autograder.api.constants.API_REQUEST_JSON_KEY):
-                data = json.loads(part.text)
-            else:
-                # Assume everything else is a file.
-                filename = values.get('filename', '')
+            # Look for a "filename" field to indicate a multipart section is a file.
+            # The file's desired name is still in "name", but an alternate name is in "filename".
+            if ('filename' in values):
+                filename = values.get('name', '')
                 if (filename == ''):
-                    raise ValueError("Unable to find filename for request.")
+                    raise ValueError("Unable to find filename for multipart section.")
 
-                # TEST
-                files[filename] = values
-            '''
+                files[filename] = multipart_section.content
+            else:
+                # Normal Parameter
+                data[name] = multipart_section.text
 
         return data, files
 
     raise ValueError("Unknown content type: '%s'." % (content_type))
 
-# TEST - Binary handing?
 def parse_content_dispositions(headers):
     """ Parse a request's content dispositions from headers. """
 

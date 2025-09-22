@@ -1,6 +1,7 @@
 import glob
 import http.server
 import os
+import pathlib
 import threading
 import time
 import typing
@@ -39,6 +40,50 @@ AUTOMATIC_RESPONSE_HEADERS: typing.List[str] = [
 ]
 """ These headers may automatically be added to responses from the server. """
 
+class FileInfo(edq.util.json.DictConverter):
+    """ Store info about files used in HTTP exchanges. """
+
+    def __init__(self,
+            path: typing.Union[str, None] = None,
+            name: typing.Union[str, None] = None,
+            content: typing.Union[str, bytes, None] = None,
+            **kwargs) -> None:
+        # Normalize the path from POSIX-style to the system's style.
+        if (path is not None):
+            path = str(pathlib.PurePath(pathlib.PurePosixPath(path)))
+
+        self.path: typing.Union[str, None] = path
+        """ The on-disk path to a file. """
+
+        if ((name is None) and (self.path is not None)):
+            name = os.path.basename(self.path)
+
+        if (name is None):
+            raise ValueError("No name was provided for this file.")
+
+        self.name: str = name
+        """ The name for this file used in an HTTP request. """
+
+        self.content: typing.Union[str, bytes, None] = content
+        """ The contents of this file. """
+
+    def resolve_path(self, base_dir: str) -> None:
+        """ Resolve this path relative to the given base dir. """
+
+        if (os.path.isabs(self.path)):
+            return
+
+        self.path = os.path.abspath(os.path.join(base_dir, self.path))
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        data = vars(self).copy()
+        del data['content']
+        return data
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> typing.Any:
+        return FileInfo(**data)
+
 class HTTPExchange(edq.util.json.DictConverter):
     """
     The request and response making up a full HTTP exchange.
@@ -52,7 +97,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             url_path: typing.Union[str, None] = None,
             url_anchor: typing.Union[str, None] = None,
             parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            files: typing.Union[typing.List[str], None] = None,
+            files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, str]]], None] = None,
             headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
             response_code: int = http.HTTPStatus.OK,
             response_headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
@@ -61,6 +106,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             read_write: bool = False,
             modify_exchange: typing.Union[str, None] = None,
             source_path: typing.Union[str, None] = None,
+            extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             **kwargs: typing.Any) -> None:
         method = method.upper()
         if (method not in ALLOWED_METHODS):
@@ -93,8 +139,24 @@ class HTTPExchange(edq.util.json.DictConverter):
         if (files is None):
             files = []
 
-        # TEST
-        self.files: typing.List[str] = files
+        parsed_files = []
+        for file in files:
+            if (isinstance(file, FileInfo)):
+                parsed_files.append(file)
+            else:
+                parsed_files.append(FileInfo(**file))
+
+        self.files: typing.List[FileInfo] = parsed_files
+        """
+        A list of files to include in the request.
+        The files are represented as dicts with a
+        "path" (path to the file on disk) and "name" (the filename to send in the request) field.
+        These paths must be POSIX-style paths,
+        they will be converted to system-specific paths.
+        Once this exchange is ready for use, these paths should be resolved (and probably absolute).
+        However, when serialized these paths should probably be relative.
+        To reconcile this, resolve_paths() should be called before using this exchange.
+        """
 
         if (headers is None):
             headers = {}
@@ -136,6 +198,18 @@ class HTTPExchange(edq.util.json.DictConverter):
         The path that this exchange was loaded from (if it was loaded from a file).
         This value should never be serialized, but can be useful for testing.
         """
+
+        if (extra_options is None):
+            extra_options = {}
+
+        self.extra_options: typing.Dict[str, typing.Any] = extra_options.copy()
+        """
+        Additional options for this exchange.
+        This library will not use these options, but other's may.
+        kwargs will also be added to this.
+        """
+
+        self.extra_options.update(kwargs)
 
     def _parse_url_components(self,
             url: typing.Union[str, None] = None,
@@ -206,6 +280,12 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         return url_path, url_anchor, parameters
 
+    def resolve_paths(self, base_dir: str) -> None:
+        """ Resolve any paths relative to the given base dir. """
+
+        for file_info in self.files:
+            file_info.resolve_path(base_dir)
+
     def match(self, query: 'HTTPExchange',
             match_headers: bool = True,
             headers_to_skip: typing.Union[typing.List[str], None] = None,
@@ -245,6 +325,12 @@ class HTTPExchange(edq.util.json.DictConverter):
         if (not match):
             return False, hint
 
+        # Check file names, not file content.
+        query_filenames = set([file.name for file in query.files])
+        target_filenames = set([file.name for file in self.files])
+        if (query_filenames != target_filenames):
+            return False, f"File names do not match (query = {query_filenames}, target = {target_filenames})."
+
         return True, None
 
     def _match_dict(self, label: str,
@@ -262,8 +348,8 @@ class HTTPExchange(edq.util.json.DictConverter):
         query_keys = set(query_dict.keys()) - set(keys_to_skip)
         target_keys = set(target_dict.keys()) - set(keys_to_skip)
 
-        if (len(query_keys) != len(target_keys)):
-            return False, f"Number of {label}s does not match ({query_label} = {len(query_keys)}, {target_label} = {len(target_keys)})."
+        if (query_keys != target_keys):
+            return False, f"{label.title()} keys do not match ({query_label} = {query_keys}, {target_label} = {target_keys})."
 
         for key in sorted(query_keys):
             query_value = query_dict[key]
@@ -287,11 +373,15 @@ class HTTPExchange(edq.util.json.DictConverter):
     def make_request(self, base_url: str, raise_on_status: bool = True) -> requests.Response:
         """ Perform the HTTP request described by this exchange. """
 
+        files = []
+        for file_info in self.files:
+            files.append((file_info.name, open(file_info.path, 'rb')))
+
         url = f"{base_url}/{self.get_url()}"
         if (self.method == 'GET'):
-            response = requests.request(self.method, url, headers = self.headers, params = self.parameters)
+            response = requests.request(self.method, url, headers = self.headers, files = files, params = self.parameters)
         else:
-            response = requests.request(self.method, url, headers = self.headers, data = self.parameters)
+            response = requests.request(self.method, url, headers = self.headers, files = files, data = self.parameters)
 
         if (raise_on_status):
             response.raise_for_status()
@@ -317,7 +407,8 @@ class HTTPExchange(edq.util.json.DictConverter):
             body = response.text
 
         if (self.response_body != body):
-            return False, 'body does not match'
+            body_hint = f"expected: '{self.response_body}', actual: '{body}'"
+            return False, f"body does not match ({body_hint})"
 
         match, hint = self._match_dict('header', response.headers, self.response_headers,
                 keys_to_skip = headers_to_skip,
@@ -325,8 +416,6 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         if (not match):
             return False, hint
-
-        # TEST - Match Files
 
         return True, None
 
@@ -498,10 +587,13 @@ class HTTPTestServer():
         full_match_options.update(match_options)
 
         hints = []
+        matches = []
+
         for (i, exchange) in enumerate(target):
             match, hint = exchange.match(query, **full_match_options)
             if (match):
-                return exchange, None
+                matches.append(exchange)
+                continue
 
             # Collect hints for non-matches.
             label = exchange.source_path
@@ -510,6 +602,16 @@ class HTTPTestServer():
 
             hints.append(f"{label}: {hint}")
 
+        if (len(matches) == 1):
+            # Found exactly one match.
+            return matches[0], None
+
+        if (len(matches) > 1):
+            # Found multiple matches.
+            match_paths = list(sorted([match.source_path for match in matches]))
+            return None, f"Found multiple matching exchanges for '{hint_display}': {match_paths}."
+
+        # Found no matches.
         return None, f"Found matching URL and method, but could not find matching headers/params for '{hint_display}' (non-matching hints: {hints})."
 
     def load_exchange(self, exchange: HTTPExchange) -> None:
@@ -536,6 +638,8 @@ class HTTPTestServer():
     def load_exchange_file(self, path: str) -> None:
         exchange = edq.util.json.load_object_path(path, HTTPExchange)
         exchange.source_path = os.path.abspath(path)
+        exchange.resolve_paths(os.path.abspath(os.path.dirname(path)))
+
         self.load_exchange(exchange)
 
     def load_exchanges_dir(self, base_dir: str, extension: str = '.json') -> None:
@@ -552,35 +656,26 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
         return
 
     def do_POST(self):
-        if (self._server is None):
-            raise ValueError("Server has not been initialized.")
-
-        request_data, request_files = edq.util.net.parse_POST_data(self)
-
-        exchange = self._get_exchange('POST', parameters = request_data, files = request_files)
-
-        code = exchange.response_code
-        headers = exchange.response_headers
-        payload = exchange.response_body
-
-        if (payload is None):
-            payload = ''
-
-        self.send_response(code)
-        for (key, value) in headers:
-            self.send_header(key, value)
-        self.end_headers()
-
-        self.wfile.write(payload.encode(edq.util.dirent.DEFAULT_ENCODING))
+        self._do_request('POST')
 
     def do_GET(self):
+        self._do_request('GET')
+
+    def _do_request(self, method: str):
         if (self._server is None):
             raise ValueError("Server has not been initialized.")
 
-        url_parts = urllib.parse.urlparse(self.path)
-        request_data = edq.util.net.parse_query_string(url_parts.query)
+        # Parse data from the request body.
+        request_data, request_files = edq.util.net.parse_request_body_data(self)
 
-        exchange = self._get_exchange('GET', parameters = request_data)
+        # Parse parameters from the URL.
+        url_parts = urllib.parse.urlparse(self.path)
+        request_data.update(edq.util.net.parse_query_string(url_parts.query))
+
+        # Construct file info objects from the raw files.
+        files = [FileInfo(name = name, content = content) for (name, content) in request_files.items()]
+
+        exchange = self._get_exchange(method, parameters = request_data, files = files)
 
         code = exchange.response_code
         headers = exchange.response_headers
@@ -598,7 +693,7 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def _get_exchange(self, method: str,
             parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            files: typing.Union[typing.List[str], None] = None,
+            files: typing.Union[typing.List[FileInfo], None] = None,
             ) -> HTTPExchange:
         """ Get the matching exchange or raise an error. """
 

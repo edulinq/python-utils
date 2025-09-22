@@ -1,5 +1,5 @@
 {
     "method": "GET",
-    "url": "simple?a=1&a=2",
-    "response_body": "specialcase_listparams <variant>"
+    "url": "simple?b=1&b=2",
+    "response_body": "specialcase_listparams_url"
 }

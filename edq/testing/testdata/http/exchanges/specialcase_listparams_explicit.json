@@ -4,5 +4,5 @@
     "parameters": {
         "a": ["1", "2"]
     },
-    "response_body": "specialcase_listparams <variant>"
+    "response_body": "specialcase_listparams_explicit"
 }
