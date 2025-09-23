@@ -12,6 +12,13 @@ import typing
 import unittest
 
 DEFAULT_TEST_FILENAME_PATTERN: str = '*_test.py'
+""" The default pattern for test files. """
+
+CLEANUP_FUNC_NAME: str = 'suite_cleanup'
+"""
+If a test class has a function with this name,
+then the function will be run after the test suite finishes.
+"""
 
 def _collect_tests(suite: typing.Union[unittest.TestCase, unittest.suite.TestSuite]) -> typing.List[unittest.TestCase]:
     """
@@ -54,6 +61,10 @@ def run(args: argparse.Namespace) -> int:
         discovered_suite = unittest.TestLoader().discover(test_dir, pattern = args.filename_pattern)
         test_cases += _collect_tests(discovered_suite)
 
+    # Cleanup class functions from test classes.
+    # {class: function, ...}
+    cleanup_funcs = {}
+
     tests = unittest.suite.TestSuite()
 
     for test_case in test_cases:
@@ -62,11 +73,19 @@ def run(args: argparse.Namespace) -> int:
 
         if (args.pattern is None or re.search(args.pattern, test_case.id())):
             tests.addTest(test_case)
+
+            # Check for a cleanup function.
+            if (hasattr(test_case.__class__, CLEANUP_FUNC_NAME)):
+                cleanup_funcs[test_case.__class__] = getattr(test_case.__class__, CLEANUP_FUNC_NAME)
         else:
             print(f"Skipping {test_case.id()} because of match pattern.")
 
     result = runner.run(tests)
     faults = len(result.errors) + len(result.failures)
+
+    # Perform any cleanup.
+    for cleanup_func in cleanup_funcs.values():
+        cleanup_func()
 
     if (not result.wasSuccessful()):
         # This value will be used as an exit status, so it should not be larger than a byte.

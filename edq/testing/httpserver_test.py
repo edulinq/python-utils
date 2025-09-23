@@ -18,6 +18,8 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
 
         # [(kwargs, expected, error substring), ...]
         test_cases = [
+            # Base
+
             (
                 {
                     'method': 'GET',
@@ -45,6 +47,8 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                 None,
                 'URL path cannot be empty',
             ),
+
+            # URL Components
 
             (
                 {
@@ -77,6 +81,8 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                 None,
                 'Mismatched URL anchors',
             ),
+
+            # Files
 
             (
                 {
@@ -121,6 +127,38 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                 None,
                 'File must have either path or content',
             ),
+
+            # JSON Response Body
+
+            (
+                {
+                    'url': 'foo',
+                    'response_body': {
+                        'a': 1,
+                    }
+                },
+                edq.testing.httpserver.HTTPExchange(
+                    url_path = 'foo',
+                    json_body = True,
+                    response_body = '{"a": 1}',
+                ),
+                None,
+            ),
+
+            (
+                {
+                    'url': 'foo',
+                    'response_body': [{
+                        'a': 1,
+                    }]
+                },
+                edq.testing.httpserver.HTTPExchange(
+                    url_path = 'foo',
+                    json_body = True,
+                    response_body = '[{"a": 1}]',
+                ),
+                None,
+            ),
         ]
 
         for (i, test_case) in enumerate(test_cases):
@@ -147,7 +185,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
         """ Test matching exchanges against queries. """
 
         # {<file basename no ext>: exchange, ...}
-        exchanges = {os.path.splitext(os.path.basename(exchange.source_path))[0]: exchange for exchange in self._server.get_exchanges()}
+        exchanges = {os.path.splitext(os.path.basename(exchange.source_path))[0]: exchange for exchange in self.get_server().get_exchanges()}
 
         # [(target, query, match?, hint substring), ...]
         test_cases = [
@@ -380,11 +418,3 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                     self.assertIn(hint_substring, hint, 'Hint is not as expected.')
                 elif (hint_substring is not None):
                     self.fail(f"Did not get expected hint: '{hint_substring}'.")
-
-    def test_exchanges_base(self):
-        """ Test making a request with each of the exchanges. """
-
-        for (i, exchange) in enumerate(self._server.get_exchanges()):
-            base_name = os.path.splitext(os.path.basename(exchange.source_path))[0]
-            with self.subTest(msg = f"Case {i} ({base_name}):"):
-                self.assert_exchange(exchange, exchange)

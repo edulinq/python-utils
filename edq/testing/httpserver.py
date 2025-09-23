@@ -103,8 +103,8 @@ class HTTPExchange(edq.util.json.DictConverter):
             headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
             response_code: int = http.HTTPStatus.OK,
             response_headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            response_body: typing.Union[str, None] = None,
-            json_body: bool = False,
+            json_body: typing.Union[bool, None] = None,
+            response_body: typing.Union[str, dict, list, None] = None,
             read_write: bool = False,
             source_path: typing.Union[str, None] = None,
             extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
@@ -174,13 +174,23 @@ class HTTPExchange(edq.util.json.DictConverter):
         self.response_headers: typing.Dict[str, typing.Any] = response_headers
         """ Headers in the response. """
 
-        self.response_body: typing.Union[str, None] = response_body
+        if (json_body is None):
+            json_body = isinstance(response_body, (dict, list))
+
+        self.json_body: bool = json_body
+        """
+        Indicates that the response is JSON and should be converted to/from a string.
+        If the response body is passed in a dict/list and this is passed as None,
+        then this will be set as true.
+        """
+
+        if (self.json_body and isinstance(response_body, (dict, list))):
+            response_body = edq.util.json.dumps(response_body)
+
+        self.response_body: typing.Union[str, None] = response_body  # type: ignore[assignment]
         """
         The response that should be sent in this exchange.
         """
-
-        self.json_body: bool = json_body
-        """ Indicates that the response is JSON and should be converted to/from a string. """
 
         self.read_write: bool = read_write
         """
@@ -400,7 +410,7 @@ class HTTPExchange(edq.util.json.DictConverter):
 
     def match_response(self, response: requests.Response,
             headers_to_skip: typing.Union[typing.List[str], None] = None,
-            ) -> typing.Tuple[bool, typing.Union[str, None]]:
+            **kwargs: typing.Any) -> typing.Tuple[bool, typing.Union[str, None]]:
         """
         Check if this exchange matches the given response.
         If they match, `(True, None)` will be returned.
@@ -410,14 +420,25 @@ class HTTPExchange(edq.util.json.DictConverter):
         if (self.response_code != response.status_code):
             return False, f"http status code does match (expected: {self.response_code}, actual: {response.status_code})"
 
-        body = None
-        if (self.json_body):
-            body = response.json()
-        else:
-            body = response.text
+        expected_body = self.response_body
+        actual_body = None
 
-        if (self.response_body != body):
-            body_hint = f"expected: '{self.response_body}', actual: '{body}'"
+        if (self.json_body):
+            actual_body = response.json()
+
+            # Normalize the actual and expected bodies.
+
+            actual_body = edq.util.json.dumps(actual_body)
+
+            if (isinstance(expected_body, str)):
+                expected_body = edq.util.json.loads(expected_body)
+
+            expected_body = edq.util.json.dumps(expected_body)
+        else:
+            actual_body = response.text
+
+        if (self.response_body != actual_body):
+            body_hint = f"expected: '{self.response_body}', actual: '{actual_body}'"
             return False, f"body does not match ({body_hint})"
 
         match, hint = self._match_dict('header', response.headers, self.response_headers,
@@ -450,7 +471,10 @@ class HTTPTestServer():
     then an error will be raised.
     """
 
-    def __init__(self, match_options: typing.Union[typing.Dict[str, typing.Any], None] = None) -> None:
+    def __init__(self,
+            match_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            default_match_options: bool = True,
+            **kwargs: typing.Any) -> None:
         self.port: typing.Union[None, int] = None
         """
         The active port this server is using.
@@ -471,11 +495,15 @@ class HTTPTestServer():
         """
 
         if (match_options is None):
-            match_options = {
-                'headers_to_skip': AUTOMATIC_REQUEST_HEADERS + AUTOMATIC_RESPONSE_HEADERS,
-            }
+            match_options = {}
 
-        self._match_options: typing.Dict[str, typing.Any] = match_options.copy()
+        if (default_match_options):
+            if ('headers_to_skip' not in match_options):
+                match_options['headers_to_skip'] = []
+
+            match_options['headers_to_skip'] += (AUTOMATIC_REQUEST_HEADERS + AUTOMATIC_RESPONSE_HEADERS)
+
+        self.match_options: typing.Dict[str, typing.Any] = match_options.copy()
         """ Options to use when matching HTTP exchanges. """
 
     def get_exchanges(self) -> typing.List[HTTPExchange]:
@@ -598,7 +626,7 @@ class HTTPTestServer():
         hint_display = f"{hint_display}, (param keys = {params})"
         target = target[query.method]
 
-        full_match_options = self._match_options.copy()
+        full_match_options = self.match_options.copy()
         full_match_options.update(match_options)
 
         hints = []
@@ -744,35 +772,80 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
     A unit test class that requires a testing HTTP server to be running.
     """
 
-    _server: typing.Union[HTTPTestServer, None] = None
+    _servers: typing.Dict[str, HTTPTestServer] = {}
+    """ The active test servers. """
+
+    server_key: str = ''
+    """
+    A key to indicate which test server this test class is using.
+    By default all test classes share the same server,
+    but child classes can set this if they want to control who is using the same server.
+    If `tear_down_server` is true, then the relevant server will be stopped (and removed) on a call to tearDownClass(),
+    which happens after a test class is complete.
+    """
+
+    tear_down_server: bool = True
+    """
+    Tear down the relevant test server in tearDownClass().
+    If set to false then the server will never get torn down,
+    but can be shared between child test classes.
+    """
 
     @classmethod
     def setUpClass(cls) -> None:
-        HTTPServerTest._server = HTTPTestServer()
-        cls.setup_server(HTTPServerTest._server)
-        HTTPServerTest._server.start()
+        if (cls.server_key in cls._servers):
+            return
+
+        server = HTTPTestServer()
+        cls.setup_server(server)
+        server.start()
+
+        cls._servers[cls.server_key] = server
 
     @classmethod
     def tearDownClass(cls) -> None:
-        if (HTTPServerTest._server is not None):
-            HTTPServerTest._server.stop()
+        if (cls.server_key not in cls._servers):
+            return
 
-        HTTPServerTest._server = None
+        server = cls.get_server()
+
+        if (cls.tear_down_server):
+            server.stop()
+            del cls._servers[cls.server_key]
+
+    @classmethod
+    def suite_cleanup(cls) -> None:
+        """ Cleanup all test servers. """
+
+        for server in cls._servers.values():
+            server.stop()
+
+        cls._servers.clear()
+
+    @classmethod
+    def get_server(cls) -> HTTPTestServer:
+        """ Get the current HTTP server or raise if there is no server. """
+
+        server = cls._servers.get(cls.server_key, None)
+        if (server is None):
+            raise ValueError("Server has not been initialized.")
+
+        return server
 
     @classmethod
     def setup_server(cls, server: HTTPTestServer) -> None:
         """ An opportunity for child classes to configure the test server before starting it. """
 
-    def get_server_url(self) -> str:
+    @classmethod
+    def get_server_url(cls) -> str:
         """ Get the URL for this test's test server. """
 
-        if (self._server is None):
-            raise ValueError("Server has not been initialized.")
+        server = cls.get_server()
 
-        if (self._server.port is None):
+        if (server.port is None):
             raise ValueError("Test server port has not been set.")
 
-        return f"http://127.0.0.1:{self._server.port}"
+        return f"http://127.0.0.1:{server.port}"
 
     def assert_exchange(self, request: HTTPExchange, response: HTTPExchange,
             base_url: typing.Union[str, None] = None,
@@ -784,16 +857,28 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
         The full response will be returned (if no assertion is raised).
         """
 
-        if (self._server is None):
-            raise ValueError("Server has not been initialized.")
+        server = self.get_server()
 
         if (base_url is None):
             base_url = self.get_server_url()
 
         full_response = request.make_request(base_url)
 
-        match, hint = response.match_response(full_response, **self._server._match_options)
+        match, hint = response.match_response(full_response, **server.match_options)
         if (not match):
             raise AssertionError(f"Exchange does not match: '{hint}'.")
 
         return full_response
+
+    def test_exchanges_base(self) -> None:
+        """ Test making a request with each of the loaded exchanges. """
+
+        server = self.get_server()
+
+        for (i, exchange) in enumerate(server.get_exchanges()):
+            base_name = exchange.get_url()
+            if (exchange.source_path is not None):
+                base_name = os.path.splitext(os.path.basename(exchange.source_path))[0]
+
+            with self.subTest(msg = f"Case {i} ({base_name}):"):
+                self.assert_exchange(exchange, exchange)
