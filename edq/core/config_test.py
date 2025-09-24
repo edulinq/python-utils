@@ -18,6 +18,8 @@ def creat_test_dir(temp_dir_prefix: str) -> str:
     ├── empty
     │   └── edq-config.json
     ├── empty-dir
+    ├── empty-key
+    │   └── edq-config.json
     ├── global
     │   └── edq-config.json
     ├── malformed
@@ -41,11 +43,15 @@ def creat_test_dir(temp_dir_prefix: str) -> str:
 
     empty_config_dir_path = os.path.join(temp_dir, "empty")
     edq.util.dirent.mkdir(empty_config_dir_path)
-    edq.util.json.dump_path({}, os.path.join(empty_config_dir_path,  edq.core.config.DEFAULT_CONFIG_FILENAME))
+    edq.util.json.dump_path({}, os.path.join(empty_config_dir_path, edq.core.config.DEFAULT_CONFIG_FILENAME))
 
-    custome_name_config_dir_path = os.path.join(temp_dir, "custom-name")
-    edq.util.dirent.mkdir(custome_name_config_dir_path)
-    edq.util.json.dump_path({"user": "user@test.edulinq.org"}, os.path.join(custome_name_config_dir_path, "custom-edq-config.json"))
+    empty_key_config_dir_path = os.path.join(temp_dir, "empty-key")
+    edq.util.dirent.mkdir(empty_key_config_dir_path)
+    edq.util.json.dump_path({"": "user@test.edulinq.org"}, os.path.join(empty_key_config_dir_path, edq.core.config.DEFAULT_CONFIG_FILENAME))
+
+    custom_name_config_dir_path = os.path.join(temp_dir, "custom-name")
+    edq.util.dirent.mkdir(custom_name_config_dir_path)
+    edq.util.json.dump_path({"user": "user@test.edulinq.org"}, os.path.join(custom_name_config_dir_path, "custom-edq-config.json"))
 
     edq.util.dirent.mkdir(os.path.join(temp_dir, "dir-config", "edq-config.json"))
     edq.util.dirent.mkdir(os.path.join(temp_dir, "empty-dir"))
@@ -135,6 +141,17 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 None,
+            ),
+
+            # Empty Key Config JSON
+            (
+                "empty-dir",
+                {
+                    "global_config_path": os.path.join(temp_dir, "empty-key", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
+                {},
+                {},
+                "The provided ': user@test.edulinq.org' config option has an empty key.",
             ),
 
             # Directory Config JSON
@@ -260,6 +277,15 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 None,
             ),
 
+            # Empty Key Config JSON
+            (
+                "empty-key",
+                {},
+                {},
+                {},
+                "The provided ': user@test.edulinq.org' config option has an empty key.",
+            ),
+
             # Directory Config JSON
             (
                 "dir-config",
@@ -362,6 +388,21 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 None,
+            ),
+
+            # Empty Key Config JSON
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.CONFIG_PATHS_KEY: [
+                            os.path.join(temp_dir, "empty-key", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        ],
+                    },
+                },
+                {},
+                {},
+                "The provided ': user@test.edulinq.org' config option has an empty key.",
             ),
 
             # Directory Config JSON

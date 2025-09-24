@@ -3,7 +3,7 @@
     "arguments": [
         "--config-file", "__DATA_DIR__(configs/simple/edq-config.json)",
         "--config-global", "__DATA_DIR__(configs/empty/edq-config.json)",
-        "--config", "pass=password1234",
+        "--config-option", "pass=password1234",
         "--show-origin",
     ],
 }

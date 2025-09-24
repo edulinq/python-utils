@@ -3,10 +3,8 @@
     "arguments": [
         "--config-global", "__DATA_DIR__(configs/empty/edq-config.json)",
         "--config-file", "__DATA_DIR__(configs/simple/edq-config.json)",
-        "--config-option", "pass=password1234",
+        "--ignore-config-option", "user",
     ],
 }
 ---
 Key	Value
-pass	password1234
-user	user@test.edulinq.org

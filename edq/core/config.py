@@ -12,8 +12,9 @@ CONFIG_SOURCE_LOCAL: str = "<local config file>"
 CONFIG_SOURCE_CLI_FILE: str = "<cli config file>"
 CONFIG_SOURCE_CLI: str = "<cli argument>"
 
-CONFIG_PATHS_KEY: str = 'config_path'
-CONFIGS_KEY: str = 'config'
+CONFIG_PATHS_KEY: str = 'config_paths'
+CONFIGS_KEY: str = 'configs'
+IGNORE_CONFIGS_KEY: str = 'ignore_configs'
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 DEFAULT_GLOBAL_CONFIG_PATH: str = platformdirs.user_config_dir(DEFAULT_CONFIG_FILENAME)
 
@@ -25,7 +26,7 @@ class ConfigSource:
         """ The label identifying the config (see CONFIG_SOURCE_* constants). """
 
         self.path = path
-        """ The path of where the config was soruced from. """
+        """ The path of where the config was sourced from. """
 
     def __eq__(self, other: object) -> bool:
         if (not isinstance(other, ConfigSource)):
@@ -80,7 +81,7 @@ def get_tiered_config(
     for path in config_paths:
         _load_config_file(path, config, sources, CONFIG_SOURCE_CLI_FILE)
 
-    # Finally, any command-line config options.
+    # Check the command-line config options.
     cli_configs = cli_arguments.get(CONFIGS_KEY, [])
     for cli_config in cli_configs:
         if ("=" not in cli_config):
@@ -89,13 +90,18 @@ def get_tiered_config(
         (key, value) = cli_config.split("=", maxsplit = 1)
 
         key = key.strip()
-        value = value.strip()
 
         if (key == ""):
             raise ValueError(f"The provided '{cli_config}' config option has an empty key.")
 
         config[key] = value
         sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
+
+    # Finally, ignore any configs that is specified from CLI command.
+    cli_ignore_configs = cli_arguments.get(IGNORE_CONFIGS_KEY, [])
+    for ignore_config in cli_ignore_configs:
+        config.pop(ignore_config, None)
+        sources.pop(ignore_config, None)
 
     return config, sources
 
@@ -109,6 +115,12 @@ def _load_config_file(
 
     config_path = os.path.abspath(config_path)
     for (key, value) in edq.util.json.load_path(config_path).items():
+
+        key = key.strip()
+
+        if (key == ""):
+            raise ValueError(f"The provided '{key}: {value}' config option has an empty key.")
+
         config[key] = value
         sources[key] = ConfigSource(label = source_label, path = config_path)
 
@@ -197,13 +209,20 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
             + ' This will override options form both global and local config files.')
     )
 
-    parser.add_argument('--config', dest = CONFIGS_KEY,
+    parser.add_argument('--config-option', dest = CONFIGS_KEY,
         action = 'append', type = str, default = [],
-        help = ('Load configuration options from the CLI command.'
-            + ' Specify options as <key>=<value> pairs. '
+        help = ('Load configuration option from the CLI command.'
+            + ' Specify options as <key>=<value> pairs.'
             + ' This flag can be specified multiple times.'
             + ' The options are applied in the order provided and later options override earlier ones.'
             + ' This will override options form all config files.')
+    )
+
+    parser.add_argument('--ignore-config-option', dest = IGNORE_CONFIGS_KEY,
+        action = 'append', type = str, default = [],
+        help = ('Ignore configuration options from the CLI command.'
+            + ' This will ignore specified config options from both files and CLI.'
+            + ' This flag can be specified multiple times.')
     )
 
 def load_config_into_args(
