@@ -4,7 +4,6 @@ Specifically, we try to be flexible when reading (using JSON5),
 and strict when writing (using vanilla JSON).
 """
 
-import abc
 import enum
 import json
 import os
@@ -14,27 +13,33 @@ import json5
 
 import edq.util.dirent
 
-class DictConverter(abc.ABC):
+class DictConverter():
     """
     A base class for class that can represent (serialize) and reconstruct (deserialize) themselves as/from a dict.
     The intention is that the dict can then be cleanly converted to/from JSON.
     """
 
-    @abc.abstractmethod
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         """
         Return a dict that can be used to represent this object.
         If the dict is passed to from_dict(), an identical object should be reconstructed.
+
+        A general (but inefficient) implementation is provided by default.
         """
 
+        return vars(self).copy()
+
     @classmethod
-    @abc.abstractmethod
     # Note that `typing.Self` is returned, but that is introduced in Python 3.12.
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> typing.Any:
         """
         Return an instance of this subclass created using the given dict.
         If the dict came from to_dict(), the returned object should be identical to the original.
+
+        A general (but inefficient) implementation is provided by default.
         """
+
+        return cls(**data)
 
     def __eq__(self, other: object) -> bool:
         """
