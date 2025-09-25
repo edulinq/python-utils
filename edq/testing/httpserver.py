@@ -14,7 +14,7 @@ import edq.util.dirent
 import edq.util.json
 import edq.util.net
 
-SERVER_THREAD_START_WAIT_SEC = 0.05
+SERVER_THREAD_START_WAIT_SEC = 0.02
 SERVER_THREAD_REAP_WAIT_SEC = 0.15
 TIMEOUT_SECS = 1.0
 
@@ -541,7 +541,7 @@ class HTTPTestServer():
             if (server._http_server is None):
                 raise ValueError('Server was not initialized.')
 
-            server._http_server.serve_forever(poll_interval = 0.1)
+            server._http_server.serve_forever(poll_interval = 0.01)
             server._http_server.server_close()
 
         self._thread = threading.Thread(target = _run_server, args = (self, server_startup_barrier))
@@ -791,16 +791,30 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
     but can be shared between child test classes.
     """
 
+    _complete_exchange_tests: typing.Set[str] = set()
+    """
+    Keep track of the servers (by key) that have run their test_exchanges_base.
+    This test should only be run once per server.
+    """
+
+    _child_class_setup_called: bool = False
+    """ Keep track if the child class setup was called. """
+
     @classmethod
     def setUpClass(cls) -> None:
+        if (not cls._child_class_setup_called):
+            cls.child_class_setup()
+            cls._child_class_setup_called = True
+
         if (cls.server_key in cls._servers):
             return
 
         server = HTTPTestServer()
+        cls._servers[cls.server_key] = server
+
         cls.setup_server(server)
         server.start()
-
-        cls._servers[cls.server_key] = server
+        cls.post_start_server(server)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -812,6 +826,7 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
         if (cls.tear_down_server):
             server.stop()
             del cls._servers[cls.server_key]
+            cls._complete_exchange_tests.discard(cls.server_key)
 
     @classmethod
     def suite_cleanup(cls) -> None:
@@ -833,8 +848,16 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
         return server
 
     @classmethod
+    def child_class_setup(cls) -> None:
+        """ This function is the recommended time for child classes to set any configuration. """
+
+    @classmethod
     def setup_server(cls, server: HTTPTestServer) -> None:
         """ An opportunity for child classes to configure the test server before starting it. """
+
+    @classmethod
+    def post_start_server(cls, server: HTTPTestServer) -> None:
+        """ An opportunity for child classes to work with the server after it has been started, but before any tests. """
 
     @classmethod
     def get_server_url(cls) -> str:
@@ -872,6 +895,14 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
 
     def test_exchanges_base(self) -> None:
         """ Test making a request with each of the loaded exchanges. """
+
+        # Check if this test has already been run for this server.
+        if (self.server_key in self._complete_exchange_tests):
+            # Don't skip the test (which will show up in the test output).
+            # Instead, just return.
+            return
+
+        self._complete_exchange_tests.add(self.server_key)
 
         server = self.get_server()
 

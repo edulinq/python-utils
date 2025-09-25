@@ -12,7 +12,7 @@ import edq.util.dirent
 
 DEFAULT_START_PORT: int = 30000
 DEFAULT_END_PORT: int = 40000
-DEFAULT_PORT_SEARCH_WAIT_SEC: float = 0.15
+DEFAULT_PORT_SEARCH_WAIT_SEC: float = 0.01
 
 def find_open_port(
         start_port: int = DEFAULT_START_PORT, end_port: int = DEFAULT_END_PORT,
