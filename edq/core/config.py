@@ -41,7 +41,6 @@ class ConfigSource:
 def get_tiered_config(
         config_file_name: str = DEFAULT_CONFIG_FILENAME,
         legacy_config_file_name: typing.Union[str, None] = None,
-        global_config_path: typing.Union[str, None] = None,
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
     ) -> typing.Tuple[typing.Dict[str, str], typing.Dict[str, ConfigSource]]:
@@ -49,9 +48,6 @@ def get_tiered_config(
     Load all configuration options from files and command-line arguments.
     Returns a configuration dictionary with the values based on tiering rules and a source dictionary mapping each key to its origin.
     """
-
-    if (global_config_path is None):
-        global_config_path = platformdirs.user_config_dir(config_file_name)
 
     if (cli_arguments is None):
         cli_arguments = {}
@@ -62,6 +58,8 @@ def get_tiered_config(
     # Ensure CLI arguments are always a dict, even if provided as argparse.Namespace.
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
+
+    global_config_path = cli_arguments.get(GLOBAL_CONFIG_KEY, platformdirs.user_config_dir(config_file_name))
 
     # Check the global user config file.
     if (os.path.isfile(global_config_path)):
@@ -238,7 +236,6 @@ def load_config_into_args(
     """
 
     (config_dict, sources_dict) = get_tiered_config(
-        global_config_path = args.global_config_path,
         cli_arguments = args,
     )
 
