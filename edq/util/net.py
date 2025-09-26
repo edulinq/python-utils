@@ -1,11 +1,13 @@
 import email.message
 import errno
 import http.server
+import logging
 import socket
 import time
 import typing
 import urllib.parse
 
+import requests
 import requests_toolbelt.multipart.decoder
 
 import edq.util.dirent
@@ -13,6 +15,8 @@ import edq.util.dirent
 DEFAULT_START_PORT: int = 30000
 DEFAULT_END_PORT: int = 40000
 DEFAULT_PORT_SEARCH_WAIT_SEC: float = 0.01
+
+DEFAULT_REQUEST_TIMEOUT_SECS: float = 10.0
 
 def find_open_port(
         start_port: int = DEFAULT_START_PORT, end_port: int = DEFAULT_END_PORT,
@@ -45,6 +49,62 @@ def find_open_port(
             raise ex
 
     raise ValueError(f"Could not find open port in [{start_port}, {end_port}].")
+
+def make_request(method: str, url: str,
+        headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
+        data: typing.Union[typing.Dict[str, typing.Any], None] = None,
+        files: typing.Union[typing.List[typing.Any], None] = None,
+        raise_for_status = True,
+        timeout_secs: float = DEFAULT_REQUEST_TIMEOUT_SECS,
+        **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
+    """
+    Make an HTTP request and return the response object and text body.
+    """
+
+    if (headers is None):
+        headers = {}
+
+    if (data is None):
+        data = {}
+
+    if (files is None):
+        files = []
+
+    options = {
+        'headers': headers,
+        'files': files,
+        'timeout': timeout_secs,
+    }
+
+    if (method == 'GET'):
+        options['params'] = data
+    else:
+        options['data'] = data
+
+    logging.debug("Making %s request: '%s'.", method, url)
+    response = requests.request(method, url, **options)
+
+    if (raise_for_status):
+        response.raise_for_status()
+
+    body = response.text
+    logging.debug("Response:\n%s", body)
+
+    return response, body
+
+def make_get(url: str, **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
+    """
+    Make a GET request and return the response object and text body.
+    """
+
+    return make_request('GET', url, **kwargs)
+
+def make_post(url: str, **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
+    """
+    Make a POST request and return the response object and text body.
+    """
+
+    return make_request('POST', url, **kwargs)
 
 def parse_request_body_data(
         request_handler: http.server.BaseHTTPRequestHandler,
