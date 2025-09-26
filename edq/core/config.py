@@ -14,6 +14,7 @@ CONFIG_SOURCE_CLI: str = "<cli argument>"
 
 CONFIG_PATHS_KEY: str = 'config_paths'
 CONFIGS_KEY: str = 'configs'
+GLOBAL_CONFIG_KEY: str = 'global_config_path'
 IGNORE_CONFIGS_KEY: str = 'ignore_configs'
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 DEFAULT_GLOBAL_CONFIG_PATH: str = platformdirs.user_config_dir(DEFAULT_CONFIG_FILENAME)
@@ -85,14 +86,16 @@ def get_tiered_config(
     cli_configs = cli_arguments.get(CONFIGS_KEY, [])
     for cli_config in cli_configs:
         if ("=" not in cli_config):
-            raise ValueError(f"The provided '{cli_config}' config option does not match the expected format.")
+            raise ValueError(
+                f"Invalid configuration option '{cli_config}'."
+                + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI."
+            )
 
         (key, value) = cli_config.split("=", maxsplit = 1)
 
         key = key.strip()
-
         if (key == ""):
-            raise ValueError(f"The provided '{cli_config}' config option has an empty key.")
+            raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
 
         config[key] = value
         sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
@@ -115,11 +118,9 @@ def _load_config_file(
 
     config_path = os.path.abspath(config_path)
     for (key, value) in edq.util.json.load_path(config_path).items():
-
         key = key.strip()
-
         if (key == ""):
-            raise ValueError(f"The provided '{key}: {value}' config option has an empty key.")
+            raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
 
         config[key] = value
         sources[key] = ConfigSource(label = source_label, path = config_path)
@@ -196,7 +197,7 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     Set common CLI arguments for configuration.
     """
 
-    parser.add_argument('--config-global', dest = 'global_config_path',
+    parser.add_argument('--config-global', dest = GLOBAL_CONFIG_KEY,
         action = 'store', type = str, default = DEFAULT_GLOBAL_CONFIG_PATH,
         help = 'Override the default global config file path (default: %(default)s).',
     )
@@ -220,9 +221,10 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
 
     parser.add_argument('--ignore-config-option', dest = IGNORE_CONFIGS_KEY,
         action = 'append', type = str, default = [],
-        help = ('Ignore configuration options from the CLI command.'
-            + ' This will ignore specified config options from both files and CLI.'
-            + ' This flag can be specified multiple times.')
+        help = ('Ignore any specified values for a config option.'
+            + ' The default value will be used for that option if one exists.'
+            + ' This flag can be specified multiple times.'
+            + ' Ignoring options happens last, so the specified option will be ignored regardless of where other flags appear in the CLI command.')
     )
 
 def load_config_into_args(
