@@ -1,5 +1,6 @@
 import glob
 import http.server
+import logging
 import os
 import pathlib
 import threading
@@ -472,13 +473,16 @@ class HTTPTestServer():
     """
 
     def __init__(self,
+            port: typing.Union[int, None] = None,
             match_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             default_match_options: bool = True,
+            verbose: bool = False,
+            raise_on_404: bool = True,
             **kwargs: typing.Any) -> None:
-        self.port: typing.Union[None, int] = None
+        self.port: typing.Union[int, None] = port
         """
         The active port this server is using.
-        Will not be set until the server has been started.
+        If None, then a random port will be chosen when the server is started and this field will be populated.
         """
 
         self._http_server: typing.Union[http.server.HTTPServer, None] = None
@@ -486,6 +490,15 @@ class HTTPTestServer():
 
         self._thread: typing.Union[threading.Thread, None] = None
         """ The thread running the HTTP server. """
+
+        self._run_lock: threading.Lock = threading.Lock()
+        """ A lock that the server holds while running. """
+
+        self.verbose: bool = verbose
+        """ Log more information. """
+
+        self.raise_on_404: bool = raise_on_404
+        """ Raise an exception when no exchange is matched (instead of a 404 error). """
 
         self._exchanges: typing.Dict[str, typing.Dict[typing.Union[str, None], typing.Dict[str, typing.List[HTTPExchange]]]] = {}
         """
@@ -528,9 +541,16 @@ class HTTPTestServer():
             """ An HTTP handler as a nested class to bind this server object to the handler. """
 
             _server = self
+            _verbose = self.verbose
+            _raise_on_404 = self.raise_on_404
 
-        self.port = edq.util.net.find_open_port()
+        if (self.port is None):
+            self.port = edq.util.net.find_open_port()
+
         self._http_server = http.server.HTTPServer(('', self.port), NestedHTTPHandler)
+
+        if (self.verbose):
+            logging.info("Starting test server on port %d.", self.port)
 
         # Use a barrier to ensure that the server thread has started.
         server_startup_barrier = threading.Barrier(2)
@@ -541,8 +561,13 @@ class HTTPTestServer():
             if (server._http_server is None):
                 raise ValueError('Server was not initialized.')
 
-            server._http_server.serve_forever(poll_interval = 0.01)
-            server._http_server.server_close()
+            # Run the server within the run lock context.
+            with server._run_lock:
+                server._http_server.serve_forever(poll_interval = 0.01)
+                server._http_server.server_close()
+
+            if (self.verbose):
+                logging.info("Stopping test server.")
 
         self._thread = threading.Thread(target = _run_server, args = (self, server_startup_barrier))
         self._thread.start()
@@ -550,6 +575,26 @@ class HTTPTestServer():
         # Wait for the server to startup.
         server_startup_barrier.wait()
         time.sleep(SERVER_THREAD_START_WAIT_SEC)
+
+    def wait_for_completion(self) -> None:
+        """
+        Block until the server is not running.
+        If called while the server is not running, this will return immediately.
+        This function will handle keyboard interrupts (Ctrl-C).
+        """
+
+        try:
+            with self._run_lock:
+                pass
+        except KeyboardInterrupt:
+            self.stop()
+            self.wait_for_completion()
+
+    def start_and_wait(self) -> None:
+        """ Start the server and block until it is done. """
+
+        self.start()
+        self.wait_for_completion()
 
     def stop(self) -> None:
         """ Stop this server. """
@@ -701,6 +746,12 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
     _server: typing.Union[HTTPTestServer, None] = None
     """ The test server this handler is being used for. """
 
+    _verbose: bool = False
+    """ Log more interactions. """
+
+    _raise_on_404: bool = True
+    """ Raise an exception when no exchange is matched (instead of a 404 error). """
+
     # Quiet logs.
     def log_message(self, format: str, *args: typing.Any) -> None:  # pylint: disable=redefined-builtin
         pass
@@ -721,6 +772,9 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
         if (self._server is None):
             raise ValueError("Server has not been initialized.")
 
+        if (self._verbose):
+            logging.debug("Incoming %s request: '%s'.", method, self.path)
+
         # Parse data from the request body.
         request_data, request_files = edq.util.net.parse_request_body_data(self)
 
@@ -731,11 +785,16 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
         # Construct file info objects from the raw files.
         files = [FileInfo(name = name, content = content) for (name, content) in request_files.items()]
 
-        exchange = self._get_exchange(method, parameters = request_data, files = files)  # type: ignore[arg-type]
+        exchange, hint = self._get_exchange(method, parameters = request_data, files = files)  # type: ignore[arg-type]
 
-        code = exchange.response_code
-        headers = exchange.response_headers
-        payload = exchange.response_body
+        if (exchange is None):
+            code = http.HTTPStatus.NOT_FOUND.value
+            headers = {}
+            payload = hint
+        else:
+            code = exchange.response_code
+            headers = exchange.response_headers
+            payload = exchange.response_body
 
         if (payload is None):
             payload = ''
@@ -750,7 +809,7 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
     def _get_exchange(self, method: str,
             parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
             files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, str]]], None] = None,
-            ) -> HTTPExchange:
+            ) -> typing.Tuple[typing.Union[HTTPExchange, None], typing.Union[str, None]]:
         """ Get the matching exchange or raise an error. """
 
         if (self._server is None):
@@ -762,10 +821,10 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
                 parameters = parameters, files = files)
 
         exchange, hint = self._server.lookup_exchange(query)
-        if (exchange is None):
+        if ((exchange is None) and self._raise_on_404):
             raise ValueError(f"Failed to lookup exchange: '{hint}'.")
 
-        return exchange
+        return exchange, hint
 
 class HTTPServerTest(edq.testing.unittest.BaseTest):
     """

@@ -54,7 +54,7 @@ def make_request(method: str, url: str,
         headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
         data: typing.Union[typing.Dict[str, typing.Any], None] = None,
         files: typing.Union[typing.List[typing.Any], None] = None,
-        raise_for_status = True,
+        raise_for_status: bool = True,
         timeout_secs: float = DEFAULT_REQUEST_TIMEOUT_SECS,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """

@@ -17,6 +17,8 @@ class DictConverter():
     """
     A base class for class that can represent (serialize) and reconstruct (deserialize) themselves as/from a dict.
     The intention is that the dict can then be cleanly converted to/from JSON.
+
+    General (but inefficient) implementations of several core Python equality, comparison, and representation methods are provided.
     """
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
@@ -54,6 +56,12 @@ class DictConverter():
             return False
 
         return bool(self.to_dict() == other.to_dict())  # type: ignore[attr-defined]
+
+    def __lt__(self, other: 'DictConverter') -> bool:
+        return dumps(self) < dumps(other)
+
+    def __hash__(self) -> int:
+        return hash(dumps(self))
 
     def __str__(self) -> str:
         return dumps(self)
