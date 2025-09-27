@@ -37,7 +37,6 @@ class StringComparisonAssertion(typing.Protocol):
         Perform an assertion between expected and actual data.
         """
 
-
 def content_equals_raw(test: edq.testing.unittest.BaseTest, expected: str, actual: str, **kwargs: typing.Any) -> None:
     """ Check for equality using a simple string comparison. """
 

@@ -543,6 +543,7 @@ class HTTPTestServer():
             _server = self
             _verbose = self.verbose
             _raise_on_404 = self.raise_on_404
+            _missing_request_func = self.missing_request
 
         if (self.port is None):
             self.port = edq.util.net.find_open_port()
@@ -742,6 +743,20 @@ class HTTPTestServer():
         for path in paths:
             self.load_exchange_file(path)
 
+@typing.runtime_checkable
+class MissingRequestFunction(typing.Protocol):
+    """
+    A function that can be used to create an exchange when none was found.
+    This is often the last resort when a test server cannot find an exchange matching a request.
+    """
+
+    def __call__(self,
+            query: HTTPExchange,
+            ) -> typing.Union[HTTPExchange, None]:
+        """
+        Create an exchange for the given query or return None.
+        """
+
 class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
     _server: typing.Union[HTTPTestServer, None] = None
     """ The test server this handler is being used for. """
@@ -751,6 +766,9 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     _raise_on_404: bool = True
     """ Raise an exception when no exchange is matched (instead of a 404 error). """
+
+    _missing_request_func: typing.Union[MissingRequestFunction, None] = None
+    """ A fallback to get an exchange before resulting in a 404. """
 
     # Quiet logs.
     def log_message(self, format: str, *args: typing.Any) -> None:  # pylint: disable=redefined-builtin
@@ -821,6 +839,10 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
                 parameters = parameters, files = files)
 
         exchange, hint = self._server.lookup_exchange(query)
+
+        if ((exchange is None) and (self._missing_request_func is not None)):
+            exchange = self._missing_request_func(query)  # pylint: disable=not-callable
+
         if ((exchange is None) and self._raise_on_404):
             raise ValueError(f"Failed to lookup exchange: '{hint}'.")
 
