@@ -219,10 +219,10 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
 
     parser.add_argument('--ignore-config-option', dest = IGNORE_CONFIGS_KEY,
         action = 'append', type = str, default = [],
-        help = ('Ignore any specified values for a config option.'
+        help = ('Ignore any config option with the specified values.'
             + ' The default value will be used for that option if one exists.'
             + ' This flag can be specified multiple times.'
-            + ' Ignoring options happens last, so the specified option will be ignored regardless of where other flags appear in the CLI command.')
+            + ' Ignoring options are processed last.')
     )
 
 def load_config_into_args(

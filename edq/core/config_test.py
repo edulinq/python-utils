@@ -24,6 +24,8 @@ def creat_test_dir(temp_dir_prefix: str) -> str:
     │   └── edq-config.json
     ├── malformed
     │   └── edq-config.json
+    ├── multiple-options
+    │   └── edq-config.json
     ├── nested
     │   ├── config.json
     │   ├── edq-config.json
@@ -44,6 +46,13 @@ def creat_test_dir(temp_dir_prefix: str) -> str:
     empty_config_dir_path = os.path.join(temp_dir, "empty")
     edq.util.dirent.mkdir(empty_config_dir_path)
     edq.util.json.dump_path({}, os.path.join(empty_config_dir_path, edq.core.config.DEFAULT_CONFIG_FILENAME))
+
+    multiple_option_config_dir_path = os.path.join(temp_dir, "multiple-options")
+    edq.util.dirent.mkdir(multiple_option_config_dir_path)
+    edq.util.json.dump_path(
+        {"user": "user@test.edulinq.org", "pass": "password1234"},
+        os.path.join(multiple_option_config_dir_path, edq.core.config.DEFAULT_CONFIG_FILENAME)
+    )
 
     empty_key_config_dir_path = os.path.join(temp_dir, "empty-key")
     edq.util.dirent.mkdir(empty_key_config_dir_path)
@@ -199,6 +208,29 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "Failed to read JSON file",
             ),
 
+            # Ignore Config Option
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.IGNORE_CONFIGS_KEY: [
+                            "pass"
+                        ]
+                    },
+                },
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.core.config.ConfigSource(
+                        label = edq.core.config.CONFIG_SOURCE_GLOBAL,
+                        path = os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    ),
+                },
+                None,
+            ),
+
             # Local Config
 
             # Default config file in current directory.
@@ -314,6 +346,28 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 "Failed to read JSON file",
+            ),
+
+            # Ignore Config Option
+            (
+                "multiple-options",
+                {
+                    "cli_arguments":{
+                        edq.core.config.IGNORE_CONFIGS_KEY: [
+                            "pass"
+                        ]
+                    }
+                },
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.core.config.ConfigSource(
+                        label = edq.core.config.CONFIG_SOURCE_LOCAL,
+                        path = os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    ),
+                },
+                None,
             ),
 
             # All 3 local config locations present at the same time.
@@ -462,6 +516,32 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "Failed to read JSON file",
             ),
 
+            # Ignore Config Option
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.CONFIG_PATHS_KEY: [
+                            os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        ],
+                        edq.core.config.IGNORE_CONFIGS_KEY: [
+                            "pass",
+                        ],
+                    },
+                },
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.core.config.ConfigSource(
+                        label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
+                        path = os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    ),
+                },
+                None,
+            ),
+
+
             # CLI Options:
 
             # CLI arguments only (direct key: value).
@@ -549,6 +629,29 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 "Invalid configuration option 'useruser@test.edulinq.org'.",
+            ),
+
+            # Ignore Config Option
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.CONFIGS_KEY: [
+                            "user=user@test.edulinq.org",
+                            "pass=password1234"
+                        ],
+                        edq.core.config.IGNORE_CONFIGS_KEY:[
+                            "pass",
+                        ],
+                    },
+                },
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
+                },
+                None,
             ),
 
             # Combinations
