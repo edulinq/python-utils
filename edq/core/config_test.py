@@ -215,8 +215,8 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "cli_arguments": {
                         edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
                         edq.core.config.IGNORE_CONFIGS_KEY: [
-                            "pass"
-                        ]
+                            "pass",
+                        ],
                     },
                 },
                 {
@@ -226,6 +226,29 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": edq.core.config.ConfigSource(
                         label = edq.core.config.CONFIG_SOURCE_GLOBAL,
                         path = os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    ),
+                },
+                None,
+            ),
+
+            # Ignore Non-Existing Config Option
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.IGNORE_CONFIGS_KEY: [
+                            "non-existing-option",
+                        ],
+                    },
+                },
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.core.config.ConfigSource(
+                        label = edq.core.config.CONFIG_SOURCE_GLOBAL,
+                        path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
                 None,
@@ -354,9 +377,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "cli_arguments":{
                         edq.core.config.IGNORE_CONFIGS_KEY: [
-                            "pass"
-                        ]
-                    }
+                            "pass",
+                        ],
+                    },
                 },
                 {
                     "user": "user@test.edulinq.org",
@@ -369,6 +392,29 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 None,
             ),
+
+            # Ignore Non-Existing Config Option
+            (
+                "simple",
+                {
+                    "cli_arguments":{
+                        edq.core.config.IGNORE_CONFIGS_KEY: [
+                            "non-existing-option",
+                        ],
+                    },
+                },
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.core.config.ConfigSource(
+                        label = edq.core.config.CONFIG_SOURCE_LOCAL,
+                        path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    ),
+                },
+                None,
+            ),
+
 
             # All 3 local config locations present at the same time.
             (
@@ -541,6 +587,31 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 None,
             ),
 
+            # Ignore Non-Existing Config Option
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.CONFIG_PATHS_KEY: [
+                            os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        ],
+                        edq.core.config.IGNORE_CONFIGS_KEY: [
+                            "non-existing-option",
+                        ],
+                    },
+                },
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.core.config.ConfigSource(
+                        label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
+                        path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    ),
+                },
+                None,
+            ),
+
 
             # CLI Options:
 
@@ -575,7 +646,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {},
                 {},
-                "Found an empty configuration option key associated with the value 'user@test.edulinq.org'."
+                "Found an empty configuration option key associated with the value 'user@test.edulinq.org'.",
             ),
 
             # Empty Config Value
@@ -638,10 +709,32 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
                             "user=user@test.edulinq.org",
-                            "pass=password1234"
+                            "pass=password1234",
                         ],
                         edq.core.config.IGNORE_CONFIGS_KEY:[
                             "pass",
+                        ],
+                    },
+                },
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
+                },
+                None,
+            ),
+
+            # Ignore Non-Existing Config Option
+            (
+                "empty-dir",
+                {
+                    "cli_arguments": {
+                        edq.core.config.CONFIGS_KEY: [
+                            "user=user@test.edulinq.org",
+                        ],
+                        edq.core.config.IGNORE_CONFIGS_KEY:[
+                            "non-existing-option",
                         ],
                     },
                 },
