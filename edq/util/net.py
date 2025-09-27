@@ -1,7 +1,11 @@
+import argparse
 import email.message
 import errno
 import http.server
+import io
 import logging
+import os
+import pathlib
 import socket
 import time
 import typing
@@ -11,12 +15,484 @@ import requests
 import requests_toolbelt.multipart.decoder
 
 import edq.util.dirent
+import edq.util.json
 
 DEFAULT_START_PORT: int = 30000
 DEFAULT_END_PORT: int = 40000
 DEFAULT_PORT_SEARCH_WAIT_SEC: float = 0.01
 
 DEFAULT_REQUEST_TIMEOUT_SECS: float = 10.0
+
+ANCHOR_HEADER_KEY: str = 'edq-anchor'
+"""
+By default, requests made via make_requet() will send a header with this key that includes the anchor component of the URL.
+Anchors are not traditionally sent in requests, but this will allow exchanges to capture this extra piece of information.
+"""
+
+ALLOWED_METHODS: typing.List[str] = [
+    'GET',
+    'POST',
+    'PUT'
+]
+""" Allowed HTTP methods for an HTTPExchange. """
+
+_request_output_dir: typing.Union[str, None] = None
+""" If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
+
+class FileInfo(edq.util.json.DictConverter):
+    """ Store info about files used in HTTP exchanges. """
+
+    def __init__(self,
+            path: typing.Union[str, None] = None,
+            name: typing.Union[str, None] = None,
+            content: typing.Union[str, bytes, None] = None,
+            **kwargs: typing.Any) -> None:
+        # Normalize the path from POSIX-style to the system's style.
+        if (path is not None):
+            path = str(pathlib.PurePath(pathlib.PurePosixPath(path)))
+
+        self.path: typing.Union[str, None] = path
+        """ The on-disk path to a file. """
+
+        if ((name is None) and (self.path is not None)):
+            name = os.path.basename(self.path)
+
+        if (name is None):
+            raise ValueError("No name was provided for file.")
+
+        self.name: str = name
+        """ The name for this file used in an HTTP request. """
+
+        self.content: typing.Union[str, bytes, None] = content
+        """ The contents of this file. """
+
+        if ((self.path is None) and (self.content is None)):
+            raise ValueError("File must have either path or content specified.")
+
+    def resolve_path(self, base_dir: str) -> None:
+        """ Resolve this path relative to the given base dir. """
+
+        if ((self.path is None) or os.path.isabs(self.path)):
+            return
+
+        self.path = os.path.abspath(os.path.join(base_dir, self.path))
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        data = vars(self).copy()
+        del data['content']
+        return data
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> typing.Any:
+        return FileInfo(**data)
+
+class HTTPExchange(edq.util.json.DictConverter):
+    """
+    The request and response making up a full HTTP exchange.
+    """
+
+    def __init__(self,
+            method: str = 'GET',
+            url: typing.Union[str, None] = None,
+            url_path: typing.Union[str, None] = None,
+            url_anchor: typing.Union[str, None] = None,
+            parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, str]]], None] = None,
+            headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            response_code: int = http.HTTPStatus.OK,
+            response_headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            json_body: typing.Union[bool, None] = None,
+            response_body: typing.Union[str, dict, list, None] = None,
+            read_write: bool = False,
+            source_path: typing.Union[str, None] = None,
+            extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            **kwargs: typing.Any) -> None:
+        method = str(method).upper()
+        if (method not in ALLOWED_METHODS):
+            raise ValueError(f"Got unknown/disallowed method: '{method}'.")
+
+        self.method: str = method
+        """ The HTTP method for this exchange. """
+
+        url_path, url_anchor, parameters = self._parse_url_components(url, url_path, url_anchor, parameters)
+
+        self.url_path: str = url_path
+        """
+        The path portion of the request URL.
+        Only the path (not domain, port, params, anchor, etc) should be included.
+        """
+
+        self.url_anchor: typing.Union[str, None] = url_anchor
+        """
+        The anchor portion of the request URL (if it exists).
+        """
+
+        self.parameters: typing.Dict[str, typing.Any] = parameters
+        """
+        The parameters/arguments for this request.
+        Parameters should be provided here and not encoded into URLs,
+        regardless of the request method.
+        With the exception of files, all parameters should be placed here.
+        """
+
+        if (files is None):
+            files = []
+
+        parsed_files = []
+        for file in files:
+            if (isinstance(file, FileInfo)):
+                parsed_files.append(file)
+            else:
+                parsed_files.append(FileInfo(**file))
+
+        self.files: typing.List[FileInfo] = parsed_files
+        """
+        A list of files to include in the request.
+        The files are represented as dicts with a
+        "path" (path to the file on disk) and "name" (the filename to send in the request) field.
+        These paths must be POSIX-style paths,
+        they will be converted to system-specific paths.
+        Once this exchange is ready for use, these paths should be resolved (and probably absolute).
+        However, when serialized these paths should probably be relative.
+        To reconcile this, resolve_paths() should be called before using this exchange.
+        """
+
+        if (headers is None):
+            headers = {}
+
+        self.headers: typing.Dict[str, typing.Any] = headers
+        """ Headers in the request. """
+
+        self.response_code: int = response_code
+        """ The HTTP status code of the response. """
+
+        if (response_headers is None):
+            response_headers = {}
+
+        self.response_headers: typing.Dict[str, typing.Any] = response_headers
+        """ Headers in the response. """
+
+        if (json_body is None):
+            json_body = isinstance(response_body, (dict, list))
+
+        self.json_body: bool = json_body
+        """
+        Indicates that the response is JSON and should be converted to/from a string.
+        If the response body is passed in a dict/list and this is passed as None,
+        then this will be set as true.
+        """
+
+        if (self.json_body and isinstance(response_body, (dict, list))):
+            response_body = edq.util.json.dumps(response_body)
+
+        self.response_body: typing.Union[str, None] = response_body  # type: ignore[assignment]
+        """
+        The response that should be sent in this exchange.
+        """
+
+        self.read_write: bool = read_write
+        """
+        Indicates that this exchange will change data on the server (regardless of the HTTP method).
+        This field may be ignored by test servers,
+        but may be observed by tools that generate or validate test data.
+        """
+
+        self.source_path: typing.Union[str, None] = source_path
+        """
+        The path that this exchange was loaded from (if it was loaded from a file).
+        This value should never be serialized, but can be useful for testing.
+        """
+
+        if (extra_options is None):
+            extra_options = {}
+
+        self.extra_options: typing.Dict[str, typing.Any] = extra_options.copy()
+        """
+        Additional options for this exchange.
+        This library will not use these options, but other's may.
+        kwargs will also be added to this.
+        """
+
+        self.extra_options.update(kwargs)
+
+    def _parse_url_components(self,
+            url: typing.Union[str, None] = None,
+            url_path: typing.Union[str, None] = None,
+            url_anchor: typing.Union[str, None] = None,
+            parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Tuple[str, typing.Union[str, None], typing.Dict[str, typing.Any]]:
+        """
+        Parse out all URL-based components from raw inputs.
+        The URL's path and anchor can either be supplied separately, or as part of the full given URL.
+        If content is present in both places, they much match (or an error will be raised).
+        Query parameters may be provided in the full URL,
+        but will be overwritten by any that are provided separately.
+        Any information from the URL aside from the path, anchor/fragment, and query will be ignored.
+        Note that path parameters (not query parameters) will be ignored.
+        The final url path, url anchor, and parameters will be returned.
+        """
+
+        # Do base initialization and cleanup.
+
+        if (url_path is not None):
+            url_path = url_path.strip()
+            if (url_path == ''):
+                url_path = None
+            else:
+                url_path = url_path.lstrip('/')
+
+        if (url_anchor is not None):
+            url_anchor = url_anchor.strip()
+            if (url_anchor == ''):
+                url_anchor = None
+            else:
+                url_anchor = url_anchor.lstrip('#')
+
+        if (parameters is None):
+            parameters = {}
+
+        # Parse the URL (if present).
+
+        if ((url is not None) and (url.strip() != '')):
+            parts = urllib.parse.urlparse(url)
+
+            # Handle the path.
+
+            path = parts.path.lstrip('/')
+
+            if ((url_path is not None) and (url_path != path)):
+                raise ValueError(f"Mismatched URL paths where supplied implicitly ('{path}') and explicitly ('{url_path}').")
+
+            url_path = path
+
+            # Check the optional anchor/fragment.
+
+            if (parts.fragment != ''):
+                fragment = parts.fragment.lstrip('#')
+
+                if ((url_anchor is not None) and (url_anchor != fragment)):
+                    raise ValueError(f"Mismatched URL anchors where supplied implicitly ('{fragment}') and explicitly ('{url_anchor}').")
+
+                url_anchor = fragment
+
+            # Check for any parameters.
+
+            url_params = parse_query_string(parts.query)
+            for (key, value) in url_params.items():
+                if (key not in parameters):
+                    parameters[key] = value
+
+        if (url_path is None):
+            raise ValueError('URL path cannot be empty, it must be explicitly set via `url_path`, or indirectly via `url`.')
+
+        return url_path, url_anchor, parameters
+
+    def resolve_paths(self, base_dir: str) -> None:
+        """ Resolve any paths relative to the given base dir. """
+
+        for file_info in self.files:
+            file_info.resolve_path(base_dir)
+
+    def match(self, query: 'HTTPExchange',
+            match_headers: bool = True,
+            headers_to_skip: typing.Union[typing.List[str], None] = None,
+            params_to_skip: typing.Union[typing.List[str], None] = None,
+            **kwargs: typing.Any) -> typing.Tuple[bool, typing.Union[str, None]]:
+        """
+        Check if this exchange matches the query exchange.
+        If they match, `(True, None)` will be returned.
+        If they do not match, `(False, <hint>)` will be returned, where `<hint>` points to where the mismatch is.
+
+        Note that this is not an equality check,
+        as a query exchange is often missing the response components.
+        This method is often invoked the see if an incoming HTTP request (the query) matches an existing exchange.
+        """
+
+        if (query.method != self.method):
+            return False, f"HTTP method does not match (query = {query.method}, target = {self.method})."
+
+        if (query.url_path != self.url_path):
+            return False, f"URL path does not match (query = {query.url_path}, target = {self.url_path})."
+
+        if (query.url_anchor != self.url_anchor):
+            return False, f"URL anchor does not match (query = {query.url_anchor}, target = {self.url_anchor})."
+
+        if (headers_to_skip is None):
+            headers_to_skip = []
+
+        if (params_to_skip is None):
+            params_to_skip = []
+
+        if (match_headers):
+            match, hint = self._match_dict('header', query.headers, self.headers, headers_to_skip)
+            if (not match):
+                return False, hint
+
+        match, hint = self._match_dict('parameter', query.parameters, self.parameters, params_to_skip)
+        if (not match):
+            return False, hint
+
+        # Check file names, not file content.
+        query_filenames = {file.name for file in query.files}
+        target_filenames = {file.name for file in self.files}
+        if (query_filenames != target_filenames):
+            return False, f"File names do not match (query = {query_filenames}, target = {target_filenames})."
+
+        return True, None
+
+    def _match_dict(self, label: str,
+            query_dict: typing.Dict[str, typing.Any],
+            target_dict: typing.Dict[str, typing.Any],
+            keys_to_skip: typing.Union[typing.List[str], None] = None,
+            query_label: str = 'query',
+            target_label: str = 'target',
+            ) -> typing.Tuple[bool, typing.Union[str, None]]:
+        """ A subcheck in match(), specifically for a dictionary. """
+
+        if (keys_to_skip is None):
+            keys_to_skip = []
+
+        query_keys = set(query_dict.keys()) - set(keys_to_skip)
+        target_keys = set(target_dict.keys()) - set(keys_to_skip)
+
+        if (query_keys != target_keys):
+            return False, f"{label.title()} keys do not match ({query_label} = {query_keys}, {target_label} = {target_keys})."
+
+        for key in sorted(query_keys):
+            query_value = query_dict[key]
+            target_value = target_dict[key]
+
+            if (query_value != target_value):
+                comparison = f"{query_label} = '{query_value}', {target_label} = '{target_value}'"
+                return False, f"{label.title()} '{key}' has a non-matching value ({comparison})."
+
+        return True, None
+
+    def get_url(self) -> str:
+        """ Get the URL path and anchor combined. """
+
+        url = self.url_path
+
+        if (self.url_anchor is not None):
+            url += ('#' + self.url_anchor)
+
+        return url
+
+    def make_request(self, base_url: str, raise_for_status: bool = True, **kwargs: typing.Any) -> requests.Response:
+        """ Perform the HTTP request described by this exchange. """
+
+        files = []
+        for file_info in self.files:
+            content = file_info.content
+            if (content is None):
+                content = open(file_info.path, 'rb')  # type: ignore[assignment,arg-type]  # pylint: disable=consider-using-with
+
+            files.append((file_info.name, content))
+
+        url = f"{base_url}/{self.get_url()}"
+
+        response, _ = make_request(self.method, url,
+                headers = self.headers,
+                data = self.parameters,
+                files = files,
+                raise_for_status = raise_for_status,
+                **kwargs,
+        )
+
+        return response
+
+    def match_response(self, response: requests.Response,
+            headers_to_skip: typing.Union[typing.List[str], None] = None,
+            **kwargs: typing.Any) -> typing.Tuple[bool, typing.Union[str, None]]:
+        """
+        Check if this exchange matches the given response.
+        If they match, `(True, None)` will be returned.
+        If they do not match, `(False, <hint>)` will be returned, where `<hint>` points to where the mismatch is.
+        """
+
+        if (self.response_code != response.status_code):
+            return False, f"http status code does match (expected: {self.response_code}, actual: {response.status_code})"
+
+        expected_body = self.response_body
+        actual_body = None
+
+        if (self.json_body):
+            actual_body = response.json()
+
+            # Normalize the actual and expected bodies.
+
+            actual_body = edq.util.json.dumps(actual_body)
+
+            if (isinstance(expected_body, str)):
+                expected_body = edq.util.json.loads(expected_body)
+
+            expected_body = edq.util.json.dumps(expected_body)
+        else:
+            actual_body = response.text
+
+        if (self.response_body != actual_body):
+            body_hint = f"expected: '{self.response_body}', actual: '{actual_body}'"
+            return False, f"body does not match ({body_hint})"
+
+        match, hint = self._match_dict('header', response.headers, self.response_headers,
+                keys_to_skip = headers_to_skip,
+                query_label = 'response', target_label = 'exchange')
+
+        if (not match):
+            return False, hint
+
+        return True, None
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return vars(self)
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> typing.Any:
+        return HTTPExchange(**data)
+
+    @classmethod
+    def from_response(cls,
+            response: requests.Response,
+            headers_to_skip: typing.Union[typing.List[str], None] = None,
+            params_to_skip: typing.Union[typing.List[str], None] = None,
+            ) -> 'HTTPExchange':
+        """ Create a full excahnge from a response. """
+
+        if (headers_to_skip is None):
+            headers_to_skip = []
+
+        if (params_to_skip is None):
+            params_to_skip = []
+
+        request_headers = dict(response.request.headers.items())
+        response_headers = dict(response.headers.items())
+
+        # Clean headers.
+        for key in headers_to_skip:
+            request_headers.pop(key, None)
+            response_headers.pop(key, None)
+
+        request_data, request_files = parse_request_data(response.request.url, response.request.headers, response.request.body)
+
+        # Clean parameters.
+        for key in params_to_skip:
+            request_data.pop(key, None)
+
+        files = [FileInfo(name = name, content = content) for (name, content) in request_files.items()]
+
+        data = {
+            'method': response.request.method,
+            'url': response.request.url,
+            'url_anchor': response.request.headers.get(ANCHOR_HEADER_KEY, None),
+            'parameters': request_data,
+            'files': files,
+            'headers': request_headers,
+            'response_code': response.status_code,
+            'response_headers': response_headers,
+            'response_body': response.text,
+        }
+
+        return HTTPExchange(**data)
 
 def find_open_port(
         start_port: int = DEFAULT_START_PORT, end_port: int = DEFAULT_END_PORT,
@@ -56,10 +532,17 @@ def make_request(method: str, url: str,
         files: typing.Union[typing.List[typing.Any], None] = None,
         raise_for_status: bool = True,
         timeout_secs: float = DEFAULT_REQUEST_TIMEOUT_SECS,
+        output_dir: typing.Union[str, None] = None,
+        send_anchor_header: bool = True,
+        headers_to_skip: typing.Union[typing.List[str], None] = None,
+        params_to_skip: typing.Union[typing.List[str], None] = None,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
     Make an HTTP request and return the response object and text body.
     """
+
+    if (output_dir is None):
+        output_dir = _request_output_dir
 
     if (headers is None):
         headers = {}
@@ -69,6 +552,13 @@ def make_request(method: str, url: str,
 
     if (files is None):
         files = []
+
+    # Add in the anchor as a header (since it is not traditionally sent in an HTTP request).
+    if (send_anchor_header):
+        headers = headers.copy()
+
+        parts = urllib.parse.urlparse(url)
+        headers[ANCHOR_HEADER_KEY] = parts.fragment.lstrip('#')
 
     options = {
         'headers': headers,
@@ -90,6 +580,20 @@ def make_request(method: str, url: str,
     body = response.text
     logging.debug("Response:\n%s", body)
 
+    if (output_dir is not None):
+        exchange = HTTPExchange.from_response(response, headers_to_skip = headers_to_skip, params_to_skip = params_to_skip)
+
+        path = os.path.abspath(os.path.join(output_dir, *exchange.get_url().split('/')))
+
+        query = urllib.parse.urlencode(exchange.parameters)
+        if (query != ''):
+            path += f"?{query}"
+
+        path += f"_{method}.json"
+
+        edq.util.dirent.mkdir(os.path.dirname(path))
+        edq.util.json.dump_path(exchange, path, indent = 4)
+
     return response, body
 
 def make_get(url: str, **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
@@ -106,20 +610,43 @@ def make_post(url: str, **kwargs: typing.Any) -> typing.Tuple[requests.Response,
 
     return make_request('POST', url, **kwargs)
 
+def parse_request_data(
+        url: str,
+        headers: typing.Union[email.message.Message, typing.Dict[str, typing.Any]],
+        body: typing.Union[bytes, str, io.BufferedIOBase],
+        ) -> typing.Tuple[typing.Dict[str, typing.Any], typing.Dict[str, bytes]]:
+    """ Parse data and files from an HTTP request URL and body. """
+
+    # Parse data from the request body.
+    request_data, request_files = parse_request_body_data(headers, body)
+
+    # Parse parameters from the URL.
+    url_parts = urllib.parse.urlparse(url)
+    request_data.update(parse_query_string(url_parts.query))
+
+    return request_data, request_files
+
 def parse_request_body_data(
-        request_handler: http.server.BaseHTTPRequestHandler,
+        headers: typing.Union[email.message.Message, typing.Dict[str, typing.Any]],
+        body: typing.Union[bytes, str, io.BufferedIOBase],
         ) -> typing.Tuple[typing.Dict[str, typing.Any], typing.Dict[str, bytes]]:
     """ Parse data and files from an HTTP request body. """
 
     data: typing.Dict[str, typing.Any] = {}
     files: typing.Dict[str, bytes] = {}
 
-    length = int(request_handler.headers.get('Content-Length', 0))
+    length = int(headers.get('Content-Length', 0))
     if (length == 0):
         return data, files
 
-    content_type = request_handler.headers.get('Content-Type', '')
-    raw_content = request_handler.rfile.read(length)
+    if (isinstance(body, io.BufferedIOBase)):
+        raw_content = body.read(length)
+    elif (isinstance(body, str)):
+        raw_content = body.encode(edq.util.dirent.DEFAULT_ENCODING)
+    else:
+        raw_content = body
+
+    content_type = headers.get('Content-Type', '')
 
     if (content_type in ['', 'application/x-www-form-urlencoded']):
         data = parse_query_string(raw_content.decode(edq.util.dirent.DEFAULT_ENCODING).strip())
@@ -152,7 +679,7 @@ def parse_request_body_data(
 
     raise ValueError(f"Unknown content type: '{content_type}'.")
 
-def parse_content_dispositions(headers: email.message.EmailMessage) -> typing.Dict[str, typing.Any]:
+def parse_content_dispositions(headers: typing.Union[email.message.Message, typing.Dict[str, typing.Any]]) -> typing.Dict[str, typing.Any]:
     """ Parse a request's content dispositions from headers. """
 
     values = {}
@@ -197,3 +724,26 @@ def parse_query_string(text: str,
             results[key] = value[0]  # type: ignore[assignment]
 
     return results
+
+def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, typing.Any]) -> None:
+    """
+    Set common CLI arguments.
+    This is a sibling to init_from_args(), as the arguments set here can be interpreted there.
+    """
+
+    parser.add_argument('--http-exchanges-out-dir', dest = 'http_exchanges_out_dir',
+        action = 'store', type = str, default = None,
+        help = 'If set, write all outgoing HTTP requests as exchanges to this directory.')
+
+def init_from_args(
+        parser: argparse.ArgumentParser,
+        args: argparse.Namespace,
+        extra_state: typing.Dict[str, typing.Any]) -> None:
+    """
+    Take in args from a parser that was passed to set_cli_args(),
+    and call init() with the appropriate arguments.
+    """
+
+    global _request_output_dir  # pylint: disable=global-statement
+
+    _request_output_dir = args.http_exchanges_out_dir

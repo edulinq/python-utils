@@ -2,11 +2,9 @@ import glob
 import http.server
 import logging
 import os
-import pathlib
 import threading
 import time
 import typing
-import urllib.parse
 
 import requests
 
@@ -17,13 +15,6 @@ import edq.util.net
 
 SERVER_THREAD_START_WAIT_SEC = 0.02
 SERVER_THREAD_REAP_WAIT_SEC = 0.15
-TIMEOUT_SECS = 1.0
-
-ALLOWED_METHODS: typing.List[str] = [
-    'GET',
-    'POST',
-    'PUT'
-]
 
 AUTOMATIC_REQUEST_HEADERS: typing.List[str] = [
     'Host',
@@ -33,6 +24,7 @@ AUTOMATIC_REQUEST_HEADERS: typing.List[str] = [
     'Connection',
     'Content-Length',
     'Content-Type',
+    edq.util.net.ANCHOR_HEADER_KEY,
 ]
 """
 These headers may automatically be added to requests in this module.
@@ -58,422 +50,6 @@ AUTOMATIC_RESPONSE_HEADERS: typing.List[str] = [
     'Server',
 ]
 """ These headers may automatically be added to responses from the server. """
-
-class FileInfo(edq.util.json.DictConverter):
-    """ Store info about files used in HTTP exchanges. """
-
-    def __init__(self,
-            path: typing.Union[str, None] = None,
-            name: typing.Union[str, None] = None,
-            content: typing.Union[str, bytes, None] = None,
-            **kwargs: typing.Any) -> None:
-        # Normalize the path from POSIX-style to the system's style.
-        if (path is not None):
-            path = str(pathlib.PurePath(pathlib.PurePosixPath(path)))
-
-        self.path: typing.Union[str, None] = path
-        """ The on-disk path to a file. """
-
-        if ((name is None) and (self.path is not None)):
-            name = os.path.basename(self.path)
-
-        if (name is None):
-            raise ValueError("No name was provided for file.")
-
-        self.name: str = name
-        """ The name for this file used in an HTTP request. """
-
-        self.content: typing.Union[str, bytes, None] = content
-        """ The contents of this file. """
-
-        if ((self.path is None) and (self.content is None)):
-            raise ValueError("File must have either path or content specified.")
-
-    def resolve_path(self, base_dir: str) -> None:
-        """ Resolve this path relative to the given base dir. """
-
-        if ((self.path is None) or os.path.isabs(self.path)):
-            return
-
-        self.path = os.path.abspath(os.path.join(base_dir, self.path))
-
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
-        data = vars(self).copy()
-        del data['content']
-        return data
-
-    @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> typing.Any:
-        return FileInfo(**data)
-
-class HTTPExchange(edq.util.json.DictConverter):
-    """
-    The request and response making up a full HTTP exchange.
-    """
-
-    def __init__(self,
-            method: str = 'GET',
-            url: typing.Union[str, None] = None,
-            url_path: typing.Union[str, None] = None,
-            url_anchor: typing.Union[str, None] = None,
-            parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, str]]], None] = None,
-            headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            response_code: int = http.HTTPStatus.OK,
-            response_headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            json_body: typing.Union[bool, None] = None,
-            response_body: typing.Union[str, dict, list, None] = None,
-            read_write: bool = False,
-            source_path: typing.Union[str, None] = None,
-            extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            **kwargs: typing.Any) -> None:
-        method = str(method).upper()
-        if (method not in ALLOWED_METHODS):
-            raise ValueError(f"Got unknown/disallowed method: '{method}'.")
-
-        self.method: str = method
-        """ The HTTP method for this exchange. """
-
-        url_path, url_anchor, parameters = self._parse_url_components(url, url_path, url_anchor, parameters)
-
-        self.url_path: str = url_path
-        """
-        The path portion of the request URL.
-        Only the path (not domain, port, params, anchor, etc) should be included.
-        """
-
-        self.url_anchor: typing.Union[str, None] = url_anchor
-        """
-        The anchor portion of the request URL (if it exists).
-        """
-
-        self.parameters: typing.Dict[str, typing.Any] = parameters
-        """
-        The parameters/arguments for this request.
-        Parameters should be provided here and not encoded into URLs,
-        regardless of the request method.
-        With the exception of files, all parameters should be placed here.
-        """
-
-        if (files is None):
-            files = []
-
-        parsed_files = []
-        for file in files:
-            if (isinstance(file, FileInfo)):
-                parsed_files.append(file)
-            else:
-                parsed_files.append(FileInfo(**file))
-
-        self.files: typing.List[FileInfo] = parsed_files
-        """
-        A list of files to include in the request.
-        The files are represented as dicts with a
-        "path" (path to the file on disk) and "name" (the filename to send in the request) field.
-        These paths must be POSIX-style paths,
-        they will be converted to system-specific paths.
-        Once this exchange is ready for use, these paths should be resolved (and probably absolute).
-        However, when serialized these paths should probably be relative.
-        To reconcile this, resolve_paths() should be called before using this exchange.
-        """
-
-        if (headers is None):
-            headers = {}
-
-        self.headers: typing.Dict[str, typing.Any] = headers
-        """ Headers in the request. """
-
-        self.response_code: int = response_code
-        """ The HTTP status code of the response. """
-
-        if (response_headers is None):
-            response_headers = {}
-
-        self.response_headers: typing.Dict[str, typing.Any] = response_headers
-        """ Headers in the response. """
-
-        if (json_body is None):
-            json_body = isinstance(response_body, (dict, list))
-
-        self.json_body: bool = json_body
-        """
-        Indicates that the response is JSON and should be converted to/from a string.
-        If the response body is passed in a dict/list and this is passed as None,
-        then this will be set as true.
-        """
-
-        if (self.json_body and isinstance(response_body, (dict, list))):
-            response_body = edq.util.json.dumps(response_body)
-
-        self.response_body: typing.Union[str, None] = response_body  # type: ignore[assignment]
-        """
-        The response that should be sent in this exchange.
-        """
-
-        self.read_write: bool = read_write
-        """
-        Indicates that this exchange will change data on the server (regardless of the HTTP method).
-        This field may be ignored by test servers,
-        but may be observed by tools that generate or validate test data.
-        """
-
-        self.source_path: typing.Union[str, None] = source_path
-        """
-        The path that this exchange was loaded from (if it was loaded from a file).
-        This value should never be serialized, but can be useful for testing.
-        """
-
-        if (extra_options is None):
-            extra_options = {}
-
-        self.extra_options: typing.Dict[str, typing.Any] = extra_options.copy()
-        """
-        Additional options for this exchange.
-        This library will not use these options, but other's may.
-        kwargs will also be added to this.
-        """
-
-        self.extra_options.update(kwargs)
-
-    def _parse_url_components(self,
-            url: typing.Union[str, None] = None,
-            url_path: typing.Union[str, None] = None,
-            url_anchor: typing.Union[str, None] = None,
-            parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            ) -> typing.Tuple[str, typing.Union[str, None], typing.Dict[str, typing.Any]]:
-        """
-        Parse out all URL-based components from raw inputs.
-        The URL's path and anchor can either be supplied separately, or as part of the full given URL.
-        If content is present in both places, they much match (or an error will be raised).
-        Query parameters may be provided in the full URL,
-        but will be overwritten by any that are provided separately.
-        Any information from the URL aside from the path, anchor/fragment, and query will be ignored.
-        Note that path parameters (not query parameters) will be ignored.
-        The final url path, url anchor, and parameters will be returned.
-        """
-
-        # Do base initialization and cleanup.
-
-        if (url_path is not None):
-            url_path = url_path.strip()
-            if (url_path == ''):
-                url_path = None
-            else:
-                url_path = url_path.lstrip('/')
-
-        if (url_anchor is not None):
-            url_anchor = url_anchor.strip()
-            if (url_anchor == ''):
-                url_anchor = None
-            else:
-                url_anchor = url_anchor.lstrip('#')
-
-        if (parameters is None):
-            parameters = {}
-
-        # Parse the URL (if present).
-
-        if ((url is not None) and (url.strip() != '')):
-            parts = urllib.parse.urlparse(url)
-
-            # Handle the path.
-
-            path = parts.path.lstrip('/')
-
-            if ((url_path is not None) and (url_path != path)):
-                raise ValueError(f"Mismatched URL paths where supplied implicitly ('{path}') and explicitly ('{url_path}').")
-
-            url_path = path
-
-            # Check the optional anchor/fragment.
-
-            if (parts.fragment != ''):
-                fragment = parts.fragment.lstrip('#')
-
-                if ((url_anchor is not None) and (url_anchor != fragment)):
-                    raise ValueError(f"Mismatched URL anchors where supplied implicitly ('{fragment}') and explicitly ('{url_anchor}').")
-
-                url_anchor = fragment
-
-            # Check for any parameters.
-
-            url_params = edq.util.net.parse_query_string(parts.query)
-            for (key, value) in url_params.items():
-                if (key not in parameters):
-                    parameters[key] = value
-
-        if (url_path is None):
-            raise ValueError('URL path cannot be empty, it must be explicitly set via `url_path`, or indirectly via `url`.')
-
-        return url_path, url_anchor, parameters
-
-    def resolve_paths(self, base_dir: str) -> None:
-        """ Resolve any paths relative to the given base dir. """
-
-        for file_info in self.files:
-            file_info.resolve_path(base_dir)
-
-    def match(self, query: 'HTTPExchange',
-            match_headers: bool = True,
-            headers_to_skip: typing.Union[typing.List[str], None] = None,
-            params_to_skip: typing.Union[typing.List[str], None] = None,
-            **kwargs: typing.Any) -> typing.Tuple[bool, typing.Union[str, None]]:
-        """
-        Check if this exchange matches the query exchange.
-        If they match, `(True, None)` will be returned.
-        If they do not match, `(False, <hint>)` will be returned, where `<hint>` points to where the mismatch is.
-
-        Note that this is not an equality check,
-        as a query exchange is often missing the response components.
-        This method is often invoked the see if an incoming HTTP request (the query) matches an existing exchange.
-        """
-
-        if (query.method != self.method):
-            return False, f"HTTP method does not match (query = {query.method}, target = {self.method})."
-
-        if (query.url_path != self.url_path):
-            return False, f"URL path does not match (query = {query.url_path}, target = {self.url_path})."
-
-        if (query.url_anchor != self.url_anchor):
-            return False, f"URL anchor does not match (query = {query.url_anchor}, target = {self.url_anchor})."
-
-        if (headers_to_skip is None):
-            headers_to_skip = []
-
-        if (params_to_skip is None):
-            params_to_skip = []
-
-        if (match_headers):
-            match, hint = self._match_dict('header', query.headers, self.headers, headers_to_skip)
-            if (not match):
-                return False, hint
-
-        match, hint = self._match_dict('parameter', query.parameters, self.parameters, params_to_skip)
-        if (not match):
-            return False, hint
-
-        # Check file names, not file content.
-        query_filenames = {file.name for file in query.files}
-        target_filenames = {file.name for file in self.files}
-        if (query_filenames != target_filenames):
-            return False, f"File names do not match (query = {query_filenames}, target = {target_filenames})."
-
-        return True, None
-
-    def _match_dict(self, label: str,
-            query_dict: typing.Dict[str, typing.Any],
-            target_dict: typing.Dict[str, typing.Any],
-            keys_to_skip: typing.Union[typing.List[str], None] = None,
-            query_label: str = 'query',
-            target_label: str = 'target',
-            ) -> typing.Tuple[bool, typing.Union[str, None]]:
-        """ A subcheck in match(), specifically for a dictionary. """
-
-        if (keys_to_skip is None):
-            keys_to_skip = []
-
-        query_keys = set(query_dict.keys()) - set(keys_to_skip)
-        target_keys = set(target_dict.keys()) - set(keys_to_skip)
-
-        if (query_keys != target_keys):
-            return False, f"{label.title()} keys do not match ({query_label} = {query_keys}, {target_label} = {target_keys})."
-
-        for key in sorted(query_keys):
-            query_value = query_dict[key]
-            target_value = target_dict[key]
-
-            if (query_value != target_value):
-                comparison = f"{query_label} = '{query_value}', {target_label} = '{target_value}'"
-                return False, f"{label.title()} '{key}' has a non-matching value ({comparison})."
-
-        return True, None
-
-    def get_url(self) -> str:
-        """ Get the URL path and anchor combined. """
-
-        url = self.url_path
-
-        if (self.url_anchor is not None):
-            url += ('#' + self.url_anchor)
-
-        return url
-
-    def make_request(self, base_url: str, raise_on_status: bool = True) -> requests.Response:
-        """ Perform the HTTP request described by this exchange. """
-
-        files = []
-        for file_info in self.files:
-            content = file_info.content
-            if (content is None):
-                content = open(file_info.path, 'rb')  # type: ignore[assignment,arg-type]  # pylint: disable=consider-using-with
-
-            files.append((file_info.name, content))
-
-        url = f"{base_url}/{self.get_url()}"
-        if (self.method == 'GET'):
-            response = requests.request(self.method, url,
-                    headers = self.headers, files = files,
-                    params = self.parameters,
-                    timeout = TIMEOUT_SECS)
-        else:
-            response = requests.request(self.method, url,
-                    headers = self.headers, files = files,
-                    data = self.parameters,
-                    timeout = TIMEOUT_SECS)
-
-        if (raise_on_status):
-            response.raise_for_status()
-
-        return response
-
-    def match_response(self, response: requests.Response,
-            headers_to_skip: typing.Union[typing.List[str], None] = None,
-            **kwargs: typing.Any) -> typing.Tuple[bool, typing.Union[str, None]]:
-        """
-        Check if this exchange matches the given response.
-        If they match, `(True, None)` will be returned.
-        If they do not match, `(False, <hint>)` will be returned, where `<hint>` points to where the mismatch is.
-        """
-
-        if (self.response_code != response.status_code):
-            return False, f"http status code does match (expected: {self.response_code}, actual: {response.status_code})"
-
-        expected_body = self.response_body
-        actual_body = None
-
-        if (self.json_body):
-            actual_body = response.json()
-
-            # Normalize the actual and expected bodies.
-
-            actual_body = edq.util.json.dumps(actual_body)
-
-            if (isinstance(expected_body, str)):
-                expected_body = edq.util.json.loads(expected_body)
-
-            expected_body = edq.util.json.dumps(expected_body)
-        else:
-            actual_body = response.text
-
-        if (self.response_body != actual_body):
-            body_hint = f"expected: '{self.response_body}', actual: '{actual_body}'"
-            return False, f"body does not match ({body_hint})"
-
-        match, hint = self._match_dict('header', response.headers, self.response_headers,
-                keys_to_skip = headers_to_skip,
-                query_label = 'response', target_label = 'exchange')
-
-        if (not match):
-            return False, hint
-
-        return True, None
-
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
-        return vars(self)
-
-    @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> typing.Any:
-        return HTTPExchange(**data)
 
 class HTTPTestServer():
     """
@@ -517,7 +93,7 @@ class HTTPTestServer():
         self.raise_on_404: bool = raise_on_404
         """ Raise an exception when no exchange is matched (instead of a 404 error). """
 
-        self._exchanges: typing.Dict[str, typing.Dict[typing.Union[str, None], typing.Dict[str, typing.List[HTTPExchange]]]] = {}
+        self._exchanges: typing.Dict[str, typing.Dict[typing.Union[str, None], typing.Dict[str, typing.List[edq.util.net.HTTPExchange]]]] = {}
         """
         The HTTP exchanges (requests+responses) that this server knows about.
         Exchanges are stored in layers to help make errors for missing requests easier.
@@ -536,7 +112,7 @@ class HTTPTestServer():
         self.match_options: typing.Dict[str, typing.Any] = match_options.copy()
         """ Options to use when matching HTTP exchanges. """
 
-    def get_exchanges(self) -> typing.List[HTTPExchange]:
+    def get_exchanges(self) -> typing.List[edq.util.net.HTTPExchange]:
         """
         Get a shallow list of all the exchanges in this server.
         Ordering is not guaranteed.
@@ -629,7 +205,7 @@ class HTTPTestServer():
 
             self._thread = None
 
-    def missing_request(self, query: HTTPExchange) -> typing.Union[HTTPExchange, None]:
+    def missing_request(self, query: edq.util.net.HTTPExchange) -> typing.Union[edq.util.net.HTTPExchange, None]:
         """
         Provide the server (specifically, child classes) one last chance to resolve an incoming HTTP request
         before the server raises an exception.
@@ -640,7 +216,7 @@ class HTTPTestServer():
 
         return None
 
-    def modify_exchanges(self, exchanges: typing.List[HTTPExchange]) -> typing.List[HTTPExchange]:
+    def modify_exchanges(self, exchanges: typing.List[edq.util.net.HTTPExchange]) -> typing.List[edq.util.net.HTTPExchange]:
         """
         Modify any exchanges before they are saved into this server's cache.
         The returned exchanges will be saved in this server's cache.
@@ -651,9 +227,9 @@ class HTTPTestServer():
         return exchanges
 
     def lookup_exchange(self,
-            query: HTTPExchange,
+            query: edq.util.net.HTTPExchange,
             match_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            ) -> typing.Tuple[typing.Union[HTTPExchange, None], typing.Union[str, None]]:
+            ) -> typing.Tuple[typing.Union[edq.util.net.HTTPExchange, None], typing.Union[str, None]]:
         """
         Lookup the query exchange to see if it exists in this server.
         If a match exists, the matching exchange (likely a full version of the query) will be returned along with None.
@@ -720,7 +296,7 @@ class HTTPTestServer():
         # Found no matches.
         return None, f"Found matching URL and method, but could not find matching headers/params for '{hint_display}' (non-matching hints: {hints})."
 
-    def load_exchange(self, exchange: HTTPExchange) -> None:
+    def load_exchange(self, exchange: edq.util.net.HTTPExchange) -> None:
         """ Load an exchange into this server. """
 
         if (exchange is None):
@@ -747,7 +323,7 @@ class HTTPTestServer():
         This will also handle setting the exchanges source path and resolve the exchange's paths.
         """
 
-        exchange = typing.cast(HTTPExchange, edq.util.json.load_object_path(path, HTTPExchange))
+        exchange = typing.cast(edq.util.net.HTTPExchange, edq.util.json.load_object_path(path, edq.util.net.HTTPExchange))
         exchange.source_path = os.path.abspath(path)
         exchange.resolve_paths(os.path.abspath(os.path.dirname(path)))
 
@@ -768,8 +344,8 @@ class MissingRequestFunction(typing.Protocol):
     """
 
     def __call__(self,
-            query: HTTPExchange,
-            ) -> typing.Union[HTTPExchange, None]:
+            query: edq.util.net.HTTPExchange,
+            ) -> typing.Union[edq.util.net.HTTPExchange, None]:
         """
         Create an exchange for the given query or return None.
         """
@@ -810,15 +386,11 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
         if (self._verbose):
             logging.debug("Incoming %s request: '%s'.", method, self.path)
 
-        # Parse data from the request body.
-        request_data, request_files = edq.util.net.parse_request_body_data(self)
-
-        # Parse parameters from the URL.
-        url_parts = urllib.parse.urlparse(self.path)
-        request_data.update(edq.util.net.parse_query_string(url_parts.query))
+        # Parse data from the request url and body.
+        request_data, request_files = edq.util.net.parse_request_data(self.path, self.headers, self.rfile)
 
         # Construct file info objects from the raw files.
-        files = [FileInfo(name = name, content = content) for (name, content) in request_files.items()]
+        files = [edq.util.net.FileInfo(name = name, content = content) for (name, content) in request_files.items()]
 
         exchange, hint = self._get_exchange(method, parameters = request_data, files = files)  # type: ignore[arg-type]
 
@@ -843,15 +415,16 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def _get_exchange(self, method: str,
             parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, str]]], None] = None,
-            ) -> typing.Tuple[typing.Union[HTTPExchange, None], typing.Union[str, None]]:
+            files: typing.Union[typing.List[typing.Union[edq.util.net.FileInfo, typing.Dict[str, str]]], None] = None,
+            ) -> typing.Tuple[typing.Union[edq.util.net.HTTPExchange, None], typing.Union[str, None]]:
         """ Get the matching exchange or raise an error. """
 
         if (self._server is None):
             raise ValueError("Server has not been initialized.")
 
-        query = HTTPExchange(method = method,
+        query = edq.util.net.HTTPExchange(method = method,
                 url = self.path,
+                url_anchor = self.headers.get(edq.util.net.ANCHOR_HEADER_KEY, None),
                 headers = self.headers,  # type: ignore[arg-type]
                 parameters = parameters, files = files)
 
@@ -968,7 +541,7 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
 
         return f"http://127.0.0.1:{server.port}"
 
-    def assert_exchange(self, request: HTTPExchange, response: HTTPExchange,
+    def assert_exchange(self, request: edq.util.net.HTTPExchange, response: edq.util.net.HTTPExchange,
             base_url: typing.Union[str, None] = None,
             ) -> requests.Response:
         """
@@ -983,7 +556,7 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
         if (base_url is None):
             base_url = self.get_server_url()
 
-        full_response = request.make_request(base_url)
+        full_response = request.make_request(base_url, **server.match_options)
 
         match, hint = response.match_response(full_response, **server.match_options)
         if (not match):

@@ -45,7 +45,9 @@ def main() -> int:
 def _get_parser() -> edq.core.argparser.Parser:
     """ Get the parser. """
 
-    parser = edq.core.argparser.get_default_parser(__doc__.strip())
+    parser = edq.core.argparser.get_default_parser(__doc__.strip(),
+            include_net = True,
+    )
 
     parser.add_argument('paths', metavar = 'PATH',
         type = str, nargs = '+',

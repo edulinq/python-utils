@@ -1,6 +1,7 @@
 import os
 
 import edq.testing.httpserver
+import edq.util.net
 
 THIS_DIR: str = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
 TEST_EXCHANGES_DIR: str = os.path.join(THIS_DIR, "testdata", "http", 'exchanges')
@@ -25,7 +26,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                     'method': 'GET',
                     'url': 'simple',
                 },
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'GET',
                     url = 'simple',
                 ),
@@ -54,7 +55,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                 {
                     'url': 'foo?a=b#c',
                 },
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     url_path = 'foo',
                     url_anchor = 'c',
                     parameters = {
@@ -93,10 +94,10 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                         }
                     ],
                 },
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     url_path = 'foo',
                     files = [
-                        edq.testing.httpserver.FileInfo(name = 'test.txt', path = 'test.txt'),
+                        edq.util.net.FileInfo(name = 'test.txt', path = 'test.txt'),
                     ]
                 ),
                 None,
@@ -137,7 +138,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                         'a': 1,
                     }
                 },
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     url_path = 'foo',
                     json_body = True,
                     response_body = '{"a": 1}',
@@ -152,7 +153,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
                         'a': 1,
                     }]
                 },
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     url_path = 'foo',
                     json_body = True,
                     response_body = '[{"a": 1}]',
@@ -166,7 +167,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
 
             with self.subTest(msg = f"Case {i}:"):
                 try:
-                    actual = edq.testing.httpserver.HTTPExchange(**kwargs)
+                    actual = edq.util.net.HTTPExchange(**kwargs)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
                     if (error_substring is None):
@@ -192,7 +193,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             # Base
             (
                 exchanges['simple'],
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'GET',
                     url = 'simple',
                 ),
@@ -204,7 +205,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             # Params
             (
                 exchanges['simple_params'],
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'GET',
                     url = 'simple',
                     parameters = {
@@ -242,7 +243,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             # Param, skip unmatching.
             (
                 exchanges['simple_params'],
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'GET',
                     url = 'simple',
                     parameters = {
@@ -272,7 +273,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             # Missed method.
             (
                 exchanges['simple'],
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'POST',
                     url = 'simple',
                 ),
@@ -291,7 +292,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             # Missed URL path.
             (
                 exchanges['simple'],
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'GET',
                     url = 'ZZZ',
                 ),
@@ -303,7 +304,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             # Missed URL anchor.
             (
                 exchanges['simple'],
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'GET',
                     url = 'simple#1',
                 ),
@@ -315,7 +316,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             # Missed number of params.
             (
                 exchanges['simple'],
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'GET',
                     url = 'simple',
                     parameters = {'a': '1'},
@@ -342,7 +343,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             # Missed param value.
             (
                 exchanges['simple_params'],
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'GET',
                     url = 'simple',
                     parameters = {
@@ -369,7 +370,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             # Missed header value.
             (
                 exchanges['simple_headers'],
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'GET',
                     url = 'simple',
                     headers = {
@@ -386,7 +387,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
             # Param, with skip.
             (
                 exchanges['simple_params'],
-                edq.testing.httpserver.HTTPExchange(
+                edq.util.net.HTTPExchange(
                     method = 'GET',
                     url = 'simple',
                     parameters = {
