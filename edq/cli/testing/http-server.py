@@ -14,8 +14,14 @@ import edq.testing.httpserver
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
+    match_options = {
+        'params_to_skip': args.ignore_params,
+        'headers_to_skip': args.ignore_headers,
+    }
+
     server = edq.testing.httpserver.HTTPTestServer(
             port = args.port,
+            match_options = match_options,
             verbose = True,
             raise_on_404 = False,
     )
@@ -48,6 +54,14 @@ def _get_parser() -> edq.core.argparser.Parser:
     parser.add_argument('--port', dest = 'port',
         action = 'store', type = int, default = None,
         help = 'The port to run this test server on. If not set, a random open port will be chosen.')
+
+    parser.add_argument('--ignore-param', dest = 'ignore_params',
+        action = 'append', type = str, default = [],
+        help = 'Ignore this parameter during exchange matching.')
+
+    parser.add_argument('--ignore-header', dest = 'ignore_headers',
+        action = 'append', type = str, default = [],
+        help = 'Ignore this header during exchange matching.')
 
     return parser
 

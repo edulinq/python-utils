@@ -34,7 +34,24 @@ AUTOMATIC_REQUEST_HEADERS: typing.List[str] = [
     'Content-Length',
     'Content-Type',
 ]
-""" These headers may automatically be added to requests in this module. """
+"""
+These headers may automatically be added to requests in this module.
+These headers are also ignored by default during matching.
+"""
+
+DEFAULT_IGNORE_HEADERS: typing.List[str] = [
+    'Accept-Language',
+    'Cookie',
+    'DNT',
+    'Priority',
+    'Sec-Fetch-Dest',
+    'Sec-Fetch-Mode',
+    'Sec-Fetch-Site',
+    'Sec-Fetch-User',
+    'Sec-GPC',
+    'Upgrade-Insecure-Requests',
+]
+""" By default, ignore these headers during matching. """
 
 AUTOMATIC_RESPONSE_HEADERS: typing.List[str] = [
     'Date',
@@ -514,7 +531,7 @@ class HTTPTestServer():
             if ('headers_to_skip' not in match_options):
                 match_options['headers_to_skip'] = []
 
-            match_options['headers_to_skip'] += (AUTOMATIC_REQUEST_HEADERS + AUTOMATIC_RESPONSE_HEADERS)
+            match_options['headers_to_skip'] += (DEFAULT_IGNORE_HEADERS + AUTOMATIC_REQUEST_HEADERS + AUTOMATIC_RESPONSE_HEADERS)
 
         self.match_options: typing.Dict[str, typing.Any] = match_options.copy()
         """ Options to use when matching HTTP exchanges. """
