@@ -12,10 +12,10 @@ CONFIG_FIELD_SEPARATOR: str = "\t"
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
-    configs_list = []
+    rows = []
 
     for (key, value) in args._config.items():
-        config_list = [key, value]
+        row = [key, f"{value}"]
         if (args.show_origin):
             config_source_obj = args._config_sources.get(key)
 
@@ -23,20 +23,20 @@ def run_cli(args: argparse.Namespace) -> int:
             if (origin is None):
                 origin = config_source_obj.label
 
-            config_list.append(origin)
+            row.append(origin)
 
-        configs_list.append(CONFIG_FIELD_SEPARATOR.join(config_list))
+        rows.append(CONFIG_FIELD_SEPARATOR.join(row))
 
-    configs_list.sort()
+    rows.sort()
 
     if (not args.skip_header):
         header = ["Key", "Value"]
         if (args.show_origin):
             header.append("Origin")
 
-        configs_list.insert(0, (CONFIG_FIELD_SEPARATOR.join(header)))
+        rows.insert(0, (CONFIG_FIELD_SEPARATOR.join(header)))
 
-    print("\n".join(configs_list))
+    print("\n".join(rows))
     return 0
 
 def main() -> int:

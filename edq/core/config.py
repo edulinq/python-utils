@@ -197,7 +197,7 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
 
     parser.add_argument('--config-global', dest = GLOBAL_CONFIG_KEY,
         action = 'store', type = str, default = DEFAULT_GLOBAL_CONFIG_PATH,
-        help = 'Override the default global config file path (default: %(default)s).',
+        help = 'Set the default global config file path (default: %(default)s).',
     )
 
     parser.add_argument('--config-file', dest = CONFIG_PATHS_KEY,
@@ -205,24 +205,24 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
         help = ('Load config options from a JSON file.'
             + ' This flag can be specified multiple times.'
             + ' Files are applied in the order provided and later files override earlier ones.'
-            + ' This will override options form both global and local config files.')
+            + ' Will override options form both global and local config files.')
     )
 
-    parser.add_argument('--config-option', dest = CONFIGS_KEY,
+    parser.add_argument('--config', dest = CONFIGS_KEY,
         action = 'append', type = str, default = [],
-        help = ('Load configuration option from the CLI command.'
+        help = ('Set a configuration option from the command-line.'
             + ' Specify options as <key>=<value> pairs.'
             + ' This flag can be specified multiple times.'
             + ' The options are applied in the order provided and later options override earlier ones.'
-            + ' This will override options form all config files.')
+            + ' Will override options form all config files.')
     )
 
     parser.add_argument('--ignore-config-option', dest = IGNORE_CONFIGS_KEY,
         action = 'append', type = str, default = [],
-        help = ('Ignore any config option with the specified values.'
-            + ' The default value will be used for that option if one exists.'
+        help = ('Ignore any config option with the specified key.'
+            + ' The system-provided default value will be used for that option if one exists.'
             + ' This flag can be specified multiple times.'
-            + ' Ignoring options are processed last.')
+            + ' Ignored options are processed last.')
     )
 
 def load_config_into_args(
