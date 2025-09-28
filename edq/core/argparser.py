@@ -10,6 +10,7 @@ while post-callbacks are generally intended to act on the results of parsing.
 import argparse
 import typing
 
+import edq.core.config
 import edq.core.log
 
 @typing.runtime_checkable
@@ -108,5 +109,6 @@ def get_default_parser(description: str) -> Parser:
     parser = Parser(description = description)
 
     parser.register_callbacks('log', edq.core.log.set_cli_args, edq.core.log.init_from_args)
+    parser.register_callbacks('config', edq.core.config.set_cli_args, edq.core.config.load_config_into_args)
 
     return parser
