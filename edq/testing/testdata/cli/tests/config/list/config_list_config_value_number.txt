@@ -7,4 +7,4 @@
 }
 ---
 Key	Value
-pass	1234567890
+timeout	60
