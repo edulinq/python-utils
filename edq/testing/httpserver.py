@@ -70,7 +70,7 @@ class HTTPTestServer():
             match_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             default_match_options: bool = True,
             verbose: bool = False,
-            raise_on_404: bool = True,
+            raise_on_404: bool = False,
             **kwargs: typing.Any) -> None:
         self.port: typing.Union[int, None] = port
         """
@@ -556,7 +556,7 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
         if (base_url is None):
             base_url = self.get_server_url()
 
-        full_response = request.make_request(base_url, **server.match_options)
+        full_response = request.make_request(base_url, raise_for_status = False, **server.match_options)
 
         match, hint = response.match_response(full_response, **server.match_options)
         if (not match):

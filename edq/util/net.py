@@ -577,11 +577,15 @@ def make_request(method: str, url: str,
     logging.debug("Making %s request: '%s'.", method, url)
     response = requests.request(method, url, **options)
 
-    if (raise_for_status):
-        response.raise_for_status()
-
     body = response.text
     logging.debug("Response:\n%s", body)
+
+    if (raise_for_status):
+        # Handle 404s a little special, as their body may contain useful information.
+        if ((response.status_code == http.HTTPStatus.NOT_FOUND) and (body is not None) and (body.strip() != '')):
+            response.reason += f" (Body: '{body.strip()}')"
+
+        response.raise_for_status()
 
     if (output_dir is not None):
         exchange = HTTPExchange.from_response(response, headers_to_skip = headers_to_skip, params_to_skip = params_to_skip)
