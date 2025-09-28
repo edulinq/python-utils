@@ -186,7 +186,10 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
         """ Test matching exchanges against queries. """
 
         # {<file basename no ext>: exchange, ...}
-        exchanges = {os.path.splitext(os.path.basename(exchange.source_path))[0]: exchange for exchange in self.get_server().get_exchanges()}
+        exchanges = {}
+        for exchange in self.get_server().get_exchanges():
+            key = os.path.basename(exchange.source_path).replace(edq.util.net.DEFAULT_HTTP_EXCHANGE_EXTENSION, '')
+            exchanges[key] = exchange
 
         # [(target, query, match?, hint substring), ...]
         test_cases = [
@@ -405,7 +408,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
 
         for (i, test_case) in enumerate(test_cases):
             (target, query, match_options, expected_match, hint_substring) = test_case
-            base_name = os.path.splitext(os.path.basename(target.source_path))[0]
+            base_name = os.path.basename(target.source_path).replace(edq.util.net.DEFAULT_HTTP_EXCHANGE_EXTENSION, '')
 
             with self.subTest(msg = f"Case {i} ('{base_name}'):"):
                 actual_match, hint = target.match(query, **match_options)

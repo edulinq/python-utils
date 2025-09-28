@@ -23,6 +23,8 @@ DEFAULT_PORT_SEARCH_WAIT_SEC: float = 0.01
 
 DEFAULT_REQUEST_TIMEOUT_SECS: float = 10.0
 
+DEFAULT_HTTP_EXCHANGE_EXTENSION: str= '.httpex.json'
+
 ANCHOR_HEADER_KEY: str = 'edq-anchor'
 """
 By default, requests made via make_requet() will send a header with this key that includes the anchor component of the URL.
@@ -536,6 +538,7 @@ def make_request(method: str, url: str,
         send_anchor_header: bool = True,
         headers_to_skip: typing.Union[typing.List[str], None] = None,
         params_to_skip: typing.Union[typing.List[str], None] = None,
+        http_exchange_extension: str = DEFAULT_HTTP_EXCHANGE_EXTENSION,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
     Make an HTTP request and return the response object and text body.
@@ -589,7 +592,7 @@ def make_request(method: str, url: str,
         if (query != ''):
             path += f"?{query}"
 
-        path += f"_{method}.json"
+        path += f"_{method}{http_exchange_extension}"
 
         edq.util.dirent.mkdir(os.path.dirname(path))
         edq.util.json.dump_path(exchange, path, indent = 4)

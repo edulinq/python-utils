@@ -13,8 +13,8 @@ import edq.util.dirent
 import edq.util.json
 import edq.util.net
 
-SERVER_THREAD_START_WAIT_SEC = 0.02
-SERVER_THREAD_REAP_WAIT_SEC = 0.15
+SERVER_THREAD_START_WAIT_SEC: float = 0.02
+SERVER_THREAD_REAP_WAIT_SEC: float = 0.15
 
 AUTOMATIC_REQUEST_HEADERS: typing.List[str] = [
     'Host',
@@ -329,7 +329,7 @@ class HTTPTestServer():
 
         self.load_exchange(exchange)
 
-    def load_exchanges_dir(self, base_dir: str, extension: str = '.json') -> None:
+    def load_exchanges_dir(self, base_dir: str, extension: str = edq.util.net.DEFAULT_HTTP_EXCHANGE_EXTENSION) -> None:
         """ Load all exchanges found (recursively) within a directory. """
 
         paths = list(sorted(glob.glob(os.path.join(base_dir, "**", f"*{extension}"), recursive = True)))
