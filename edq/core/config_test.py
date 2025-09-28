@@ -276,7 +276,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 "custom-name",
                 {
-                    "config_file_name": "custom-edq-config.json",
+                    "config_filename": "custom-edq-config.json",
                 },
                 {
                     "user": "user@test.edulinq.org",
@@ -294,7 +294,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 "old-name",
                 {
-                    "legacy_config_file_name": "config.json",
+                    "legacy_config_filename": "config.json",
                 },
                 {
                     "user": "user@test.edulinq.org",
@@ -328,7 +328,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 os.path.join("old-name", "nest1", "nest2"),
                 {
-                    "legacy_config_file_name": "config.json",
+                    "legacy_config_filename": "config.json",
                 },
                 {},
                 {},
@@ -420,7 +420,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 os.path.join("nested", "nest1", "nest2b"),
                 {
-                    "legacy_config_file_name": "config.json",
+                    "legacy_config_filename": "config.json",
                 },
                 {
                     "user": "user@test.edulinq.org",

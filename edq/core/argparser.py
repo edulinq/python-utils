@@ -8,6 +8,7 @@ while post-callbacks are generally intended to act on the results of parsing.
 """
 
 import argparse
+import functools
 import typing
 
 import edq.core.config
@@ -108,6 +109,7 @@ def get_default_parser(description: str,
         include_log: bool = True,
         include_config: bool = True,
         include_net: bool = False,
+        config_filename: str = edq.core.config.DEFAULT_CONFIG_FILENAME,
         ) -> Parser:
     """ Get a parser with the requested default callbacks already attached. """
 
@@ -117,7 +119,9 @@ def get_default_parser(description: str,
         parser.register_callbacks('log', edq.core.log.set_cli_args, edq.core.log.init_from_args)
 
     if (include_config):
-        parser.register_callbacks('config', edq.core.config.set_cli_args, edq.core.config.load_config_into_args)
+        config_pre_func = functools.partial(edq.core.config.set_cli_args, config_filename = config_filename)
+        config_post_func = functools.partial(edq.core.config.load_config_into_args, config_filename = config_filename)
+        parser.register_callbacks('config', config_pre_func, config_post_func)
 
     if (include_net):
         parser.register_callbacks('net', edq.util.net.set_cli_args, edq.util.net.init_from_args)

@@ -1,5 +1,5 @@
 """
-List current configuration options.
+List the current configuration options.
 """
 
 import argparse
@@ -44,10 +44,16 @@ def main() -> int:
 
     return run_cli(_get_parser().parse_args())
 
-def _get_parser() -> edq.core.argparser.Parser:
+def _get_parser() -> argparse.ArgumentParser:
     """ Get a parser and add addition flags. """
 
     parser = edq.core.argparser.get_default_parser(__doc__.strip())
+    modify_parser(parser)
+
+    return parser
+
+def modify_parser(parser: argparse.ArgumentParser) -> None:
+    """ Add this CLI's flags to the given parser. """
 
     parser.add_argument("--show-origin", dest = 'show_origin',
         action = 'store_true',
@@ -58,8 +64,6 @@ def _get_parser() -> edq.core.argparser.Parser:
         action = 'store_true',
         help = 'Skip headers when displaying configs.',
     )
-
-    return parser
 
 if (__name__ == '__main__'):
     sys.exit(main())
