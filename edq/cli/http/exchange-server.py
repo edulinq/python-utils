@@ -1,7 +1,7 @@
 #  # pylint: disable=invalid-name
 
 """
-Start an HTTP test server with the specified exchanges.
+Start an HTTP test server that serves the specified HTTP exchanges.
 """
 
 import argparse

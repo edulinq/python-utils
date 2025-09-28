@@ -320,14 +320,10 @@ class HTTPTestServer():
     def load_exchange_file(self, path: str) -> None:
         """
         Load an exchange from a file.
-        This will also handle setting the exchanges source path and resolve the exchange's paths.
+        This will also handle setting the exchanges source path and resolving the exchange's paths.
         """
 
-        exchange = typing.cast(edq.util.net.HTTPExchange, edq.util.json.load_object_path(path, edq.util.net.HTTPExchange))
-        exchange.source_path = os.path.abspath(path)
-        exchange.resolve_paths(os.path.abspath(os.path.dirname(path)))
-
-        self.load_exchange(exchange)
+        self.load_exchange(edq.util.net.HTTPExchange.from_path(path))
 
     def load_exchanges_dir(self, base_dir: str, extension: str = edq.util.net.DEFAULT_HTTP_EXCHANGE_EXTENSION) -> None:
         """ Load all exchanges found (recursively) within a directory. """

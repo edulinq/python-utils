@@ -453,6 +453,24 @@ class HTTPExchange(edq.util.json.DictConverter):
         return HTTPExchange(**data)
 
     @classmethod
+    def from_path(cls, path: str,
+            set_source_path: bool = True,
+            ) -> 'HTTPExchange':
+        """
+        Load an exchange from a file.
+        This will also handle setting the exchanges source path (if specified) and resolving the exchange's paths.
+        """
+
+        exchange = typing.cast(HTTPExchange, edq.util.json.load_object_path(path, HTTPExchange))
+
+        if (set_source_path):
+            exchange.source_path = os.path.abspath(path)
+
+        exchange.resolve_paths(os.path.abspath(os.path.dirname(path)))
+
+        return exchange
+
+    @classmethod
     def from_response(cls,
             response: requests.Response,
             headers_to_skip: typing.Union[typing.List[str], None] = None,
