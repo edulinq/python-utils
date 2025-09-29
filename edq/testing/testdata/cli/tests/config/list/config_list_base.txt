@@ -10,7 +10,7 @@
 }
 ---
 Key	Value
-api-key	TEST-KEY-1234567890
+api-key	KEY-1234567890
 pass	password1234
 server	http://test.edulinq.org
 user	user@test.edulinq.org
