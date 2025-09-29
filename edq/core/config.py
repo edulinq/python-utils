@@ -196,6 +196,7 @@ def _get_ancestor_config_file_path(
 
 def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, typing.Any],
         config_filename: str = DEFAULT_CONFIG_FILENAME,
+        **kwargs: typing.Any,
     ) -> None:
     """
     Set common CLI arguments for configuration.
@@ -236,11 +237,26 @@ def load_config_into_args(
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any],
         config_filename: str = DEFAULT_CONFIG_FILENAME,
+        cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
+        **kwargs: typing.Any,
     ) -> None:
     """
     Take in args from a parser that was passed to set_cli_args(),
     and get the tired configuration with the appropriate parameters, and attache it to args.
+
+    Arguments that appear on the CLI as flags (e.g. `--foo bar`) can be copied over to the config options via `cli_arg_config_map`.
+    The keys of `cli_arg_config_map` represent attributes in the CLI arguments (`args`),
+    while the values represent the desired config name this argument should be set as.
+    For example, a `cli_arg_config_map` of `{'foo': 'baz'}` will make the CLI argument `--foo bar`
+    be equivalent to `--config baz=bar`.
     """
+
+    if (cli_arg_config_map is None):
+        cli_arg_config_map = {}
+
+    for (cli_key, config_key) in cli_arg_config_map.items():
+        if (hasattr(args, cli_key)):
+            getattr(args, CONFIGS_KEY).append(f"{config_key}={getattr(args, cli_key)}")
 
     (config_dict, sources_dict) = get_tiered_config(
         cli_arguments = args,

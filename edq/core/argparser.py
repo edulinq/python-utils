@@ -109,9 +109,12 @@ def get_default_parser(description: str,
         include_log: bool = True,
         include_config: bool = True,
         include_net: bool = False,
-        config_filename: str = edq.core.config.DEFAULT_CONFIG_FILENAME,
+        config_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
         ) -> Parser:
     """ Get a parser with the requested default callbacks already attached. """
+
+    if (config_options is None):
+        config_options = {}
 
     parser = Parser(description = description)
 
@@ -119,8 +122,8 @@ def get_default_parser(description: str,
         parser.register_callbacks('log', edq.core.log.set_cli_args, edq.core.log.init_from_args)
 
     if (include_config):
-        config_pre_func = functools.partial(edq.core.config.set_cli_args, config_filename = config_filename)
-        config_post_func = functools.partial(edq.core.config.load_config_into_args, config_filename = config_filename)
+        config_pre_func = functools.partial(edq.core.config.set_cli_args, **config_options)
+        config_post_func = functools.partial(edq.core.config.load_config_into_args, **config_options)
         parser.register_callbacks('config', config_pre_func, config_post_func)
 
     if (include_net):
