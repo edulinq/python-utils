@@ -1,4 +1,4 @@
-#  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
 
 """
 Send an HTTP exchange to the target server.

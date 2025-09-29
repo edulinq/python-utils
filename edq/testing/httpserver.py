@@ -16,41 +16,6 @@ import edq.util.net
 SERVER_THREAD_START_WAIT_SEC: float = 0.02
 SERVER_THREAD_REAP_WAIT_SEC: float = 0.15
 
-AUTOMATIC_REQUEST_HEADERS: typing.List[str] = [
-    'Host',
-    'User-Agent',
-    'Accept-Encoding',
-    'Accept',
-    'Connection',
-    'Content-Length',
-    'Content-Type',
-    edq.util.net.ANCHOR_HEADER_KEY,
-]
-"""
-These headers may automatically be added to requests in this module.
-These headers are also ignored by default during matching.
-"""
-
-DEFAULT_IGNORE_HEADERS: typing.List[str] = [
-    'Accept-Language',
-    'Cookie',
-    'DNT',
-    'Priority',
-    'Sec-Fetch-Dest',
-    'Sec-Fetch-Mode',
-    'Sec-Fetch-Site',
-    'Sec-Fetch-User',
-    'Sec-GPC',
-    'Upgrade-Insecure-Requests',
-]
-""" By default, ignore these headers during matching. """
-
-AUTOMATIC_RESPONSE_HEADERS: typing.List[str] = [
-    'Date',
-    'Server',
-]
-""" These headers may automatically be added to responses from the server. """
-
 class HTTPTestServer():
     """
     An HTTP server meant for testing.
@@ -107,7 +72,7 @@ class HTTPTestServer():
             if ('headers_to_skip' not in match_options):
                 match_options['headers_to_skip'] = []
 
-            match_options['headers_to_skip'] += (DEFAULT_IGNORE_HEADERS + AUTOMATIC_REQUEST_HEADERS + AUTOMATIC_RESPONSE_HEADERS)
+            match_options['headers_to_skip'] += edq.util.net.DEFAULT_EXCHANGE_IGNORE_HEADERS
 
         self.match_options: typing.Dict[str, typing.Any] = match_options.copy()
         """ Options to use when matching HTTP exchanges. """
@@ -552,7 +517,7 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
         if (base_url is None):
             base_url = self.get_server_url()
 
-        full_response = request.make_request(base_url, raise_for_status = False, **server.match_options)
+        full_response = request.make_request(base_url, raise_for_status = True, **server.match_options)
 
         match, hint = response.match_response(full_response, **server.match_options)
         if (not match):

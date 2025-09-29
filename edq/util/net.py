@@ -38,6 +38,37 @@ ALLOWED_METHODS: typing.List[str] = [
 ]
 """ Allowed HTTP methods for an HTTPExchange. """
 
+DEFAULT_EXCHANGE_IGNORE_HEADERS: typing.List[str] = [
+    'accept',
+    'accept-encoding',
+    'accept-language',
+    'connection',
+    'content-length',
+    'content-type',
+    'cookie',
+    'date',
+    'dnt',
+    'host',
+    'priority',
+    'sec-fetch-dest',
+    'sec-fetch-mode',
+    'sec-fetch-site',
+    'sec-fetch-user',
+    'sec-gpc',
+    'server',
+    'server-timing',
+    'set-cookie',
+    'upgrade-insecure-requests',
+    'user-agent',
+    'x-canvas-meta',
+    'x-request-context-id',
+    'x-request-cost',
+    'x-runtime',
+    'x-session-id',
+    ANCHOR_HEADER_KEY,
+]
+""" By default, ignore these headers during exchange matching. """
+
 _request_output_dir: typing.Union[str, None] = None
 """ If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
 
@@ -320,7 +351,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             return False, f"URL anchor does not match (query = {query.url_anchor}, target = {self.url_anchor})."
 
         if (headers_to_skip is None):
-            headers_to_skip = []
+            headers_to_skip = DEFAULT_EXCHANGE_IGNORE_HEADERS
 
         if (params_to_skip is None):
             params_to_skip = []
@@ -348,11 +379,17 @@ class HTTPExchange(edq.util.json.DictConverter):
             keys_to_skip: typing.Union[typing.List[str], None] = None,
             query_label: str = 'query',
             target_label: str = 'target',
+            normalize_key_case: bool = True,
             ) -> typing.Tuple[bool, typing.Union[str, None]]:
         """ A subcheck in match(), specifically for a dictionary. """
 
         if (keys_to_skip is None):
             keys_to_skip = []
+
+        if (normalize_key_case):
+            keys_to_skip = [key.lower() for key in keys_to_skip]
+            query_dict = {key.lower(): value for (key, value) in query_dict.items()}
+            target_dict = {key.lower(): value for (key, value) in target_dict.items()}
 
         query_keys = set(query_dict.keys()) - set(keys_to_skip)
         target_keys = set(target_dict.keys()) - set(keys_to_skip)
@@ -411,6 +448,9 @@ class HTTPExchange(edq.util.json.DictConverter):
         If they match, `(True, None)` will be returned.
         If they do not match, `(False, <hint>)` will be returned, where `<hint>` points to where the mismatch is.
         """
+
+        if (headers_to_skip is None):
+            headers_to_skip = DEFAULT_EXCHANGE_IGNORE_HEADERS
 
         if (self.response_code != response.status_code):
             return False, f"http status code does match (expected: {self.response_code}, actual: {response.status_code})"
@@ -479,7 +519,7 @@ class HTTPExchange(edq.util.json.DictConverter):
         """ Create a full excahnge from a response. """
 
         if (headers_to_skip is None):
-            headers_to_skip = []
+            headers_to_skip = DEFAULT_EXCHANGE_IGNORE_HEADERS
 
         if (params_to_skip is None):
             params_to_skip = []
@@ -557,10 +597,14 @@ def make_request(method: str, url: str,
         headers_to_skip: typing.Union[typing.List[str], None] = None,
         params_to_skip: typing.Union[typing.List[str], None] = None,
         http_exchange_extension: str = DEFAULT_HTTP_EXCHANGE_EXTENSION,
+        add_http_prefix: bool = True,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
     Make an HTTP request and return the response object and text body.
     """
+
+    if (add_http_prefix and (not url.lower().startswith('http'))):
+        url = 'http://' + url
 
     if (output_dir is None):
         output_dir = _request_output_dir

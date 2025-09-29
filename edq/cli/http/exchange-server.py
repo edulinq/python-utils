@@ -1,4 +1,4 @@
-#  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
 
 """
 Start an HTTP test server that serves the specified HTTP exchanges.
@@ -51,7 +51,7 @@ def _get_parser() -> argparse.ArgumentParser:
 
     parser.add_argument('paths', metavar = 'PATH',
         type = str, nargs = '+',
-        help = 'Path to exchange files or dirs (which will be recursively searched for all JSON files).')
+        help = 'Path to exchange files or dirs (which will be recursively searched for all exchange files).')
 
     parser.add_argument('--port', dest = 'port',
         action = 'store', type = int, default = None,

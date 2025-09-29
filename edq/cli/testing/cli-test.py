@@ -1,4 +1,4 @@
-#  # pylint: disable=invalid-name
+# pylint: disable=invalid-name
 
 """
 Run specified CLI test files.
