@@ -255,8 +255,9 @@ def load_config_into_args(
         cli_arg_config_map = {}
 
     for (cli_key, config_key) in cli_arg_config_map.items():
-        if (hasattr(args, cli_key)):
-            getattr(args, CONFIGS_KEY).append(f"{config_key}={getattr(args, cli_key)}")
+        value = getattr(args, cli_key, None)
+        if (value is not None):
+            getattr(args, CONFIGS_KEY).append(f"{config_key}={value}")
 
     (config_dict, sources_dict) = get_tiered_config(
         cli_arguments = args,
