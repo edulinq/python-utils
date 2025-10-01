@@ -57,9 +57,9 @@ def _get_test_method(path: str, server: str,
 
     def __method(self: edq.testing.unittest.BaseTest) -> None:
         exchange = edq.util.net.HTTPExchange.from_path(path)
-        response = exchange.make_request(server, raise_for_status = False, **match_options)
+        response, body = exchange.make_request(server, raise_for_status = False, **match_options)
 
-        match, hint = exchange.match_response(response, **match_options)
+        match, hint = exchange.match_response(response, override_body = body, **match_options)
         if (not match):
             raise AssertionError(f"Exchange does not match: '{hint}'.")
 

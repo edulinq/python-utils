@@ -517,9 +517,9 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
         if (base_url is None):
             base_url = self.get_server_url()
 
-        full_response = request.make_request(base_url, raise_for_status = True, **server.match_options)
+        full_response, body = request.make_request(base_url, raise_for_status = True, **server.match_options)
 
-        match, hint = response.match_response(full_response, **server.match_options)
+        match, hint = response.match_response(full_response, override_body = body, **server.match_options)
         if (not match):
             raise AssertionError(f"Exchange does not match: '{hint}'.")
 
