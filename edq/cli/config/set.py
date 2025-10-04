@@ -4,13 +4,14 @@ Set a configuration option.
 
 import argparse
 import sys
+import typing
 
 import edq.core.argparser
 import edq.core.config
 import edq.util.dirent
 import edq.util.json
 
-def write_configs_to_file(file_path: str, configs_to_write: list[str]) -> None:
+def write_configs_to_file(file_path: str, configs_to_write: typing.List[str]) -> None:
     """ Write configs to a specified file path. Create the path if it do not exist. """
 
     if (not (edq.util.dirent.exists(file_path))):
