@@ -14,9 +14,9 @@ def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
     exchange = edq.util.net.HTTPExchange.from_path(args.path)
-    response = exchange.make_request(args.server)
+    _, body = exchange.make_request(args.server)
 
-    print(response.text)
+    print(body)
 
     return 0
 

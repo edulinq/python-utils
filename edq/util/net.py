@@ -1,3 +1,7 @@
+"""
+Utilities for network and HTTP.
+"""
+
 import argparse
 import email.message
 import errno
@@ -16,6 +20,7 @@ import requests_toolbelt.multipart.decoder
 
 import edq.util.dirent
 import edq.util.json
+import edq.util.pyimport
 
 DEFAULT_START_PORT: int = 30000
 DEFAULT_END_PORT: int = 40000
@@ -27,7 +32,7 @@ DEFAULT_HTTP_EXCHANGE_EXTENSION: str= '.httpex.json'
 
 ANCHOR_HEADER_KEY: str = 'edq-anchor'
 """
-By default, requests made via make_requet() will send a header with this key that includes the anchor component of the URL.
+By default, requests made via make_request() will send a header with this key that includes the anchor component of the URL.
 Anchors are not traditionally sent in requests, but this will allow exchanges to capture this extra piece of information.
 """
 
@@ -42,14 +47,19 @@ DEFAULT_EXCHANGE_IGNORE_HEADERS: typing.List[str] = [
     'accept',
     'accept-encoding',
     'accept-language',
+    'cache-control',
     'connection',
     'content-length',
+    'content-security-policy',
     'content-type',
     'cookie',
     'date',
     'dnt',
+    'etag',
     'host',
+    'link',
     'priority',
+    'referrer-policy',
     'sec-fetch-dest',
     'sec-fetch-mode',
     'sec-fetch-site',
@@ -60,17 +70,45 @@ DEFAULT_EXCHANGE_IGNORE_HEADERS: typing.List[str] = [
     'set-cookie',
     'upgrade-insecure-requests',
     'user-agent',
-    'x-canvas-meta',
+    'x-content-type-options',
+    'x-download-options',
+    'x-permitted-cross-domain-policies',
+    'x-rate-limit-remaining',
     'x-request-context-id',
     'x-request-cost',
     'x-runtime',
     'x-session-id',
+    'x-xss-protection',
     ANCHOR_HEADER_KEY,
 ]
-""" By default, ignore these headers during exchange matching. """
+"""
+By default, ignore these headers during exchange matching.
+Some are sent automatically and we don't need to record (like content-length),
+and some are additional information we don't need.
+"""
 
-_request_output_dir: typing.Union[str, None] = None
+_exchanges_out_dir: typing.Union[str, None] = None
 """ If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
+
+_exchanges_clean_func: typing.Union[str, None] = None
+""" If not None, all created exchanges (in HTTPExchange.make_request() and HTTPExchange.from_response()) will use this response modifier. """
+
+@typing.runtime_checkable
+class ResponseModifierFunction(typing.Protocol):
+    """
+    A function that can be used to modify an exchange's response.
+    Exchanges can use these functions to normalize their responses before saving.
+    """
+
+    def __call__(self,
+            response: requests.Response,
+            body: str,
+            ) -> str:
+        """
+        Modify the http response.
+        Headers may be modified in the response directly,
+        while the modified (or same) body must be returned.
+        """
 
 class FileInfo(edq.util.json.DictConverter):
     """ Store info about files used in HTTP exchanges. """
@@ -138,6 +176,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             response_body: typing.Union[str, dict, list, None] = None,
             read_write: bool = False,
             source_path: typing.Union[str, None] = None,
+            response_modifier: typing.Union[str, None] = None,
             extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             **kwargs: typing.Any) -> None:
         method = str(method).upper()
@@ -228,6 +267,13 @@ class HTTPExchange(edq.util.json.DictConverter):
         Indicates that this exchange will change data on the server (regardless of the HTTP method).
         This field may be ignored by test servers,
         but may be observed by tools that generate or validate test data.
+        """
+
+        self.response_modifier: typing.Union[str, None] = response_modifier
+        """
+        This function reference will be used to modify responses (in HTTPExchange.make_request() and HTTPExchange.from_response())
+        before sent back to the caller.
+        This reference must be importable via edq.util.pyimport.fetch().
         """
 
         self.source_path: typing.Union[str, None] = source_path
@@ -417,7 +463,7 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         return url
 
-    def make_request(self, base_url: str, raise_for_status: bool = True, **kwargs: typing.Any) -> requests.Response:
+    def make_request(self, base_url: str, raise_for_status: bool = True, **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
         """ Perform the HTTP request described by this exchange. """
 
         files = []
@@ -430,7 +476,7 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         url = f"{base_url}/{self.get_url()}"
 
-        response, _ = make_request(self.method, url,
+        response, body = make_request(self.method, url,
                 headers = self.headers,
                 data = self.parameters,
                 files = files,
@@ -438,9 +484,14 @@ class HTTPExchange(edq.util.json.DictConverter):
                 **kwargs,
         )
 
-        return response
+        if (self.response_modifier is not None):
+            modify_func = edq.util.pyimport.fetch(self.response_modifier)
+            body = modify_func(response, body)
+
+        return response, body
 
     def match_response(self, response: requests.Response,
+            override_body: typing.Union[str, None] = None,
             headers_to_skip: typing.Union[typing.List[str], None] = None,
             **kwargs: typing.Any) -> typing.Tuple[bool, typing.Union[str, None]]:
         """
@@ -451,6 +502,10 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         if (headers_to_skip is None):
             headers_to_skip = DEFAULT_EXCHANGE_IGNORE_HEADERS
+
+        response_body = override_body
+        if (response_body is None):
+            response_body = response.text
 
         if (self.response_code != response.status_code):
             return False, f"http status code does match (expected: {self.response_code}, actual: {response.status_code})"
@@ -470,7 +525,7 @@ class HTTPExchange(edq.util.json.DictConverter):
 
             expected_body = edq.util.json.dumps(expected_body)
         else:
-            actual_body = response.text
+            actual_body = response_body
 
         if (self.response_body != actual_body):
             body_hint = f"expected: '{self.response_body}', actual: '{actual_body}'"
@@ -524,11 +579,20 @@ class HTTPExchange(edq.util.json.DictConverter):
         if (params_to_skip is None):
             params_to_skip = []
 
-        request_headers = dict(response.request.headers.items())
-        response_headers = dict(response.headers.items())
+        body = response.text
+
+        # Use a clean function (if one exists).
+        if (_exchanges_clean_func is not None):
+            modify_func = edq.util.pyimport.fetch(_exchanges_clean_func)
+            body = modify_func(response, body)
+
+        request_headers = {key.lower().strip(): value for (key, value) in response.request.headers.items()}
+        response_headers = {key.lower().strip(): value for (key, value) in response.headers.items()}
 
         # Clean headers.
         for key in headers_to_skip:
+            key = key.lower()
+
             request_headers.pop(key, None)
             response_headers.pop(key, None)
 
@@ -549,7 +613,8 @@ class HTTPExchange(edq.util.json.DictConverter):
             'headers': request_headers,
             'response_code': response.status_code,
             'response_headers': response_headers,
-            'response_body': response.text,
+            'response_body': body,
+            'response_modifier': _exchanges_clean_func,
         }
 
         return HTTPExchange(**data)
@@ -607,7 +672,7 @@ def make_request(method: str, url: str,
         url = 'http://' + url
 
     if (output_dir is None):
-        output_dir = _request_output_dir
+        output_dir = _exchanges_out_dir
 
     if (headers is None):
         headers = {}
@@ -804,6 +869,10 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
         action = 'store', type = str, default = None,
         help = 'If set, write all outgoing HTTP requests as exchanges to this directory.')
 
+    parser.add_argument('--http-exchanges-clean-func', dest = 'http_exchanges_clean_func',
+        action = 'store', type = str, default = None,
+        help = 'If set, default all created exchanges to this modifier function.')
+
 def init_from_args(
         parser: argparse.ArgumentParser,
         args: argparse.Namespace,
@@ -813,6 +882,10 @@ def init_from_args(
     and call init() with the appropriate arguments.
     """
 
-    global _request_output_dir  # pylint: disable=global-statement
+    global _exchanges_out_dir  # pylint: disable=global-statement
+    if (args.http_exchanges_out_dir is not None):
+        _exchanges_out_dir = args.http_exchanges_out_dir
 
-    _request_output_dir = args.http_exchanges_out_dir
+    global _exchanges_clean_func  # pylint: disable=global-statement
+    if (args.http_exchanges_clean_func is not None):
+        _exchanges_clean_func = args.http_exchanges_clean_func
