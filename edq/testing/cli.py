@@ -9,6 +9,12 @@ and a second part which is the expected text output (stdout).
 For the keys of the JSON section, see the defaulted arguments to CLITestInfo.
 The options JSON will be splatted into CLITestInfo's constructor.
 
+If a test class implements a method with the signature `modify_cli_test_info(self, test_info: CLITestInfo) -> None`,
+then this method will be called with the test info right after the test info is read from disk.
+
+If a test class implements a class method with the signature `get_test_basename(cls, path: str) -> str`,
+then this method will be called to create the base name for the test case at the given path.
+
 The expected output or any argument can reference the test's current temp or data dirs with `__TEMP_DIR__()` or `__DATA_DIR__()`, respectively.
 An optional slash-separated path can be used as an argument to reference a path within those base directories.
 For example, `__DATA_DIR__(foo/bar.txt)` references `bar.txt` inside the `foo` directory inside the data directory.
@@ -253,6 +259,10 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
     def __method(self: edq.testing.unittest.BaseTest) -> None:
         test_info = CLITestInfo.load_path(path, test_name, getattr(self, BASE_TEMP_DIR_ATTR), data_dir)
 
+        # Allow the test class a chance to modify the test info before the test runs.
+        if (hasattr(self, 'modify_cli_test_info')):
+            self.modify_cli_test_info(test_info)
+
         if (test_info.should_skip()):
             self.skipTest(test_info.skip_message())
 
@@ -303,7 +313,11 @@ def add_test_paths(target_class: type, data_dir: str, paths: typing.List[str]) -
         setattr(target_class, BASE_TEMP_DIR_ATTR, edq.util.dirent.get_temp_path('edq_cli_test_'))
 
     for path in sorted(paths):
-        test_name = 'test_cli__' + os.path.splitext(os.path.basename(path))[0]
+        basename = os.path.splitext(os.path.basename(path))[0]
+        if (hasattr(target_class, 'get_test_basename')):
+            basename = getattr(target_class, 'get_test_basename')(path)
+
+        test_name = 'test_cli__' + basename
 
         try:
             setattr(target_class, test_name, _get_test_method(test_name, path, data_dir))
