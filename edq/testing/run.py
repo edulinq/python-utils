@@ -37,28 +37,38 @@ def _collect_tests(suite: typing.Union[unittest.TestCase, unittest.suite.TestSui
 
     return test_cases
 
-def run(args: argparse.Namespace) -> int:
+def run(args: typing.Union[argparse.Namespace, typing.Dict[str, typing.Any], None] = None) -> int:
     """
     Discover and run unit tests.
     This function may change your working directory.
     Will raise if tests fail to load (e.g. syntax errors) and a suggested exit code otherwise.
     """
 
-    if (args.work_dir is not None):
-        os.chdir(args.work_dir)
+    if (args is None):
+        args = {}
 
-    if (args.path_additions is not None):
-        for path in args.path_additions:
+    if (not isinstance(args, dict)):
+        args = vars(args)
+
+    if (args.get('work_dir', None) is not None):
+        os.chdir(args['work_dir'])
+
+    if (args.get('path_additions', None) is not None):
+        for path in args['path_additions']:
             sys.path.append(path)
 
-    if (args.test_dirs is None):
-        args.test_dirs = ['.']
+    test_dirs = args.get('test_dirs', None)
+    if (test_dirs is None):
+        test_dirs = []
+
+    if (len(test_dirs) == 0):
+        test_dirs.append('.')
 
     runner = unittest.TextTestRunner(verbosity = 3)
     test_cases = []
 
-    for test_dir in args.test_dirs:
-        discovered_suite = unittest.TestLoader().discover(test_dir, pattern = args.filename_pattern)
+    for test_dir in test_dirs:
+        discovered_suite = unittest.TestLoader().discover(test_dir, pattern = args.get('filename_pattern', DEFAULT_TEST_FILENAME_PATTERN))
         test_cases += _collect_tests(discovered_suite)
 
     # Cleanup class functions from test classes.
@@ -71,7 +81,8 @@ def run(args: argparse.Namespace) -> int:
         if (isinstance(test_case, unittest.loader._FailedTest)):  # type: ignore[attr-defined]
             raise ValueError(f"Failed to load test: '{test_case.id()}'.") from test_case._exception
 
-        if (args.pattern is None or re.search(args.pattern, test_case.id())):
+        pattern = args.get('pattern', None)
+        if ((pattern is None) or re.search(pattern, test_case.id())):
             tests.addTest(test_case)
 
             # Check for a cleanup function.
