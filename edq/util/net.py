@@ -364,6 +364,9 @@ class HTTPExchange(edq.util.json.DictConverter):
         if (url_path is None):
             raise ValueError('URL path cannot be empty, it must be explicitly set via `url_path`, or indirectly via `url`.')
 
+        # Sort parameter keys for consistency.
+        parameters = {key: parameters[key] for key in sorted(parameters.keys())}
+
         return url_path, url_anchor, parameters
 
     def resolve_paths(self, base_dir: str) -> None:
@@ -726,7 +729,7 @@ def make_request(method: str, url: str,
         path += f"_{method}{http_exchange_extension}"
 
         edq.util.dirent.mkdir(os.path.dirname(path))
-        edq.util.json.dump_path(exchange, path, indent = 4)
+        edq.util.json.dump_path(exchange, path, indent = 4, sort_keys = False)
 
     return response, body
 
