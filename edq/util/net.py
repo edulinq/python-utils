@@ -724,7 +724,8 @@ def make_request(method: str, url: str,
 
         query = urllib.parse.urlencode(exchange.parameters)
         if (query != ''):
-            path += f"?{query}"
+            # Note that the '?' is URL encoded.
+            path += f"%3F{query}"
 
         path += f"_{method}{http_exchange_extension}"
 
