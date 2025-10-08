@@ -14,7 +14,7 @@ function main() {
     set -e
     trap exit SIGINT
 
-    local outputDir="${ROOT_DIR}/html"
+    local outputDir="${ROOT_DIR}/build/html"
     if [[ $# -gt 0 ]]; then
         outputDir=$1
     fi
