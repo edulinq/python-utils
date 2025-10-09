@@ -95,7 +95,7 @@ function main() {
     gen_docs "latest (${git_hash})" "${git_hash}" 'latest'
 
     # Generate docs for each tagged version.
-    for tag in $(git tag -l | grep -P '^v\d+\.\d+\.\d+') ; do
+    for tag in $(git tag -l | grep -P '^v\d+\.\d+\.\d+' | sort -r --version-sort) ; do
         if [[ ! "${tag}" > "${ONLY_AFTER_TAG}" ]] ; then
             continue
         fi
