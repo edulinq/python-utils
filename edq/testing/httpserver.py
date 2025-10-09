@@ -404,9 +404,6 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
     A unit test class that requires a testing HTTP server to be running.
     """
 
-    _servers: typing.Dict[str, HTTPTestServer] = {}
-    """ The active test servers. """
-
     server_key: str = ''
     """
     A key to indicate which test server this test class is using.
@@ -422,6 +419,12 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
     If set to false then the server will never get torn down,
     but can be shared between child test classes.
     """
+
+    skip_test_exchanges_base: bool = False
+    """ Skip test_exchanges_base. """
+
+    _servers: typing.Dict[str, HTTPTestServer] = {}
+    """ The active test servers. """
 
     _complete_exchange_tests: typing.Set[str] = set()
     """
@@ -533,6 +536,9 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
             # Don't skip the test (which will show up in the test output).
             # Instead, just return.
             return
+
+        if (self.skip_test_exchanges_base):
+            self.skipTest('test_exchanges_base has been manually skipped.')
 
         self._complete_exchange_tests.add(self.server_key)
 

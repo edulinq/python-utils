@@ -106,6 +106,7 @@ class Parser(argparse.ArgumentParser):
         return parsed_args  # type: ignore[no-any-return]
 
 def get_default_parser(description: str,
+        version: typing.Union[str, None] = None,
         include_log: bool = True,
         include_config: bool = True,
         include_net: bool = False,
@@ -117,6 +118,10 @@ def get_default_parser(description: str,
         config_options = {}
 
     parser = Parser(description = description)
+
+    if (version is not None):
+        parser.add_argument('--version',
+                action = 'version', version = version)
 
     if (include_log):
         parser.register_callbacks('log', edq.core.log.set_cli_args, edq.core.log.init_from_args)
