@@ -7,8 +7,7 @@ import edq.core.config
 import edq.util.dirent
 import edq.util.json
 
-GLOBAL_DIR: str  = 'global'
-LOCAL_DIR: str = 'local'
+EMPTY_DIR: str  = 'empty-dir'
 
 def create_test_dir(temp_dir_prefix: str) -> str:
     """ 
@@ -19,14 +18,14 @@ def create_test_dir(temp_dir_prefix: str) -> str:
     .
     ├── empty-config
     │   └── edq-config.json
-    ├── global
+    ├── empty-dir
     └── non-empty-config
         └── edq-config.json
     """
 
-    temp_dir = edq.util.dirent.get_temp_dir(prefix = temp_dir_prefix, rm = False)
+    temp_dir = edq.util.dirent.get_temp_dir(prefix = temp_dir_prefix)
 
-    global_config_path = os.path.join(temp_dir, GLOBAL_DIR)
+    global_config_path = os.path.join(temp_dir, EMPTY_DIR)
     edq.util.dirent.mkdir(global_config_path)
 
     path_empty_config = os.path.join(temp_dir, "empty-config")
@@ -116,6 +115,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                     "_config_params": {
                         edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join("non-empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
+                    "set_is_local": True,
                 },
                 [
                     {
@@ -134,12 +134,12 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                     "config_to_set": ["user=user@test.edulinq.org"],
                     "set_is_global": True,
                     "_config_params": {
-                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(GLOBAL_DIR, edq.core.config.DEFAULT_CONFIG_FILENAME)
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(EMPTY_DIR, edq.core.config.DEFAULT_CONFIG_FILENAME)
                     }
                 },
                 [
                     {
-                        "path": os.path.join(GLOBAL_DIR, edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        "path": os.path.join(EMPTY_DIR, edq.core.config.DEFAULT_CONFIG_FILENAME),
                         "data": {"user": "user@test.edulinq.org"},
                     },
                 ],
@@ -250,7 +250,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                         edq.core.config.LOCAL_CONFIG_PATH_KEY: config_params.get(edq.core.config.LOCAL_CONFIG_PATH_KEY, None),
                         edq.core.config.GLOBAL_CONFIG_PATH_KEY: config_params.get(
                             edq.core.config.GLOBAL_CONFIG_PATH_KEY,
-                            os.path.join(temp_dir, GLOBAL_DIR, filename),
+                            os.path.join(temp_dir, EMPTY_DIR, filename),
                         ),
                         edq.core.config.FILENAME_KEY: filename
                     }
