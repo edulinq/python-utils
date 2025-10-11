@@ -666,6 +666,7 @@ def make_request(method: str, url: str,
         params_to_skip: typing.Union[typing.List[str], None] = None,
         http_exchange_extension: str = DEFAULT_HTTP_EXCHANGE_EXTENSION,
         add_http_prefix: bool = True,
+        additional_requests_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
     Make an HTTP request and return the response object and text body.
@@ -686,6 +687,9 @@ def make_request(method: str, url: str,
     if (files is None):
         files = []
 
+    if (additional_requests_options is None):
+        additional_requests_options = {}
+
     # Add in the anchor as a header (since it is not traditionally sent in an HTTP request).
     if (send_anchor_header):
         headers = headers.copy()
@@ -693,11 +697,12 @@ def make_request(method: str, url: str,
         parts = urllib.parse.urlparse(url)
         headers[ANCHOR_HEADER_KEY] = parts.fragment.lstrip('#')
 
-    options = {
+    options = additional_requests_options.copy()
+    options.update({
         'headers': headers,
         'files': files,
         'timeout': timeout_secs,
-    }
+    })
 
     if (method == 'GET'):
         options['params'] = data
