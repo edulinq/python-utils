@@ -35,6 +35,7 @@ import edq.util.json
 import edq.util.pyimport
 
 TEST_CASE_SEP: str = '---'
+OUTPUT_SEP: str = '+++'
 DATA_DIR_ID: str = '__DATA_DIR__'
 ABS_DATA_DIR_ID: str = '__ABS_DATA_DIR__'
 TEMP_DIR_ID: str = '__TEMP_DIR__'
@@ -52,6 +53,7 @@ class CLITestInfo:
             base_dir: str,
             data_dir: str,
             temp_dir: str,
+            cwd: typing.Union[str, None] = None,
             cli: typing.Union[str, None] = None,
             arguments: typing.Union[typing.List[str], None] = None,
             error: bool = False,
@@ -99,6 +101,15 @@ class CLITestInfo:
         A temp directory that this test has access to.
         This is the expansion for `__TEMP_DIR__` paths.
         """
+
+        self.cwd: str = self.temp_dir
+        """
+        The directory that test runs from
+        """
+
+        if (cwd is not None):
+            self.cwd = self._expand_paths(cwd)
+
 
         edq.util.dirent.mkdir(temp_dir)
 
@@ -149,7 +160,7 @@ class CLITestInfo:
         """
         Split stdout and stderr into different strings for testing.
         By default, these two will be combined.
-        If both are non-empty, then they will be joined like: f"{stdout}\n{TEST_CASE_SEP}\n{stderr}".
+        If both are non-empty, then they will be joined like: f"{stdout}\n{OUTPUT_SEP}\n{stderr}".
         Otherwise, only the non-empty one will be present with no separator.
         Any stdout assertions will be applied to the combined text.
         """
@@ -269,6 +280,9 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
         old_args = sys.argv
         sys.argv = [test_info.module.__file__] + test_info.arguments
 
+        previous_work_directory = os.getcwd()
+        os.chdir(test_info.cwd)
+
         try:
             with contextlib.redirect_stdout(io.StringIO()) as stdout_output:
                 with contextlib.redirect_stderr(io.StringIO()) as stderr_output:
@@ -289,11 +303,12 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
             if (isinstance(ex, SystemExit) and (ex.__context__ is not None)):
                 stderr_text = self.format_error_string(ex.__context__)
         finally:
+            os.chdir(previous_work_directory)
             sys.argv = old_args
 
         if (not test_info.split_stdout_stderr):
             if ((len(stdout_text) > 0) and (len(stderr_text) > 0)):
-                stdout_text = f"{stdout_text}\n{TEST_CASE_SEP}\n{stderr_text}"
+                stdout_text = f"{stdout_text}\n{OUTPUT_SEP}\n{stderr_text}"
             elif (len(stderr_text) > 0):
                 stdout_text = stderr_text
 

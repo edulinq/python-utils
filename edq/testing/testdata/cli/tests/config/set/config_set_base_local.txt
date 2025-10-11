@@ -1,0 +1,7 @@
+{
+    "cli": "edq.cli.config.set",
+    "arguments": [
+        "user=user@test.edulinq.org",
+    ],
+}
+---
