@@ -14,7 +14,6 @@ CONFIG_SOURCE_CLI: str = "<cli argument>"
 
 CONFIG_PATHS_KEY: str = 'config_paths'
 CONFIGS_KEY: str = 'configs'
-CLI_CONFIG_KEY_VALUE_SEPARATOR: str = "="
 GLOBAL_CONFIG_PATH_KEY: str = 'global_config_path'
 LOCAL_CONFIG_PATH_KEY: str = 'local_config_path'
 FILENAME_KEY: str = 'config_filename'
@@ -97,13 +96,13 @@ def get_tiered_config(
     # Check the command-line config options.
     cli_configs = cli_arguments.get(CONFIGS_KEY, [])
     for cli_config in cli_configs:
-        if (CLI_CONFIG_KEY_VALUE_SEPARATOR not in cli_config):
+        if ( "=" not in cli_config):
             raise ValueError(
                 f"Invalid configuration option '{cli_config}'."
                 + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI."
             )
 
-        (key, value) = cli_config.split(CLI_CONFIG_KEY_VALUE_SEPARATOR, maxsplit = 1)
+        (key, value) = cli_config.split("=", maxsplit = 1)
 
         key = key.strip()
         if (key == ""):
@@ -227,7 +226,7 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
             + ' Will override options form both global and local config files.')
     )
 
-    group.add_argument('--config', dest = CONFIGS_KEY, metavar = f"<KEY>{CLI_CONFIG_KEY_VALUE_SEPARATOR}<VALUE>",
+    group.add_argument('--config', dest = CONFIGS_KEY, metavar = "<KEY>=<VALUE>",
         action = 'append', type = str, default = [],
         help = ('Set a configuration option from the command-line.'
             + ' Specify options as <key>=<value> pairs.'
@@ -261,7 +260,7 @@ def load_config_into_args(
     The keys of `cli_arg_config_map` represent attributes in the CLI arguments (`args`),
     while the values represent the desired config name this argument should be set as.
     For example, a `cli_arg_config_map` of `{'foo': 'baz'}` will make the CLI argument `--foo bar`
-    be equivalent to f"--config baz{CLI_CONFIG_KEY_VALUE_SEPARATOR}bar".
+    be equivalent to f"--config baz=bar".
     """
 
     if (cli_arg_config_map is None):
@@ -270,7 +269,7 @@ def load_config_into_args(
     for (cli_key, config_key) in cli_arg_config_map.items():
         value = getattr(args, cli_key, None)
         if (value is not None):
-            getattr(args, CONFIGS_KEY).append(f"{config_key}{CLI_CONFIG_KEY_VALUE_SEPARATOR}{value}")
+            getattr(args, CONFIGS_KEY).append(f"{config_key}={value}")
 
     (config_dict, sources_dict, config_params_dict) = get_tiered_config(
         cli_arguments = args,
