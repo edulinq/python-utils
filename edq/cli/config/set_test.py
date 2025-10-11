@@ -7,10 +7,8 @@ import edq.core.config
 import edq.util.dirent
 import edq.util.json
 
-EMPTY_DIR: str  = 'empty-dir'
-
 def create_test_dir(temp_dir_prefix: str) -> str:
-    """ 
+    """
     Create a temp dir and populate it with dirents for testing.
 
     This test data directory is laid out as:
@@ -25,17 +23,17 @@ def create_test_dir(temp_dir_prefix: str) -> str:
 
     temp_dir = edq.util.dirent.get_temp_dir(prefix = temp_dir_prefix)
 
-    global_config_path = os.path.join(temp_dir, EMPTY_DIR)
+    global_config_path = os.path.join(temp_dir, 'empty-dir')
     edq.util.dirent.mkdir(global_config_path)
 
-    path_empty_config = os.path.join(temp_dir, "empty-config")
+    path_empty_config = os.path.join(temp_dir, 'empty-config')
     edq.util.dirent.mkdir(path_empty_config)
     edq.util.json.dump_path(
         {},
         os.path.join(path_empty_config, edq.core.config.DEFAULT_CONFIG_FILENAME),
     )
 
-    path_non_empty_config = os.path.join(temp_dir, "non-empty-config")
+    path_non_empty_config = os.path.join(temp_dir, 'non-empty-config')
     edq.util.dirent.mkdir(path_non_empty_config)
     edq.util.json.dump_path(
         {"user": "user@test.edulinq.org"},
@@ -50,7 +48,6 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
     def test_set_base(self):
         """
         Test that the 'set' command creates configuration files and writes the specified configuration correctly.
-        'TEMP_DIR' gets replaced with actual temp dir path when testing.
         """
 
         # [(set cli arguments, expected result, error substring), ...]
@@ -108,6 +105,26 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                 None,
             ),
 
+            # Multiple Configs
+            (
+                {
+                    "config_to_set": ["user=user@test.edulinq.org", "pass=password123"],
+                    "_config_params": {
+                        edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    },
+                },
+                [
+                    {
+                        "path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        "data": {
+                            "user": "user@test.edulinq.org",
+                            "pass": "password123",
+                        },
+                    },
+                ],
+                None,
+            ),
+
             # Non Empty Config
             (
                 {
@@ -134,12 +151,12 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                     "config_to_set": ["user=user@test.edulinq.org"],
                     "set_is_global": True,
                     "_config_params": {
-                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(EMPTY_DIR, edq.core.config.DEFAULT_CONFIG_FILENAME)
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join('empty-dir', edq.core.config.DEFAULT_CONFIG_FILENAME)
                     }
                 },
                 [
                     {
-                        "path": os.path.join(EMPTY_DIR, edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        "path": os.path.join('empty-dir', edq.core.config.DEFAULT_CONFIG_FILENAME),
                         "data": {"user": "user@test.edulinq.org"},
                     },
                 ],
@@ -159,6 +176,27 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                     {
                         "path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
                         "data": {"user": "user@test.edulinq.org"},
+                    },
+                ],
+                None,
+            ),
+
+            # Multiple Configs
+            (
+                {
+                    "config_to_set": ["user=user@test.edulinq.org", "pass=password123"],
+                    "set_is_global": True,
+                    "_config_params": {
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME)
+                    }
+                },
+                [
+                    {
+                        "path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        "data": {
+                            "user": "user@test.edulinq.org",
+                            "pass": "password123",
+                        },
                     },
                 ],
                 None,
@@ -214,6 +252,24 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                 None,
             ),
 
+            # Multiple Configs
+            (
+                {
+                    "config_to_set": ["user=user@test.edulinq.org", "pass=password123"],
+                    "set_to_file_path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
+                [
+                    {
+                        "path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        "data": {
+                            "user": "user@test.edulinq.org",
+                            "pass": "password123",
+                        },
+                    },
+                ],
+                None,
+            ),
+
             # Non Empty Config
             (
                 {
@@ -228,8 +284,6 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                 ],
                 None,
             ),
-
-
         ]
 
         for (i, test_case) in enumerate(test_cases):
@@ -250,7 +304,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                         edq.core.config.LOCAL_CONFIG_PATH_KEY: config_params.get(edq.core.config.LOCAL_CONFIG_PATH_KEY, None),
                         edq.core.config.GLOBAL_CONFIG_PATH_KEY: config_params.get(
                             edq.core.config.GLOBAL_CONFIG_PATH_KEY,
-                            os.path.join(temp_dir, EMPTY_DIR, filename),
+                            os.path.join(temp_dir, 'empty-dir', filename),
                         ),
                         edq.core.config.FILENAME_KEY: filename
                     }

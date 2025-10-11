@@ -22,12 +22,12 @@ def write_config_to_file(file_path: str, configs_to_write: typing.List[str]) -> 
     config = edq.util.json.load_path(file_path)
 
     for config_option in  configs_to_write:
-        if ("=" not in config_option):
+        if (edq.core.config.CLI_CONFIG_KEY_VALUE_SEPARATOR not in config_option):
             raise ValueError(
                 f"Invalid configuration option '{config_option}'."
                 + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI.")
 
-        (key, value) = config_option.split("=", maxsplit = 1)
+        (key, value) = config_option.split(edq.core.config.CLI_CONFIG_KEY_VALUE_SEPARATOR, maxsplit = 1)
 
         key = key.strip()
         if (key == ""):
@@ -62,7 +62,7 @@ def main() -> int:
     return run_cli(_get_parser().parse_args())
 
 def _get_parser() -> argparse.ArgumentParser:
-    """ Get a parser and add addition flags. """
+    """ Get a parser and add additional flags. """
 
     parser = edq.core.argparser.get_default_parser(__doc__.strip())
     modify_parser(parser)
@@ -72,9 +72,10 @@ def _get_parser() -> argparse.ArgumentParser:
 def modify_parser(parser: argparse.ArgumentParser) -> None:
     """ Add this CLI's flags to the given parser. """
 
-    parser.add_argument('config_to_set', metavar = "<KEY>=<VALUE>",
+    parser.add_argument('config_to_set', metavar = f"<KEY>{edq.core.config.CLI_CONFIG_KEY_VALUE_SEPARATOR}<VALUE>",
         action = 'store', nargs = '+', type = str,
-        help = ('Configuration option to be set. Expected config format is <key>=<value>.'),
+        help = ('Configuration option to be set.'
+            +  f" Expected config format is <key>{edq.core.config.CLI_CONFIG_KEY_VALUE_SEPARATOR}<value>."),
     )
 
     config_file_locations = parser.add_argument_group("set config options")

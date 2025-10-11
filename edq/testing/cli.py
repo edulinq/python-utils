@@ -104,7 +104,7 @@ class CLITestInfo:
 
         self.cwd: str = self.temp_dir
         """
-        The directory that test runs from
+        The directory the test runs from.
         """
 
         if (cwd is not None):
