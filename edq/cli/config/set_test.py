@@ -1,9 +1,9 @@
 import argparse
 import os
 
-import edq.testing.unittest
 import edq.cli.config.set
 import edq.core.config
+import edq.testing.unittest
 import edq.util.dirent
 import edq.util.json
 

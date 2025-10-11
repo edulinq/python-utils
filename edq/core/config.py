@@ -96,7 +96,7 @@ def get_tiered_config(
     # Check the command-line config options.
     cli_configs = cli_arguments.get(CONFIGS_KEY, [])
     for cli_config in cli_configs:
-        if ( "=" not in cli_config):
+        if ("=" not in cli_config):
             raise ValueError(
                 f"Invalid configuration option '{cli_config}'."
                 + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI."
@@ -260,7 +260,7 @@ def load_config_into_args(
     The keys of `cli_arg_config_map` represent attributes in the CLI arguments (`args`),
     while the values represent the desired config name this argument should be set as.
     For example, a `cli_arg_config_map` of `{'foo': 'baz'}` will make the CLI argument `--foo bar`
-    be equivalent to f"--config baz=bar".
+    be equivalent to "--config baz=bar".
     """
 
     if (cli_arg_config_map is None):
