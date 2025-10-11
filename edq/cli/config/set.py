@@ -77,11 +77,12 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
         help = ('Configuration option to be set. Expected config format is <key>=<value>.'),
     )
 
-    group = parser.add_mutually_exclusive_group()
+    config_file_locations = parser.add_argument_group("set config options")
+    group = config_file_locations.add_mutually_exclusive_group()
 
     group.add_argument('--local',
         action = 'store_true', dest = 'set_is_local',
-        help = ('Set the configuration option in a local config file if one exists. '
+        help = ('Set the configuration option in a local config file if one exists.'
         + ' If no local config file is found, a new one will be created in the current directory.'),
     )
 

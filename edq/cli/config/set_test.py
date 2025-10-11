@@ -133,6 +133,9 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                 {
                     "config_to_set": ["user=user@test.edulinq.org"],
                     "set_is_global": True,
+                    "_config_params": {
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(GLOBAL_DIR, edq.core.config.DEFAULT_CONFIG_FILENAME)
+                    }
                 },
                 [
                     {
@@ -195,6 +198,38 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                 ],
                 None,
             ),
+
+            # Empty Config
+            (
+                {
+                    "config_to_set": ["user=user@test.edulinq.org"],
+                    "set_to_file_path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
+                [
+                    {
+                        "path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        "data": {"user": "user@test.edulinq.org"},
+                    },
+                ],
+                None,
+            ),
+
+            # Non Empty Config
+            (
+                {
+                    "config_to_set": ["pass=password123"],
+                    "set_to_file_path": os.path.join("non-empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
+                [
+                    {
+                        "path": os.path.join("non-empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        "data": {"user": "user@test.edulinq.org", "pass": "password123"},
+                    },
+                ],
+                None,
+            ),
+
+
         ]
 
         for (i, test_case) in enumerate(test_cases):

@@ -2,7 +2,7 @@
     "cli": "edq.cli.config.set",
     "arguments": [
         "user=user@test.edulinq.org",
-        "--local"
+        "--file", "__TEMP_DIR__(edq-config.json)",
     ],
 }
 ---
