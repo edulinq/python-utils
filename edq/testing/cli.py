@@ -35,6 +35,7 @@ import edq.util.json
 import edq.util.pyimport
 
 TEST_CASE_SEP: str = '---'
+OUTPUT_SEP: str = '+++'
 DATA_DIR_ID: str = '__DATA_DIR__'
 ABS_DATA_DIR_ID: str = '__ABS_DATA_DIR__'
 TEMP_DIR_ID: str = '__TEMP_DIR__'
@@ -149,7 +150,7 @@ class CLITestInfo:
         """
         Split stdout and stderr into different strings for testing.
         By default, these two will be combined.
-        If both are non-empty, then they will be joined like: f"{stdout}\n{TEST_CASE_SEP}\n{stderr}".
+        If both are non-empty, then they will be joined like: f"{stdout}\n{OUTPUT_SEP}\n{stderr}".
         Otherwise, only the non-empty one will be present with no separator.
         Any stdout assertions will be applied to the combined text.
         """
@@ -293,7 +294,7 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
 
         if (not test_info.split_stdout_stderr):
             if ((len(stdout_text) > 0) and (len(stderr_text) > 0)):
-                stdout_text = f"{stdout_text}\n{TEST_CASE_SEP}\n{stderr_text}"
+                stdout_text = f"{stdout_text}\n{OUTPUT_SEP}\n{stderr_text}"
             elif (len(stderr_text) > 0):
                 stdout_text = stderr_text
 
