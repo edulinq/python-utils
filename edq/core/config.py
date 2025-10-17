@@ -14,9 +14,12 @@ CONFIG_SOURCE_CLI: str = "<cli argument>"
 
 CONFIG_PATHS_KEY: str = 'config_paths'
 CONFIGS_KEY: str = 'configs'
-GLOBAL_CONFIG_KEY: str = 'global_config_path'
+GLOBAL_CONFIG_PATH_KEY: str = 'global_config_path'
+LOCAL_CONFIG_PATH_KEY: str = 'local_config_path'
+FILENAME_KEY: str = 'config_filename'
 IGNORE_CONFIGS_KEY: str = 'ignore_configs'
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
+
 
 class ConfigSource:
     """ A class for storing config source information. """
@@ -47,7 +50,7 @@ def get_tiered_config(
         legacy_config_filename: typing.Union[str, None] = None,
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
-    ) -> typing.Tuple[typing.Dict[str, str], typing.Dict[str, ConfigSource]]:
+    ) -> typing.Tuple[typing.Dict[str, str], typing.Dict[str, ConfigSource], typing.Dict[str, typing.Union[str, None]]]:
     """
     Load all configuration options from files and command-line arguments.
     Returns a configuration dictionary with the values based on tiering rules and a source dictionary mapping each key to its origin.
@@ -58,12 +61,16 @@ def get_tiered_config(
 
     config: typing.Dict[str, str] = {}
     sources: typing.Dict[str, ConfigSource] = {}
+    config_params: typing.Dict[str, typing.Union[str, None]] = {}
+
+    config_params["config_filename"] = config_filename
 
     # Ensure CLI arguments are always a dict, even if provided as argparse.Namespace.
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
 
-    global_config_path = cli_arguments.get(GLOBAL_CONFIG_KEY, get_global_config_path(config_filename))
+    global_config_path = cli_arguments.get(GLOBAL_CONFIG_PATH_KEY, get_global_config_path(config_filename))
+    config_params[GLOBAL_CONFIG_PATH_KEY] = global_config_path
 
     # Check the global user config file.
     if (os.path.isfile(global_config_path)):
@@ -75,6 +82,8 @@ def get_tiered_config(
         legacy_config_filename = legacy_config_filename,
         local_config_root_cutoff = local_config_root_cutoff,
     )
+
+    config_params[LOCAL_CONFIG_PATH_KEY] = local_config_path
 
     if (local_config_path is not None):
         _load_config_file(local_config_path, config, sources, CONFIG_SOURCE_LOCAL)
@@ -108,7 +117,7 @@ def get_tiered_config(
         config.pop(ignore_config, None)
         sources.pop(ignore_config, None)
 
-    return config, sources
+    return config, sources, config_params
 
 def _load_config_file(
         config_path: str,
@@ -202,12 +211,14 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     Set common CLI arguments for configuration.
     """
 
-    parser.add_argument('--config-global', dest = GLOBAL_CONFIG_KEY,
+    group = parser.add_argument_group("load config options")
+
+    group.add_argument('--config-global', dest = GLOBAL_CONFIG_PATH_KEY,
         action = 'store', type = str, default = get_global_config_path(config_filename),
         help = 'Set the default global config file path (default: %(default)s).',
     )
 
-    parser.add_argument('--config-file', dest = CONFIG_PATHS_KEY,
+    group.add_argument('--config-file', dest = CONFIG_PATHS_KEY,
         action = 'append', type = str, default = [],
         help = ('Load config options from a JSON file.'
             + ' This flag can be specified multiple times.'
@@ -215,7 +226,7 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
             + ' Will override options form both global and local config files.')
     )
 
-    parser.add_argument('--config', dest = CONFIGS_KEY,
+    group.add_argument('--config', dest = CONFIGS_KEY, metavar = "<KEY>=<VALUE>",
         action = 'append', type = str, default = [],
         help = ('Set a configuration option from the command-line.'
             + ' Specify options as <key>=<value> pairs.'
@@ -224,7 +235,7 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
             + ' Will override options form all config files.')
     )
 
-    parser.add_argument('--ignore-config-option', dest = IGNORE_CONFIGS_KEY,
+    group.add_argument('--ignore-config-option', dest = IGNORE_CONFIGS_KEY,
         action = 'append', type = str, default = [],
         help = ('Ignore any config option with the specified key.'
             + ' The system-provided default value will be used for that option if one exists.'
@@ -237,6 +248,7 @@ def load_config_into_args(
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any],
         config_filename: str = DEFAULT_CONFIG_FILENAME,
+        legacy_config_filename: typing.Union[str, None] = None,
         cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
         **kwargs: typing.Any,
     ) -> None:
@@ -248,7 +260,7 @@ def load_config_into_args(
     The keys of `cli_arg_config_map` represent attributes in the CLI arguments (`args`),
     while the values represent the desired config name this argument should be set as.
     For example, a `cli_arg_config_map` of `{'foo': 'baz'}` will make the CLI argument `--foo bar`
-    be equivalent to `--config baz=bar`.
+    be equivalent to "--config baz=bar".
     """
 
     if (cli_arg_config_map is None):
@@ -259,10 +271,12 @@ def load_config_into_args(
         if (value is not None):
             getattr(args, CONFIGS_KEY).append(f"{config_key}={value}")
 
-    (config_dict, sources_dict) = get_tiered_config(
+    (config_dict, sources_dict, config_params_dict) = get_tiered_config(
         cli_arguments = args,
         config_filename = config_filename,
+        legacy_config_filename = legacy_config_filename,
     )
 
     setattr(args, "_config", config_dict)
     setattr(args, "_config_sources", sources_dict)
+    setattr(args, "_config_params", config_params_dict)
