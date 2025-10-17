@@ -4,5 +4,6 @@
         "user=user@test.edulinq.org",
         "--file", "__TEMP_DIR__(edq-config.json)",
     ],
+    "work_dir": "__TEMP_DIR__()"
 }
 ---

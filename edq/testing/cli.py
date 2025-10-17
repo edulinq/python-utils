@@ -53,7 +53,7 @@ class CLITestInfo:
             base_dir: str,
             data_dir: str,
             temp_dir: str,
-            cwd: typing.Union[str, None] = None,
+            work_dir: typing.Union[str, None] = None,
             cli: typing.Union[str, None] = None,
             arguments: typing.Union[typing.List[str], None] = None,
             error: bool = False,
@@ -102,16 +102,14 @@ class CLITestInfo:
         This is the expansion for `__TEMP_DIR__` paths.
         """
 
-        self.cwd: str = self.temp_dir
-        """
-        The directory the test runs from.
-        """
-
-        if (cwd is not None):
-            self.cwd = self._expand_paths(cwd)
-
-
         edq.util.dirent.mkdir(temp_dir)
+
+        self.work_dir: str = os.getcwd()
+        """ The directory the test runs from. """
+
+        if (work_dir is not None):
+            work_dir_expanded = self._expand_paths(work_dir)
+            self.work_dir = work_dir_expanded
 
         if (cli is None):
             raise ValueError("Missing CLI module.")
@@ -281,7 +279,7 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
         sys.argv = [test_info.module.__file__] + test_info.arguments
 
         previous_work_directory = os.getcwd()
-        os.chdir(test_info.cwd)
+        os.chdir(test_info.work_dir)
 
         try:
             with contextlib.redirect_stdout(io.StringIO()) as stdout_output:
