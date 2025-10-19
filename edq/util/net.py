@@ -19,6 +19,7 @@ import requests
 import requests_toolbelt.multipart.decoder
 
 import edq.util.dirent
+import edq.util.hash
 import edq.util.json
 import edq.util.pyimport
 
@@ -29,6 +30,9 @@ DEFAULT_PORT_SEARCH_WAIT_SEC: float = 0.01
 DEFAULT_REQUEST_TIMEOUT_SECS: float = 10.0
 
 DEFAULT_HTTP_EXCHANGE_EXTENSION: str= '.httpex.json'
+
+QUERY_CLIP_LENGTH: int = 100
+""" If the query portion of an HTTPExhange being saved is longer than this, then clip the name. """
 
 ANCHOR_HEADER_KEY: str = 'edq-anchor'
 """
@@ -729,8 +733,11 @@ def make_request(method: str, url: str,
 
         query = urllib.parse.urlencode(exchange.parameters)
         if (query != ''):
+            # The query can get very long, so we may have to clip it.
+            query_text = edq.util.hash.clip_text(query, QUERY_CLIP_LENGTH)
+
             # Note that the '?' is URL encoded.
-            path += f"%3F{query}"
+            path += f"%3F{query_text}"
 
         path += f"_{method}{http_exchange_extension}"
 
