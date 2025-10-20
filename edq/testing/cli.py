@@ -214,6 +214,22 @@ class CLITestInfo:
 
         return CLITestInfo(test_name, base_dir, data_dir, temp_dir, **options)
 
+@typing.runtime_checkable
+class TestMethodWrapperFunction(typing.Protocol):
+    """
+    A function that can be used to wrap/modify a CLI test method before it is attached to the test class.
+    """
+
+    def __call__(self,
+            test_method: typing.Callable,
+            test_info_path: str,
+            ) -> typing.Callable:
+        """
+        Wrap and/or modify the CLI test method before it is attached to the test class.
+        See _get_test_method() for the input method.
+        The returned method will be used in-place of the input one.
+        """
+
 def read_test_file(path: str) -> typing.Tuple[typing.Dict[str, typing.Any], str]:
     """ Read a test case file and split the output into JSON data and text. """
 
@@ -257,7 +273,9 @@ def replace_path_pattern(text: str, key: str, target_dir: str) -> str:
 def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callable:
     """ Get a test method that represents the test case at the given path. """
 
-    def __method(self: edq.testing.unittest.BaseTest) -> None:
+    def __method(self: edq.testing.unittest.BaseTest,
+            reraise_exception_types: typing.Union[typing.Tuple[typing.Type], None] = None,
+            **kwargs: typing.Any) -> None:
         test_info = CLITestInfo.load_path(path, test_name, getattr(self, BASE_TEMP_DIR_ATTR), data_dir)
 
         # Allow the test class a chance to modify the test info before the test runs.
@@ -281,6 +299,9 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
             if (test_info.error):
                 self.fail(f"No error was not raised when one was expected ('{str(test_info.expected_stdout)}').")
         except BaseException as ex:
+            if ((reraise_exception_types is not None) and isinstance(ex, reraise_exception_types)):
+                raise ex
+
             if (not test_info.error):
                 raise ex
 
@@ -306,7 +327,8 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
 
     return __method
 
-def add_test_paths(target_class: type, data_dir: str, paths: typing.List[str]) -> None:
+def add_test_paths(target_class: type, data_dir: str, paths: typing.List[str],
+        test_method_wrapper: typing.Union[TestMethodWrapperFunction, None] = None) -> None:
     """ Add tests from the given test files. """
 
     # Attach a temp directory to the testing class so all tests can share a common base temp dir.
@@ -321,12 +343,18 @@ def add_test_paths(target_class: type, data_dir: str, paths: typing.List[str]) -
         test_name = 'test_cli__' + basename
 
         try:
-            setattr(target_class, test_name, _get_test_method(test_name, path, data_dir))
+            test_method = _get_test_method(test_name, path, data_dir)
         except Exception as ex:
             raise ValueError(f"Failed to parse test case '{path}'.") from ex
 
-def discover_test_cases(target_class: type, test_cases_dir: str, data_dir: str) -> None:
+        if (test_method_wrapper is not None):
+            test_method = test_method_wrapper(test_method, path)
+
+        setattr(target_class, test_name, test_method)
+
+def discover_test_cases(target_class: type, test_cases_dir: str, data_dir: str,
+        test_method_wrapper: typing.Union[TestMethodWrapperFunction, None] = None) -> None:
     """ Look in the text cases directory for any test cases and add them as test methods to the test class. """
 
     paths = list(sorted(glob.glob(os.path.join(test_cases_dir, "**", "*.txt"), recursive = True)))
-    add_test_paths(target_class, data_dir, paths)
+    add_test_paths(target_class, data_dir, paths, test_method_wrapper = test_method_wrapper)
