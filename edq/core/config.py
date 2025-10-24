@@ -40,30 +40,41 @@ class ConfigSource:
     def __str__(self) -> str:
         return f"({self.label}, {self.path})"
 
-def write_config_to_file(file_path: str, configs_to_write: typing.List[str]) -> None:
+def write_config_to_file(file_path: str, configs_to_write: typing.Dict[str, str]) -> None:
     """ Write configs to a specified file path. Create the path if it do not exist. """
 
-    if (not (edq.util.dirent.exists(file_path))):
-        edq.util.dirent.mkdir(os.path.dirname(file_path))
-        edq.util.json.dump_path({}, file_path)
+    config = {}
+    if (edq.util.dirent.exists(file_path)):
+        config = edq.util.json.load_path(file_path)
 
-    config = edq.util.json.load_path(file_path)
+    config.update(configs_to_write)
 
-    for config_option in  configs_to_write:
+    edq.util.dirent.mkdir(os.path.dirname(file_path))
+    edq.util.json.dump_path(config, file_path, indent = 4)
+
+def _load_cli_config(
+        cli_configs_to_load: typing.List[str],
+        config_dict: typing.Dict[str, str],
+        sources_dict: typing.Union[typing.Dict[str, ConfigSource], None] = None
+    ) -> None:
+
+    if (sources_dict is None):
+        sources_dict = {}
+
+    for config_option in  cli_configs_to_load:
         if ("=" not in config_option):
             raise ValueError(
                 f"Invalid configuration option '{config_option}'."
                 + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI.")
 
-        (key, value) = config_option.split("=", maxsplit = 1)
+        (key, value) = config_option.split('=', maxsplit = 1)
 
         key = key.strip()
-        if (key == ""):
+        if (key == ''):
             raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
 
-        config[key] = value
-
-    edq.util.json.dump_path(config, file_path, indent = 4)
+        config_dict[key] = value
+        sources_dict[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
 
 def get_global_config_path(config_filename: str) -> str:
     """ Get the path for the global config file. """
@@ -88,7 +99,7 @@ def get_tiered_config(
     sources: typing.Dict[str, ConfigSource] = {}
     config_params: typing.Dict[str, typing.Union[str, None]] = {}
 
-    config_params["config_filename"] = config_filename
+    config_params[FILENAME_KEY] = config_filename
 
     # Ensure CLI arguments are always a dict, even if provided as argparse.Namespace.
     if (isinstance(cli_arguments, argparse.Namespace)):
@@ -120,21 +131,7 @@ def get_tiered_config(
 
     # Check the command-line config options.
     cli_configs = cli_arguments.get(CONFIGS_KEY, [])
-    for cli_config in cli_configs:
-        if ("=" not in cli_config):
-            raise ValueError(
-                f"Invalid configuration option '{cli_config}'."
-                + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI."
-            )
-
-        (key, value) = cli_config.split("=", maxsplit = 1)
-
-        key = key.strip()
-        if (key == ""):
-            raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
-
-        config[key] = value
-        sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
+    _load_cli_config(cli_configs, config, sources)
 
     # Finally, ignore any configs that is specified from CLI command.
     cli_ignore_configs = cli_arguments.get(IGNORE_CONFIGS_KEY, [])
@@ -155,7 +152,7 @@ def _load_config_file(
     config_path = os.path.abspath(config_path)
     for (key, value) in edq.util.json.load_path(config_path).items():
         key = key.strip()
-        if (key == ""):
+        if (key == ''):
             raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
 
         config[key] = value

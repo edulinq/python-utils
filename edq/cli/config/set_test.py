@@ -12,7 +12,6 @@ def create_test_dir(temp_dir_prefix: str) -> str:
     Create a temp dir and populate it with dirents for testing.
 
     This test data directory is laid out as:
-
     .
     ├── empty-config
     │   └── edq-config.json
@@ -132,7 +131,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                     "_config_params": {
                         edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join("non-empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
-                    "set_is_local": True,
+                    "write_local": True,
                 },
                 [
                     {
@@ -149,7 +148,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
             (
                 {
                     "config_to_set": ["user=user@test.edulinq.org"],
-                    "set_is_global": True,
+                    "write_global": True,
                     "_config_params": {
                         edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join('empty-dir', edq.core.config.DEFAULT_CONFIG_FILENAME)
                     }
@@ -167,7 +166,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
             (
                 {
                     "config_to_set": ["user=user@test.edulinq.org"],
-                    "set_is_global": True,
+                    "write_global": True,
                     "_config_params": {
                         edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME)
                     }
@@ -185,7 +184,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
             (
                 {
                     "config_to_set": ["user=user@test.edulinq.org", "pass=password123"],
-                    "set_is_global": True,
+                    "write_global": True,
                     "_config_params": {
                         edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME)
                     }
@@ -209,7 +208,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                     "_config_params": {
                         edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join("non-empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
-                    "set_is_global": True,
+                    "write_global": True,
                 },
                 [
                     {
@@ -226,7 +225,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
             (
                 {
                     "config_to_set": ["user=user@test.edulinq.org"],
-                    "set_to_file_path": os.path.join("non-existent", "path", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    "write_file_path": os.path.join("non-existent", "path", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 [
                     {
@@ -241,7 +240,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
             (
                 {
                     "config_to_set": ["user=user@test.edulinq.org"],
-                    "set_to_file_path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    "write_file_path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 [
                     {
@@ -256,7 +255,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
             (
                 {
                     "config_to_set": ["user=user@test.edulinq.org", "pass=password123"],
-                    "set_to_file_path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    "write_file_path": os.path.join("empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 [
                     {
@@ -274,7 +273,7 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
             (
                 {
                     "config_to_set": ["pass=password123"],
-                    "set_to_file_path": os.path.join("non-empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    "write_file_path": os.path.join("non-empty-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 [
                     {
@@ -296,9 +295,9 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                 filename = config_params.get(edq.core.config.FILENAME_KEY, edq.core.config.DEFAULT_CONFIG_FILENAME)
 
                 set_args = argparse.Namespace(
-                    set_is_local = cli_arguments.get("set_is_local", False),
-                    set_is_global = cli_arguments.get("set_is_global", False),
-                    set_to_file_path = cli_arguments.get("set_to_file_path", None),
+                    write_local = cli_arguments.get("write_local", False),
+                    write_global = cli_arguments.get("write_global", False),
+                    write_file_path = cli_arguments.get("write_file_path", None),
                     config_to_set = cli_arguments.get("config_to_set"),
                     _config_params = {
                         edq.core.config.LOCAL_CONFIG_PATH_KEY: config_params.get(edq.core.config.LOCAL_CONFIG_PATH_KEY, None),
@@ -332,12 +331,12 @@ class TestSetConfig(edq.testing.unittest.BaseTest):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
                 for file in expected_result:
-                    set_to_file_path = file.get("path")
-                    set_to_file_path = os.path.join(temp_dir, set_to_file_path)
+                    write_file_path = file.get("path")
+                    write_file_path = os.path.join(temp_dir, write_file_path)
 
-                    if (not edq.util.dirent.exists(set_to_file_path)):
-                        self.fail(f"Expected file does not exist at path: {set_to_file_path}")
+                    if (not edq.util.dirent.exists(write_file_path)):
+                        self.fail(f"Expected file does not exist at path: {write_file_path}")
 
-                    data_actual = edq.util.json.load_path(set_to_file_path)
+                    data_actual = edq.util.json.load_path(write_file_path)
 
                     self.assertJSONDictEqual(data_actual, file.get("data"))
