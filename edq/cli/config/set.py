@@ -15,6 +15,7 @@ def run_cli(args: argparse.Namespace) -> int:
     cli_config_dict: typing.Dict[str, str] = {}
     edq.core.config._load_cli_config(args.config_to_set, cli_config_dict)
 
+    # Defaults to the local configuration if no configuration type is specified.
     if (not (args.write_local or args.write_global or (args.write_file_path is not None))):
         args.write_local = True
 
@@ -58,20 +59,20 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
 
     group.add_argument('--local',
         action = 'store_true', dest = 'write_local',
-        help = ('Set the configuration option in a local config file if one exists.'
+        help = ('Write config option(s) to the local config file if one exists.'
         + ' If no local config file is found, a new one will be created in the current directory.'),
     )
 
     group.add_argument('--global',
         action = 'store_true', dest = 'write_global',
-        help =  ('Set the configuration option in the global config file if it exists.'
+        help =  ('Write config option(s) to the global config file if it exists.'
         +  " If it doesn't exist, it will be created."
         +  " Use '--config-global' to view or change the global config file location."),
     )
 
     group.add_argument('--file', metavar = "<FILE>",
         action = 'store', type = str, default = None, dest = 'write_file_path',
-        help = ('Set the config option in a specified config file.'
+        help = ('Write config option(s) to the specified config file.'
             +  " If the given file path doesn't exist, it will be created.")
     )
 

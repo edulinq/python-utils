@@ -52,29 +52,6 @@ def write_config_to_file(file_path: str, configs_to_write: typing.Dict[str, str]
     edq.util.dirent.mkdir(os.path.dirname(file_path))
     edq.util.json.dump_path(config, file_path, indent = 4)
 
-def _load_cli_config(
-        cli_configs_to_load: typing.List[str],
-        config_dict: typing.Dict[str, str],
-        sources_dict: typing.Union[typing.Dict[str, ConfigSource], None] = None
-    ) -> None:
-
-    if (sources_dict is None):
-        sources_dict = {}
-
-    for config_option in  cli_configs_to_load:
-        if ("=" not in config_option):
-            raise ValueError(
-                f"Invalid configuration option '{config_option}'."
-                + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI.")
-
-        (key, value) = config_option.split('=', maxsplit = 1)
-
-        key = key.strip()
-        if (key == ''):
-            raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
-
-        config_dict[key] = value
-        sources_dict[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
 
 def get_global_config_path(config_filename: str) -> str:
     """ Get the path for the global config file. """
@@ -140,6 +117,30 @@ def get_tiered_config(
         sources.pop(ignore_config, None)
 
     return config, sources, config_params
+
+def _load_cli_config(
+        cli_configs_to_load: typing.List[str],
+        config_dict: typing.Dict[str, str],
+        sources_dict: typing.Union[typing.Dict[str, ConfigSource], None] = None
+    ) -> None:
+
+    if (sources_dict is None):
+        sources_dict = {}
+
+    for config_option in  cli_configs_to_load:
+        if ("=" not in config_option):
+            raise ValueError(
+                f"Invalid configuration option '{config_option}'."
+                + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI.")
+
+        (key, value) = config_option.split('=', maxsplit = 1)
+
+        key = key.strip()
+        if (key == ''):
+            raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
+
+        config_dict[key] = value
+        sources_dict[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
 
 def _load_config_file(
         config_path: str,
