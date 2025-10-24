@@ -626,6 +626,22 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         return HTTPExchange(**data)
 
+@typing.runtime_checkable
+class HTTPExchangeComplete(typing.Protocol):
+    """
+    A function that can be called after a request has been made (and exchange constructed).
+    """
+
+    def __call__(self,
+            exchange: HTTPExchange
+            ) -> str:
+        """
+        Called after an HTTP exchange has been completed.
+        """
+
+_make_request_exchange_complete_func: typing.Union[HTTPExchangeComplete, None] = None  # pylint: disable=invalid-name
+""" If not None, call this func after make_request() has created its HTTPExchange. """
+
 def find_open_port(
         start_port: int = DEFAULT_START_PORT, end_port: int = DEFAULT_END_PORT,
         wait_time: float = DEFAULT_PORT_SEARCH_WAIT_SEC) -> int:
@@ -671,6 +687,7 @@ def make_request(method: str, url: str,
         http_exchange_extension: str = DEFAULT_HTTP_EXCHANGE_EXTENSION,
         add_http_prefix: bool = True,
         additional_requests_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+        exchange_complete_func: typing.Union[HTTPExchangeComplete, None] = None,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
     Make an HTTP request and return the response object and text body.
@@ -713,7 +730,7 @@ def make_request(method: str, url: str,
     else:
         options['data'] = data
 
-    logging.debug("Making %s request: '%s'.", method, url)
+    logging.debug("Making %s request: '%s' (options = %s).", method, url, options)
     response = requests.request(method, url, **options)
 
     body = response.text
@@ -726,9 +743,11 @@ def make_request(method: str, url: str,
 
         response.raise_for_status()
 
-    if (output_dir is not None):
+    exchange = None
+    if ((output_dir is not None) or (exchange_complete_func is not None) or (_make_request_exchange_complete_func is not None)):
         exchange = HTTPExchange.from_response(response, headers_to_skip = headers_to_skip, params_to_skip = params_to_skip)
 
+    if ((output_dir is not None) and (exchange is not None)):
         path = os.path.abspath(os.path.join(output_dir, *exchange.get_url().split('/')))
 
         query = urllib.parse.urlencode(exchange.parameters)
@@ -743,6 +762,12 @@ def make_request(method: str, url: str,
 
         edq.util.dirent.mkdir(os.path.dirname(path))
         edq.util.json.dump_path(exchange, path, indent = 4, sort_keys = False)
+
+    if ((exchange_complete_func is not None) and (exchange is not None)):
+        exchange_complete_func(exchange)
+
+    if ((_make_request_exchange_complete_func is not None) and (exchange is not None)):
+        _make_request_exchange_complete_func(exchange)  # pylint: disable=not-callable
 
     return response, body
 
