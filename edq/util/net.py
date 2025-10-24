@@ -887,13 +887,14 @@ def parse_content_dispositions(headers: typing.Union[email.message.Message, typi
 
 def parse_query_string(text: str,
         replace_single_lists: bool = True,
-        ) -> typing.Dict[str, typing.Any]:
+        keep_blank_values: bool = True,
+        **kwargs: typing.Any) -> typing.Dict[str, typing.Any]:
     """
     Parse a query string (like urllib.parse.parse_qs()), and normalize the result.
     If specified, lists with single values (as returned from urllib.parse.parse_qs()) will be replaced with the single value.
     """
 
-    results = urllib.parse.parse_qs(text)
+    results = urllib.parse.parse_qs(text, keep_blank_values = True)
     for (key, value) in results.items():
         if (replace_single_lists and (len(value) == 1)):
             results[key] = value[0]  # type: ignore[assignment]
