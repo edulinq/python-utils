@@ -40,6 +40,31 @@ class ConfigSource:
     def __str__(self) -> str:
         return f"({self.label}, {self.path})"
 
+def write_config_to_file(file_path: str, configs_to_write: typing.List[str]) -> None:
+    """ Write configs to a specified file path. Create the path if it do not exist. """
+
+    if (not (edq.util.dirent.exists(file_path))):
+        edq.util.dirent.mkdir(os.path.dirname(file_path))
+        edq.util.json.dump_path({}, file_path)
+
+    config = edq.util.json.load_path(file_path)
+
+    for config_option in  configs_to_write:
+        if ("=" not in config_option):
+            raise ValueError(
+                f"Invalid configuration option '{config_option}'."
+                + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI.")
+
+        (key, value) = config_option.split("=", maxsplit = 1)
+
+        key = key.strip()
+        if (key == ""):
+            raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
+
+        config[key] = value
+
+    edq.util.json.dump_path(config, file_path, indent = 4)
+
 def get_global_config_path(config_filename: str) -> str:
     """ Get the path for the global config file. """
 
