@@ -62,6 +62,7 @@ DEFAULT_EXCHANGE_IGNORE_HEADERS: typing.List[str] = [
     'etag',
     'host',
     'link',
+    'location',
     'priority',
     'referrer-policy',
     'sec-fetch-dest',
@@ -174,11 +175,11 @@ class HTTPExchange(edq.util.json.DictConverter):
             parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
             files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, str]]], None] = None,
             headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            allow_redirects: typing.Union[bool, None] = None,
             response_code: int = http.HTTPStatus.OK,
             response_headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
             json_body: typing.Union[bool, None] = None,
             response_body: typing.Union[str, dict, list, None] = None,
-            read_write: bool = False,
             source_path: typing.Union[str, None] = None,
             response_modifier: typing.Union[str, None] = None,
             extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
@@ -239,6 +240,12 @@ class HTTPExchange(edq.util.json.DictConverter):
         self.headers: typing.Dict[str, typing.Any] = headers
         """ Headers in the request. """
 
+        if (allow_redirects is None):
+            allow_redirects = True
+
+        self.allow_redirects: bool = allow_redirects
+        """ Follow redirects. """
+
         self.response_code: int = response_code
         """ The HTTP status code of the response. """
 
@@ -264,13 +271,6 @@ class HTTPExchange(edq.util.json.DictConverter):
         self.response_body: typing.Union[str, None] = response_body  # type: ignore[assignment]
         """
         The response that should be sent in this exchange.
-        """
-
-        self.read_write: bool = read_write
-        """
-        Indicates that this exchange will change data on the server (regardless of the HTTP method).
-        This field may be ignored by test servers,
-        but may be observed by tools that generate or validate test data.
         """
 
         self.response_modifier: typing.Union[str, None] = response_modifier
@@ -320,7 +320,7 @@ class HTTPExchange(edq.util.json.DictConverter):
         if (url_path is not None):
             url_path = url_path.strip()
             if (url_path == ''):
-                url_path = None
+                url_path = ''
             else:
                 url_path = url_path.lstrip('/')
 
@@ -488,6 +488,7 @@ class HTTPExchange(edq.util.json.DictConverter):
                 data = self.parameters,
                 files = files,
                 raise_for_status = raise_for_status,
+                allow_redirects = self.allow_redirects,
                 **kwargs,
         )
 
@@ -577,6 +578,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             response: requests.Response,
             headers_to_skip: typing.Union[typing.List[str], None] = None,
             params_to_skip: typing.Union[typing.List[str], None] = None,
+            allow_redirects: typing.Union[bool, None] = None,
             ) -> 'HTTPExchange':
         """ Create a full excahnge from a response. """
 
@@ -622,6 +624,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             'response_headers': response_headers,
             'response_body': body,
             'response_modifier': _exchanges_clean_func,
+            'allow_redirects': allow_redirects,
         }
 
         return HTTPExchange(**data)
@@ -688,6 +691,7 @@ def make_request(method: str, url: str,
         add_http_prefix: bool = True,
         additional_requests_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
         exchange_complete_func: typing.Union[HTTPExchangeComplete, None] = None,
+        allow_redirects: typing.Union[bool, None] = None,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
     Make an HTTP request and return the response object and text body.
@@ -725,6 +729,9 @@ def make_request(method: str, url: str,
         'timeout': timeout_secs,
     })
 
+    if (allow_redirects is not None):
+        options['allow_redirects'] = allow_redirects
+
     if (method == 'GET'):
         options['params'] = data
     else:
@@ -745,10 +752,16 @@ def make_request(method: str, url: str,
 
     exchange = None
     if ((output_dir is not None) or (exchange_complete_func is not None) or (_make_request_exchange_complete_func is not None)):
-        exchange = HTTPExchange.from_response(response, headers_to_skip = headers_to_skip, params_to_skip = params_to_skip)
+        exchange = HTTPExchange.from_response(response,
+                headers_to_skip = headers_to_skip, params_to_skip = params_to_skip,
+                allow_redirects = options.get('allow_redirects', None))
 
     if ((output_dir is not None) and (exchange is not None)):
-        path = os.path.abspath(os.path.join(output_dir, *exchange.get_url().split('/')))
+        url = exchange.get_url()
+        if (url == ''):
+            url = '_index_'
+
+        path = os.path.abspath(os.path.join(output_dir, *url.split('/')))
 
         query = urllib.parse.urlencode(exchange.parameters)
         if (query != ''):
