@@ -12,8 +12,10 @@ import edq.core.config
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
-    cli_config_dict: typing.Dict[str, str] = {}
-    edq.core.config._load_cli_config(args.config_to_set, cli_config_dict)
+    config: typing.Dict[str, str] = {}
+    for config_option in args.config_to_set:
+        (key, value) = edq.core.config._parse_cli_config_option(config_option)
+        config[key] = value
 
     # Defaults to the local configuration if no configuration type is specified.
     if (not (args.write_local or args.write_global or (args.write_file_path is not None))):
@@ -23,12 +25,12 @@ def run_cli(args: argparse.Namespace) -> int:
         local_config_path = args._config_params[edq.core.config.LOCAL_CONFIG_PATH_KEY]
         if (local_config_path is None):
             local_config_path = args._config_params[edq.core.config.FILENAME_KEY]
-        edq.core.config.write_config_to_file(local_config_path, cli_config_dict)
+        edq.core.config.write_config_to_file(local_config_path, config)
     elif (args.write_global):
         global_config_path = args._config_params[edq.core.config.GLOBAL_CONFIG_PATH_KEY]
-        edq.core.config.write_config_to_file(global_config_path, cli_config_dict)
+        edq.core.config.write_config_to_file(global_config_path, config)
     elif (args.write_file_path is not None):
-        edq.core.config.write_config_to_file(args.write_file_path, cli_config_dict)
+        edq.core.config.write_config_to_file(args.write_file_path, config)
 
     return 0
 

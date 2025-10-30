@@ -108,7 +108,11 @@ def get_tiered_config(
 
     # Check the command-line config options.
     cli_configs = cli_arguments.get(CONFIGS_KEY, [])
-    _load_cli_config(cli_configs, config, sources)
+    for cli_config_option in cli_configs:
+        (key, value) = _parse_cli_config_option(cli_config_option)
+
+        config[key] = value
+        sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
 
     # Finally, ignore any configs that is specified from CLI command.
     cli_ignore_configs = cli_arguments.get(IGNORE_CONFIGS_KEY, [])
@@ -118,29 +122,23 @@ def get_tiered_config(
 
     return config, sources, config_params
 
-def _load_cli_config(
-        cli_configs_to_load: typing.List[str],
-        config_dict: typing.Dict[str, str],
-        sources_dict: typing.Union[typing.Dict[str, ConfigSource], None] = None
-    ) -> None:
+def _parse_cli_config_option(
+        config_option: str,
+    ) -> typing.Tuple[str, str]:
+    """ Parse and validate a CLI configuration option string, returs the resulting config option as a key value pair. """
 
-    if (sources_dict is None):
-        sources_dict = {}
+    if ("=" not in config_option):
+        raise ValueError(
+            f"Invalid configuration option '{config_option}'."
+            + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI.")
 
-    for config_option in  cli_configs_to_load:
-        if ("=" not in config_option):
-            raise ValueError(
-                f"Invalid configuration option '{config_option}'."
-                + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI.")
+    (key, value) = config_option.split('=', maxsplit = 1)
 
-        (key, value) = config_option.split('=', maxsplit = 1)
+    key = key.strip()
+    if (key == ''):
+        raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
 
-        key = key.strip()
-        if (key == ''):
-            raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
-
-        config_dict[key] = value
-        sources_dict[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
+    return key, value
 
 def _load_config_file(
         config_path: str,
