@@ -40,14 +40,14 @@ class ConfigSource:
     def __str__(self) -> str:
         return f"({self.label}, {self.path})"
 
-def write_config_to_file(file_path: str, configs_to_write: typing.Dict[str, str]) -> None:
+def write_config_to_file(file_path: str, config_to_write: typing.Dict[str, str]) -> None:
     """ Write configs to a specified file path. Create the path if it do not exist. """
 
     config = {}
     if (edq.util.dirent.exists(file_path)):
         config = edq.util.json.load_path(file_path)
 
-    config.update(configs_to_write)
+    config.update(config_to_write)
 
     edq.util.dirent.mkdir(os.path.dirname(file_path))
     edq.util.json.dump_path(config, file_path, indent = 4)
