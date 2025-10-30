@@ -53,6 +53,7 @@ class CLITestInfo:
             base_dir: str,
             data_dir: str,
             temp_dir: str,
+            work_dir: typing.Union[str, None] = None,
             cli: typing.Union[str, None] = None,
             arguments: typing.Union[typing.List[str], None] = None,
             error: bool = False,
@@ -102,6 +103,13 @@ class CLITestInfo:
         """
 
         edq.util.dirent.mkdir(temp_dir)
+
+        self.work_dir: str = os.getcwd()
+        """ The directory the test runs from. """
+
+        if (work_dir is not None):
+            work_dir_expanded = self._expand_paths(work_dir)
+            self.work_dir = work_dir_expanded
 
         if (cli is None):
             raise ValueError("Missing CLI module.")
@@ -288,6 +296,9 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
         old_args = sys.argv
         sys.argv = [test_info.module.__file__] + test_info.arguments
 
+        previous_work_directory = os.getcwd()
+        os.chdir(test_info.work_dir)
+
         try:
             with contextlib.redirect_stdout(io.StringIO()) as stdout_output:
                 with contextlib.redirect_stderr(io.StringIO()) as stderr_output:
@@ -311,6 +322,7 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
             if (isinstance(ex, SystemExit) and (ex.__context__ is not None)):
                 stderr_text = self.format_error_string(ex.__context__)
         finally:
+            os.chdir(previous_work_directory)
             sys.argv = old_args
 
         if (not test_info.split_stdout_stderr):
