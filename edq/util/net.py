@@ -41,9 +41,13 @@ Anchors are not traditionally sent in requests, but this will allow exchanges to
 """
 
 ALLOWED_METHODS: typing.List[str] = [
+    'DELETE',
     'GET',
+    'HEAD',
+    'OPTIONS',
+    'PATCH',
     'POST',
-    'PUT'
+    'PUT',
 ]
 """ Allowed HTTP methods for an HTTPExchange. """
 
