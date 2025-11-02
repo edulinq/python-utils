@@ -20,7 +20,6 @@ FILENAME_KEY: str = 'config_filename'
 IGNORE_CONFIGS_KEY: str = 'ignore_configs'
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 
-
 class ConfigSource:
     """ A class for storing config source information. """
 
@@ -133,12 +132,18 @@ def _parse_cli_config_option(
             + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI.")
 
     (key, value) = config_option.split('=', maxsplit = 1)
-
-    key = key.strip()
-    if (key == ''):
-        raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
+    key = _validate_config_key(key, value)
 
     return key, value
+
+def _validate_config_key(config_key: str, config_value: str) -> str:
+    """ Validate a configuration key and return its stripped version. """
+
+    key = config_key.strip()
+    if (key == ''):
+        raise ValueError(f"Found an empty configuration option key associated with the value '{config_value}'.")
+
+    return key
 
 def _load_config_file(
         config_path: str,
@@ -150,9 +155,7 @@ def _load_config_file(
 
     config_path = os.path.abspath(config_path)
     for (key, value) in edq.util.json.load_path(config_path).items():
-        key = key.strip()
-        if (key == ''):
-            raise ValueError(f"Found an empty configuration option key associated with the value '{value}'.")
+        key = _validate_config_key(key, value)
 
         config[key] = value
         sources[key] = ConfigSource(label = source_label, path = config_path)

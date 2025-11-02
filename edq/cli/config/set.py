@@ -56,8 +56,7 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
             +  " Expected config format is <key>=<value>."),
     )
 
-    config_file_locations = parser.add_argument_group("set config options")
-    group = config_file_locations.add_mutually_exclusive_group()
+    group = parser.add_argument_group("set config options").add_mutually_exclusive_group()
 
     group.add_argument('--local',
         action = 'store_true', dest = 'write_local',

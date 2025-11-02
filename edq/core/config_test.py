@@ -1151,7 +1151,6 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     self.assertIn(error_substring, error_string, 'Error is not as expected.')
 
                     continue
-
                 finally:
                     os.chdir(previous_work_directory)
 
@@ -1161,3 +1160,112 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 self.assertJSONDictEqual(expected_config, actual_config)
                 self.assertJSONDictEqual(expected_source, actual_sources)
                 self.assertJSONDictEqual(expected_config_params, actual_config_params)
+
+    def test_write_config_base(self):
+        """
+        Test that the given config is written correctly and paths are created correctly.
+        """
+
+        # [(write config arguments, expected result, error substring), ...]
+        test_cases = [
+            # Non-exisiting Path
+            (
+                {
+                    'file_path': os.path.join('non-exisiting-path', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_write': {'user': 'user@test.edulinq.org'},
+                },
+                {
+                    'path': os.path.join('non-exisiting-path', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {'user': 'user@test.edulinq.org'},
+                },
+                None,
+            ),
+
+            # Directory Path
+            (
+                {
+                    'file_path': os.path.join("dir-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_write': {'user': 'user@test.edulinq.org'},
+                },
+                {},
+                "Cannot open JSON file, expected a file but got a directory",
+            ),
+
+            # Empty Config
+            (
+                {
+                    'file_path': os.path.join('empty', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_write': {'user': 'user@test.edulinq.org'},
+                },
+                {
+                    'path': os.path.join('empty', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {'user': 'user@test.edulinq.org'},
+                },
+                None,
+            ),
+
+            # Non-empty Config
+            (
+                {
+                    'file_path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_write': {'pass': 'password1234'},
+                },
+                {
+                    'path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {'user': 'user@test.edulinq.org', 'pass': 'password1234'},
+                },
+                None,
+            ),
+
+            # Non-empty Config (Overwrite)
+            (
+                {
+                    'file_path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_write': {'user': 'admin@test.edulinq.org'},
+                },
+                {
+                    'path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {'user': 'admin@test.edulinq.org'},
+                },
+                None,
+            ),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            arguments, expected_result, error_substring = test_case
+
+            with self.subTest(msg = f"Case {i}"):
+                temp_dir = create_test_dir(temp_dir_prefix = "edq-test-write-config-")
+
+                arguments['file_path'] = os.path.join(temp_dir, arguments['file_path'])
+
+                previous_work_directory = os.getcwd()
+                os.chdir(temp_dir)
+
+                try:
+                    edq.core.config.write_config_to_file(**arguments)
+                except Exception as ex:
+                    error_string = self.format_error_string(ex)
+
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{error_string}'.")
+
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
+                    continue
+                finally:
+                    os.chdir(previous_work_directory)
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
+                write_file_path = expected_result["path"]
+                write_file_path = os.path.join(temp_dir, write_file_path)
+
+                if (not edq.util.dirent.exists(write_file_path)):
+                    self.fail(f"Expected file does not exist at path: {write_file_path}")
+
+                data_actual = edq.util.json.load_path(write_file_path)
+                data_expected = expected_result['data']
+
+                self.assertJSONDictEqual(data_actual, data_expected)
