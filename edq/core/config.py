@@ -51,7 +51,6 @@ def write_config_to_file(file_path: str, config_to_write: typing.Dict[str, str])
     edq.util.dirent.mkdir(os.path.dirname(file_path))
     edq.util.json.dump_path(config, file_path, indent = 4)
 
-
 def get_global_config_path(config_filename: str) -> str:
     """ Get the path for the global config file. """
 
@@ -284,7 +283,7 @@ def load_config_into_args(
     The keys of `cli_arg_config_map` represent attributes in the CLI arguments (`args`),
     while the values represent the desired config name this argument should be set as.
     For example, a `cli_arg_config_map` of `{'foo': 'baz'}` will make the CLI argument `--foo bar`
-    be equivalent to "--config baz=bar".
+    be equivalent to `--config baz=bar`.
     """
 
     if (cli_arg_config_map is None):
