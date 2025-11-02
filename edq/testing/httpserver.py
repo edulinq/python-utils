@@ -328,15 +328,40 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: typing.Any) -> None:  # pylint: disable=redefined-builtin
         pass
 
-    def do_POST(self) -> None:  # pylint: disable=invalid-name
-        """ A handler for POST requests. """
+    def do_DELETE(self) -> None:  # pylint: disable=invalid-name
+        """ A handler for DELETE requests. """
 
-        self._do_request('POST')
+        self._do_request('DELETE')
 
     def do_GET(self) -> None:  # pylint: disable=invalid-name
         """ A handler for GET requests. """
 
         self._do_request('GET')
+
+    def do_HEAD(self) -> None:  # pylint: disable=invalid-name
+        """ A handler for HEAD requests. """
+
+        self._do_request('HEAD')
+
+    def do_OPTIONS(self) -> None:  # pylint: disable=invalid-name
+        """ A handler for OPTIONS requests. """
+
+        self._do_request('OPTIONS')
+
+    def do_PATCH(self) -> None:  # pylint: disable=invalid-name
+        """ A handler for PATCH requests. """
+
+        self._do_request('PATCH')
+
+    def do_POST(self) -> None:  # pylint: disable=invalid-name
+        """ A handler for POST requests. """
+
+        self._do_request('POST')
+
+    def do_PUT(self) -> None:  # pylint: disable=invalid-name
+        """ A handler for PUT requests. """
+
+        self._do_request('PUT')
 
     def _do_request(self, method: str) -> None:
         """ A common handler for multiple types of requests. """
