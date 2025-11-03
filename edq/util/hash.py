@@ -8,8 +8,11 @@ DEFAULT_CLIP_HASH_LENGTH: int = 8
 def sha256_hex(payload: typing.Any, encoding: str = edq.util.dirent.DEFAULT_ENCODING) -> str:
     """ Compute and return the hex string of the SHA3-256 encoding of the payload. """
 
+    if (isinstance(payload, str)):
+        payload = payload.encode(encoding)
+
     digest = hashlib.new('sha256')
-    digest.update(payload.encode(encoding))
+    digest.update(payload)
     return digest.hexdigest()
 
 def clip_text(text: str, max_length: int, hash_length: int = DEFAULT_CLIP_HASH_LENGTH) -> str:

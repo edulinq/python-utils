@@ -19,6 +19,7 @@ import requests
 import requests_toolbelt.multipart.decoder
 
 import edq.util.dirent
+import edq.util.encoding
 import edq.util.hash
 import edq.util.json
 import edq.util.pyimport
@@ -32,7 +33,7 @@ DEFAULT_REQUEST_TIMEOUT_SECS: float = 10.0
 DEFAULT_HTTP_EXCHANGE_EXTENSION: str= '.httpex.json'
 
 QUERY_CLIP_LENGTH: int = 100
-""" If the query portion of an HTTPExhange being saved is longer than this, then clip the name. """
+""" If the filename of an HTTPExhange being saved is longer than this, then clip it. """
 
 ANCHOR_HEADER_KEY: str = 'edq-anchor'
 """
@@ -126,6 +127,7 @@ class FileInfo(edq.util.json.DictConverter):
             path: typing.Union[str, None] = None,
             name: typing.Union[str, None] = None,
             content: typing.Union[str, bytes, None] = None,
+            b64_encoded: bool = False,
             **kwargs: typing.Any) -> None:
         # Normalize the path from POSIX-style to the system's style.
         if (path is not None):
@@ -146,20 +148,45 @@ class FileInfo(edq.util.json.DictConverter):
         self.content: typing.Union[str, bytes, None] = content
         """ The contents of this file. """
 
+        self.b64_encoded: bool = b64_encoded
+        """ Whether the content is a string encoded in Base64. """
+
         if ((self.path is None) and (self.content is None)):
             raise ValueError("File must have either path or content specified.")
 
-    def resolve_path(self, base_dir: str) -> None:
+    def resolve_path(self, base_dir: str, load_file: bool = True) -> None:
         """ Resolve this path relative to the given base dir. """
 
-        if ((self.path is None) or os.path.isabs(self.path)):
-            return
+        if ((self.path is not None) and (not os.path.isabs(self.path))):
+            self.path = os.path.abspath(os.path.join(base_dir, self.path))
 
-        self.path = os.path.abspath(os.path.join(base_dir, self.path))
+        if ((self.path is not None) and (self.content is None) and load_file):
+            self.content = edq.util.dirent.read_file_bytes(self.path)
+
+    def hash_content(self) -> str:
+        """
+        Compute a hash for the content present.
+        If no content is provided, use the path.
+        """
+
+        hash_content = self.content
+
+        if (self.b64_encoded and isinstance(hash_content, str)):
+            hash_content = edq.util.encoding.from_base64(hash_content)
+
+        if (hash_content is None):
+            hash_content = self.path
+
+        return edq.util.hash.sha256_hex(hash_content)
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         data = vars(self).copy()
-        del data['content']
+
+        # JSON does not support raw bytes, so we will need to base64 encode any binary content.
+        if (isinstance(self.content, bytes)):
+            data['content'] = edq.util.encoding.to_base64(self.content)
+            data['b64_encoded'] = True
+
         return data
 
     @classmethod
@@ -177,7 +204,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             url_path: typing.Union[str, None] = None,
             url_anchor: typing.Union[str, None] = None,
             parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, str]]], None] = None,
+            files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, typing.Any]]], None] = None,
             headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
             allow_redirects: typing.Union[bool, None] = None,
             response_code: int = http.HTTPStatus.OK,
@@ -422,9 +449,9 @@ class HTTPExchange(edq.util.json.DictConverter):
         if (not match):
             return False, hint
 
-        # Check file names, not file content.
-        query_filenames = {file.name for file in query.files}
-        target_filenames = {file.name for file in self.files}
+        # Check file names and hash contents.
+        query_filenames = {(file.name, file.hash_content()) for file in query.files}
+        target_filenames = {(file.name, file.hash_content()) for file in self.files}
         if (query_filenames != target_filenames):
             return False, f"File names do not match (query = {query_filenames}, target = {target_filenames})."
 
@@ -480,6 +507,12 @@ class HTTPExchange(edq.util.json.DictConverter):
         files = []
         for file_info in self.files:
             content = file_info.content
+
+            # Content is base64 encoded.
+            if (file_info.b64_encoded and isinstance(content, str)):
+                content = edq.util.encoding.from_base64(content)
+
+            # Content is missing and must be in a file.
             if (content is None):
                 content = open(file_info.path, 'rb')  # type: ignore[assignment,arg-type]  # pylint: disable=consider-using-with
 
@@ -551,6 +584,44 @@ class HTTPExchange(edq.util.json.DictConverter):
             return False, hint
 
         return True, None
+
+    def compute_relpath(self, http_exchange_extension: str = DEFAULT_HTTP_EXCHANGE_EXTENSION) -> str:
+        """ Create a consistent, semi-unique, and relative path for this exchange. """
+
+        url = self.get_url().strip()
+        parts = url.split('/')
+
+
+        if (url in ['', '/']):
+            filename = '_index_'
+            dirname = ''
+        else:
+            filename = parts[-1]
+
+            if (len(parts) > 1):
+                dirname = os.path.join(*parts[0:-1])
+            else:
+                dirname = ''
+
+        parameters = {}
+        for key in sorted(self.parameters.keys()):
+            parameters[key] = self.parameters[key]
+
+        # Treat files as params as well.
+        for file_info in self.files:
+            parameters[f"file-{file_info.name}"] = file_info.hash_content()
+
+        query = urllib.parse.urlencode(parameters)
+        if (query != ''):
+            # The query can get very long, so we may have to clip it.
+            query_text = edq.util.hash.clip_text(query, QUERY_CLIP_LENGTH)
+
+            # Note that the '?' is URL encoded.
+            filename += f"%3F{query_text}"
+
+        filename += f"_{self.method}{http_exchange_extension}"
+
+        return os.path.join(dirname, filename)
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return vars(self)
@@ -761,21 +832,8 @@ def make_request(method: str, url: str,
                 allow_redirects = options.get('allow_redirects', None))
 
     if ((output_dir is not None) and (exchange is not None)):
-        url = exchange.get_url()
-        if (url == ''):
-            url = '_index_'
-
-        path = os.path.abspath(os.path.join(output_dir, *url.split('/')))
-
-        query = urllib.parse.urlencode(exchange.parameters)
-        if (query != ''):
-            # The query can get very long, so we may have to clip it.
-            query_text = edq.util.hash.clip_text(query, QUERY_CLIP_LENGTH)
-
-            # Note that the '?' is URL encoded.
-            path += f"%3F{query_text}"
-
-        path += f"_{method}{http_exchange_extension}"
+        relpath = exchange.compute_relpath(http_exchange_extension = http_exchange_extension)
+        path = os.path.abspath(os.path.join(output_dir, relpath))
 
         edq.util.dirent.mkdir(os.path.dirname(path))
         edq.util.json.dump_path(exchange, path, indent = 4, sort_keys = False)
