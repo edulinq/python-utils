@@ -291,12 +291,18 @@ def read_file_bytes(raw_path: str) -> bytes:
         return file.read()
 
 def write_file_bytes(
-        raw_path: str, contents: typing.Union[bytes, None],
+        raw_path: str, contents: typing.Union[bytes, str, None],
         no_clobber: bool = False) -> None:
     """
     Write the contents of a file as bytes.
     If clobbering, any existing dirent will be removed before write.
     """
+
+    if (contents is None):
+        contents = b''
+
+    if (isinstance(contents, str)):
+        contents = contents.encode(DEFAULT_ENCODING)
 
     path = os.path.abspath(raw_path)
 
@@ -305,9 +311,6 @@ def write_file_bytes(
             raise ValueError(f"Destination of write bytes already exists: '{raw_path}'.")
 
         remove(path)
-
-    if (contents is None):
-        contents = b''
 
     with open(path, 'wb') as file:
         file.write(contents)
