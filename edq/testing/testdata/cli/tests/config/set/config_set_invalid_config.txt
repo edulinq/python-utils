@@ -1,0 +1,10 @@
+
+{
+    "cli": "edq.cli.config.set",
+    "arguments": [
+        "useruser@test.edulinq.org",
+    ],
+    "error": true
+}
+---
+builtins.ValueError: Invalid configuration option 'useruser@test.edulinq.org'. Configuration options must be provided in the format `<key>=<value>` when passed via the CLI.
