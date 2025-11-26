@@ -14,6 +14,7 @@ import socket
 import time
 import typing
 import urllib.parse
+import urllib3
 
 import requests
 import requests_toolbelt.multipart.decoder
@@ -102,6 +103,12 @@ _exchanges_out_dir: typing.Union[str, None] = None
 
 _exchanges_clean_func: typing.Union[str, None] = None
 """ If not None, all created exchanges (in HTTPExchange.make_request() and HTTPExchange.from_response()) will use this response modifier. """
+
+_module_makerequest_options: typing.Union[typing.Dict[str, typing.Any], None] = None
+"""
+Module-wide options for requests.request().
+These should generally only be used in testing.
+"""
 
 @typing.runtime_checkable
 class ResponseModifierFunction(typing.Protocol):
@@ -767,6 +774,7 @@ def make_request(method: str, url: str,
         additional_requests_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
         exchange_complete_func: typing.Union[HTTPExchangeComplete, None] = None,
         allow_redirects: typing.Union[bool, None] = None,
+        use_module_options: bool = True,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
     Make an HTTP request and return the response object and text body.
@@ -797,7 +805,13 @@ def make_request(method: str, url: str,
         parts = urllib.parse.urlparse(url)
         headers[ANCHOR_HEADER_KEY] = parts.fragment.lstrip('#')
 
-    options = additional_requests_options.copy()
+    options = {}
+
+    if (use_module_options and (_module_makerequest_options is not None)):
+        options.update(_module_makerequest_options)
+
+    options.update(additional_requests_options)
+
     options.update({
         'headers': headers,
         'files': files,
@@ -813,7 +827,7 @@ def make_request(method: str, url: str,
         options['data'] = data
 
     logging.debug("Making %s request: '%s' (options = %s).", method, url, options)
-    response = requests.request(method, url, **options)
+    response = requests.request(method, url, **options)  # pylint: disable=missing-timeout
 
     body = response.text
     logging.debug("Response:\n%s", body)
@@ -990,6 +1004,10 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
         action = 'store', type = str, default = None,
         help = 'If set, default all created exchanges to this modifier function.')
 
+    parser.add_argument('--https-no-verify', dest = 'https_no_verify',
+        action = 'store_true', default = False,
+        help = 'If set, skip HTTPS/SSL verification.')
+
 def init_from_args(
         parser: argparse.ArgumentParser,
         args: argparse.Namespace,
@@ -1006,3 +1024,12 @@ def init_from_args(
     global _exchanges_clean_func  # pylint: disable=global-statement
     if (args.http_exchanges_clean_func is not None):
         _exchanges_clean_func = args.http_exchanges_clean_func
+
+    global _module_makerequest_options  # pylint: disable=global-statement
+    if (args.https_no_verify):
+        _module_makerequest_options = {
+            'verify': False,
+        }
+
+        # Ignore insecure warnings.
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
