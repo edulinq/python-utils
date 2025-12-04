@@ -3,6 +3,7 @@ Utilities for network and HTTP.
 """
 
 import argparse
+import copy
 import email.message
 import errno
 import http.server
@@ -98,13 +99,13 @@ Some are sent automatically and we don't need to record (like content-length),
 and some are additional information we don't need.
 """
 
-_exchanges_out_dir: typing.Union[str, None] = None
+_exchanges_out_dir: typing.Union[str, None] = None  # pylint: disable=invalid-name
 """ If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
 
-_exchanges_clean_func: typing.Union[str, None] = None
+_exchanges_clean_func: typing.Union[str, None] = None  # pylint: disable=invalid-name
 """ If not None, all created exchanges (in HTTPExchange.make_request() and HTTPExchange.from_response()) will use this response modifier. """
 
-_module_makerequest_options: typing.Union[typing.Dict[str, typing.Any], None] = None
+_module_makerequest_options: typing.Union[typing.Dict[str, typing.Any], None] = None  # pylint: disable=invalid-name
 """
 Module-wide options for requests.request().
 These should generally only be used in testing.
@@ -674,6 +675,10 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         # Use a clean function (if one exists).
         if (_exchanges_clean_func is not None):
+            # Make a copy of the response to avoid cleaning functions modifying it.
+            # Note that this is not a very complete solution, since we can't rely on the deep copy getting everything right.
+            response = copy.deepcopy(response)
+
             modify_func = edq.util.pyimport.fetch(_exchanges_clean_func)
             body = modify_func(response, body)
 
@@ -990,6 +995,19 @@ def parse_query_string(text: str,
 
     return results
 
+def _disable_https_verification() -> None:
+    """ Disable checking the SSL certificate for HTTPS requests. """
+
+    global _module_makerequest_options  # pylint: disable=global-statement
+
+    if (_module_makerequest_options is None):
+        _module_makerequest_options = {}
+
+    _module_makerequest_options['verify'] = False
+
+    # Ignore insecure warnings.
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, typing.Any]) -> None:
     """
     Set common CLI arguments.
@@ -1025,11 +1043,5 @@ def init_from_args(
     if (args.http_exchanges_clean_func is not None):
         _exchanges_clean_func = args.http_exchanges_clean_func
 
-    global _module_makerequest_options  # pylint: disable=global-statement
     if (args.https_no_verify):
-        _module_makerequest_options = {
-            'verify': False,
-        }
-
-        # Ignore insecure warnings.
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        _disable_https_verification()
