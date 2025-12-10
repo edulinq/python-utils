@@ -178,12 +178,15 @@ def copy(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
     if (not exists(source)):
         raise ValueError(f"Source of copy does not exist: '{raw_source}'.")
 
+    if (contains_path(source, dest)):
+        raise ValueError(f"Source of copy cannot contain the destination. Source: '{raw_source}', Destination: '{raw_dest}'.")
+
+    if (contains_path(dest, source)):
+        raise ValueError(f"Destination of copy cannot contain the source. Destination: '{raw_dest}', Source: '{raw_source}'.")
+
     if (exists(dest)):
         if (no_clobber):
             raise ValueError(f"Destination of copy already exists: '{raw_dest}'.")
-
-        if (contains_path(dest, source)):
-            raise ValueError(f"Destination of copy cannot contain the source. Destination: '{raw_dest}', Source: '{raw_source}'.")
 
         remove(dest)
 

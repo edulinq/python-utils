@@ -524,6 +524,31 @@ class TestDirent(edq.testing.unittest.BaseTest):
 
                 self._check_existing_paths(temp_dir, checks)
 
+    def test_copy_special_matching_subdir_name(self):
+        """ Test copying a special case of copying a files into themselves with matching names. """
+
+        base_dir = edq.util.dirent.get_temp_dir()
+
+        target_dir = os.path.join(base_dir, 'already_exists')
+        target_file = os.path.join(target_dir, 'already_exists.txt')
+
+        edq.util.dirent.mkdir(target_dir)
+        edq.util.dirent.write_file(target_file, 'aaa')
+
+        try:
+            edq.util.dirent.copy(target_dir, target_file)
+            self.fail("Did not get expected error.")
+        except Exception as ex:
+            error_string = self.format_error_string(ex)
+            self.assertIn('Source of copy cannot contain the destination', error_string, 'Error is not as expected.')
+
+        try:
+            edq.util.dirent.copy(target_file, target_dir)
+            self.fail("Did not get expected error.")
+        except Exception as ex:
+            error_string = self.format_error_string(ex)
+            self.assertIn('Destination of copy cannot contain the source', error_string, 'Error is not as expected.')
+
     def test_same_base(self):
         """ Test checking for two paths pointing to the same dirent. """
 
