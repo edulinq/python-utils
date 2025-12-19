@@ -64,7 +64,7 @@ def run(args: typing.Union[argparse.Namespace, typing.Dict[str, typing.Any], Non
     if (len(test_dirs) == 0):
         test_dirs.append('.')
 
-    runner = unittest.TextTestRunner(verbosity = 3)
+    runner = unittest.TextTestRunner(verbosity = 3, failfast = args.get('fail_fast', False))
     test_cases = []
 
     for test_dir in test_dirs:

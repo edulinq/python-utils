@@ -14,14 +14,14 @@ import edq.util.net
 class ExchangeVerification(edq.testing.unittest.BaseTest):
     """ Verify that exchanges match their content. """
 
-def run(paths: typing.List[str], server: str) -> int:
+def run(paths: typing.List[str], server: str, fail_fast: bool = False) -> int:
     """ Run exchange verification. """
 
     exchange_paths = _collect_exchange_paths(paths)
 
     _attach_tests(exchange_paths, server)
 
-    runner = unittest.TextTestRunner(verbosity = 2)
+    runner = unittest.TextTestRunner(verbosity = 2, failfast = fail_fast)
     tests = unittest.defaultTestLoader.loadTestsFromTestCase(ExchangeVerification)
     results = runner.run(tests)
 
