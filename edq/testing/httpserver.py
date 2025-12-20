@@ -448,6 +448,9 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
     skip_test_exchanges_base: bool = False
     """ Skip test_exchanges_base. """
 
+    override_server_url: typing.Union[str, None] = None
+    """ If set, return this URL from get_server_url(). """
+
     _servers: typing.Dict[str, HTTPTestServer] = {}
     """ The active test servers. """
 
@@ -522,6 +525,9 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
     @classmethod
     def get_server_url(cls) -> str:
         """ Get the URL for this test's test server. """
+
+        if (cls.override_server_url is not None):
+            return cls.override_server_url
 
         server = cls.get_server()
 
