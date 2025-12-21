@@ -26,6 +26,8 @@ import edq.util.hash
 import edq.util.json
 import edq.util.pyimport
 
+_logger = logging.getLogger(__name__)
+
 DEFAULT_START_PORT: int = 30000
 DEFAULT_END_PORT: int = 40000
 DEFAULT_PORT_SEARCH_WAIT_SEC: float = 0.01
@@ -831,11 +833,11 @@ def make_request(method: str, url: str,
     else:
         options['data'] = data
 
-    logging.debug("Making %s request: '%s' (options = %s).", method, url, options)
+    _logger.debug("Making %s request: '%s' (options = %s).", method, url, options)
     response = requests.request(method, url, **options)  # pylint: disable=missing-timeout
 
     body = response.text
-    logging.debug("Response:\n%s", body)
+    _logger.debug("Response:\n%s", body)
 
     if (raise_for_status):
         # Handle 404s a little special, as their body may contain useful information.

@@ -13,6 +13,8 @@ import edq.util.dirent
 import edq.util.json
 import edq.util.net
 
+_logger = logging.getLogger(__name__)
+
 SERVER_THREAD_START_WAIT_SEC: float = 0.02
 SERVER_THREAD_REAP_WAIT_SEC: float = 0.15
 
@@ -109,7 +111,7 @@ class HTTPTestServer():
         self._http_server = http.server.HTTPServer(('', self.port), NestedHTTPHandler)
 
         if (self.verbose):
-            logging.info("Starting test server on port %d.", self.port)
+            _logger.info("Starting test server on port %d.", self.port)
 
         # Use a barrier to ensure that the server thread has started.
         server_startup_barrier = threading.Barrier(2)
@@ -126,7 +128,7 @@ class HTTPTestServer():
                 server._http_server.server_close()
 
             if (self.verbose):
-                logging.info("Stopping test server.")
+                _logger.info("Stopping test server.")
 
         self._thread = threading.Thread(target = _run_server, args = (self, server_startup_barrier))
         self._thread.start()
@@ -370,7 +372,7 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
             raise ValueError("Server has not been initialized.")
 
         if (self._verbose):
-            logging.debug("Incoming %s request: '%s'.", method, self.path)
+            _logger.debug("Incoming %s request: '%s'.", method, self.path)
 
         # Parse data from the request url and body.
         request_data, request_files = edq.util.net.parse_request_data(self.path, self.headers, self.rfile)

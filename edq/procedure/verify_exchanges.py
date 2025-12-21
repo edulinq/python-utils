@@ -11,6 +11,8 @@ import unittest
 import edq.testing.unittest
 import edq.util.net
 
+_logger = logging.getLogger(__name__)
+
 class ExchangeVerification(edq.testing.unittest.BaseTest):
     """ Verify that exchanges match their content. """
 
@@ -75,7 +77,7 @@ def _collect_exchange_paths(
             if (path.endswith(extension)):
                 final_paths.append(path)
             else:
-                logging.warning("Path does not look like an exchange file: '%s'.", path)
+                _logger.warning("Path does not look like an exchange file: '%s'.", path)
         else:
             dirent_paths = glob.glob(os.path.join(path, "**", f"*{extension}"), recursive = True)
             for dirent_path in dirent_paths:

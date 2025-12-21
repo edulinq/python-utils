@@ -2,6 +2,8 @@ import argparse
 import logging
 import typing
 
+_logger = logging.getLogger(__name__)
+
 DEFAULT_LOGGING_LEVEL: str = logging.getLevelName(logging.INFO)
 DEFAULT_LOGGING_FORMAT: str = '%(asctime)s [%(levelname)-8s] - %(filename)s:%(lineno)s -- %(message)s'
 
@@ -31,7 +33,7 @@ def init(level: str = DEFAULT_LOGGING_LEVEL, log_format: str = DEFAULT_LOGGING_F
         for warn_logger in warn_loggers:
             logging.getLogger(warn_logger).setLevel(logging.WARNING)
 
-    logging.trace("Logging initialized with level '%s'.", level)  # type: ignore[attr-defined]
+    _logger.trace("Logging initialized with level '%s'.", level)  # type: ignore[attr-defined]
 
 def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, typing.Any]) -> None:
     """
