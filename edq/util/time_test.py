@@ -105,3 +105,64 @@ class TestTime(edq.testing.unittest.BaseTest):
 
                 actual = a - b
                 self.assertEqual(expected, actual)
+
+    def test_timestamp_embedded(self):
+        """
+        Test pulling timestamps out of messages.
+        """
+
+        # [(input, expected, timezone), ...]
+        test_cases = [
+            (
+                "Some <timestamp:0> timestamp.",
+                "Some 1970-01-01 00:00 timestamp.",
+                edq.util.time.UTC,
+            ),
+            (
+                "Some <timestamp:1695873620000> timestamp.",
+                "Some 2023-09-28 04:00 timestamp.",
+                edq.util.time.UTC,
+            ),
+            (
+                "Some <timestamp:1695873620000> timestamp.",
+                "Some 2023-09-28 03:00 timestamp.",
+                datetime.timezone(datetime.timedelta(hours = -1)),
+            ),
+            (
+                "No timestamp here.",
+                "No timestamp here.",
+                edq.util.time.UTC,
+            ),
+            (
+                "Some <timestamp:nil> timestamp.",
+                "Some 1970-01-01 00:00 timestamp.",
+                edq.util.time.UTC,
+            ),
+            (
+                "Some <timestamp:-60000> timestamp.",
+                "Some 1969-12-31 23:59 timestamp.",
+                edq.util.time.UTC,
+            ),
+            (
+                "Some <timestamp:-60001> timestamp.",
+                "Some 1969-12-31 23:58 timestamp.",
+                edq.util.time.UTC,
+            ),
+            (
+                "Timestamp one <timestamp:0> and two <timestamp:-60000>.",
+                "Timestamp one 1970-01-01 00:00 and two 1969-12-31 23:59.",
+                edq.util.time.UTC,
+            ),
+            (
+                "Timestamp one <timestamp:0> and two <timestamp:0>.",
+                "Timestamp one 1970-01-01 00:00 and two 1970-01-01 00:00.",
+                edq.util.time.UTC,
+            ),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (text, expected, timezone) = test_case
+
+            with self.subTest(msg = f"Case {i} ('text')"):
+                actual = edq.util.time.Timestamp.convert_embedded(text, pretty = True, timezone = timezone)
+                self.assertEqual(expected, actual)

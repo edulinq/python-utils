@@ -1,7 +1,19 @@
 import datetime
+import re
 import time
+import typing
 
 PRETTY_SHORT_FORMAT: str = '%Y-%m-%d %H:%M'
+"""
+The format string for a pretty timestamp.
+See: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
+"""
+
+DEFAULT_EMBEDDED_PATTERN: str = r'<timestamp:(-?\d+|nil)>'
+""" A regex for matching an embedded timestamp. """
+
+UTC: datetime.timezone = datetime.timezone.utc
+""" A shortcut for the UTC timezone. """
 
 class Duration(int):
     """
@@ -35,25 +47,29 @@ class Timestamp(int):
 
         return Duration(self - other)
 
-    def to_pytime(self, timezone: datetime.timezone = datetime.timezone.utc) -> datetime.datetime:
-        """ Convert this timestamp to a Python datetime in the given timezone (UTC by default). """
+    def to_pytime(self, timezone: typing.Union[datetime.timezone, None] = None) -> datetime.datetime:
+        """ Convert this timestamp to a Python datetime in the given timezone (local by default). """
+
+        if (timezone is None):
+            timezone = get_local_timezone()
 
         return datetime.datetime.fromtimestamp(self / 1000, timezone)
 
     def to_local_pytime(self) -> datetime.datetime:
         """ Convert this timestamp to a Python datetime in the system timezone. """
 
-        local_timezone = datetime.datetime.now().astimezone().tzinfo
-        if ((local_timezone is None) or (not isinstance(local_timezone, datetime.timezone))):
-            raise ValueError("Could not discover local timezone.")
+        return self.to_pytime(timezone = get_local_timezone())
 
-        return self.to_pytime(timezone = local_timezone)
-
-    def pretty(self, short: bool = False, timezone: datetime.timezone = datetime.timezone.utc) -> str:
+    def pretty(self, short: bool = False, timezone: typing.Union[datetime.timezone, None] = None) -> str:
         """
         Get a "pretty" string representation of this timestamp.
         There is no guarantee that this representation can be parsed back to its original form.
+
+        If no timezone is provided, the system's local timezone will be used.
         """
+
+        if (timezone is None):
+            timezone = get_local_timezone()
 
         pytime = self.to_pytime(timezone = timezone)
 
@@ -73,3 +89,44 @@ class Timestamp(int):
         """ Get a Timestamp that represents the current moment. """
 
         return Timestamp(time.time() * 1000)
+
+    @staticmethod
+    def convert_embedded(
+            text: str,
+            embedded_pattern: str = DEFAULT_EMBEDDED_PATTERN,
+            pretty: bool = False,
+            short: bool = True,
+            timezone: typing.Union[datetime.timezone, None] = None,
+            ) -> str:
+        """
+        Look for any timestamps embedded in the text and replace them.
+        """
+
+        while True:
+            match = re.search(embedded_pattern, text)
+            if (match is None):
+                break
+
+            initial_text = match.group(0)
+            timestamp_text = match.group(1)
+
+            timestamp = Timestamp()
+            if (timestamp_text != 'nil'):
+                timestamp = Timestamp(int(timestamp_text))
+
+            replacement_text = str(timestamp)
+            if (pretty):
+                replacement_text = timestamp.pretty(short = short, timezone = timezone)
+
+            text = text.replace(initial_text, replacement_text)
+
+        return text
+
+def get_local_timezone() -> datetime.timezone:
+    """ Get the local (system) timezone or raise an exception. """
+
+    local_timezone = datetime.datetime.now().astimezone().tzinfo
+    if ((local_timezone is None) or (not isinstance(local_timezone, datetime.timezone))):
+        raise ValueError("Could not discover local timezone.")
+
+    return local_timezone
