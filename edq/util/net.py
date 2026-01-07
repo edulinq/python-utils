@@ -105,7 +105,17 @@ _exchanges_out_dir: typing.Union[str, None] = None  # pylint: disable=invalid-na
 """ If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
 
 _exchanges_clean_func: typing.Union[str, None] = None  # pylint: disable=invalid-name
-""" If not None, all created exchanges (in HTTPExchange.make_request() and HTTPExchange.from_response()) will use this response modifier. """
+"""
+If not None, all created exchanges (in HTTPExchange.make_request() and HTTPExchange.from_response()) will use this response modifier.
+This function will be called with the response and response body before parsing the rest of the data to build the exchange.
+"""
+
+_exchanges_finalize_func: typing.Union[str, None] = None  # pylint: disable=invalid-name
+"""
+If not None, all created exchanges (in HTTPExchange.make_request()) will use this finalize function.
+This function will be called with the created exchange right after construction and before passing back to the caller
+(or writing).
+"""
 
 _module_makerequest_options: typing.Union[typing.Dict[str, typing.Any], None] = None  # pylint: disable=invalid-name
 """
@@ -223,6 +233,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             response_body: typing.Union[str, dict, list, None] = None,
             source_path: typing.Union[str, None] = None,
             response_modifier: typing.Union[str, None] = None,
+            finalize: typing.Union[str, None] = None,
             extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             **kwargs: typing.Any) -> None:
         method = str(method).upper()
@@ -318,6 +329,12 @@ class HTTPExchange(edq.util.json.DictConverter):
         """
         This function reference will be used to modify responses (in HTTPExchange.make_request() and HTTPExchange.from_response())
         before sent back to the caller.
+        This reference must be importable via edq.util.pyimport.fetch().
+        """
+
+        self.finalize: typing.Union[str, None] = finalize
+        """
+        This function reference will be used to finalize echanges before sent back to the caller.
         This reference must be importable via edq.util.pyimport.fetch().
         """
 
@@ -716,7 +733,16 @@ class HTTPExchange(edq.util.json.DictConverter):
             'allow_redirects': allow_redirects,
         }
 
-        return HTTPExchange(**data)
+        exchange = HTTPExchange(**data)
+
+        # Use a finalize function (if one exists).
+        if (_exchanges_finalize_func is not None):
+            finalize_func = edq.util.pyimport.fetch(_exchanges_finalize_func)
+
+            exchange = finalize_func(exchange)
+            exchange.finalize = _exchanges_finalize_func
+
+        return exchange
 
 @typing.runtime_checkable
 class HTTPExchangeComplete(typing.Protocol):
@@ -1024,6 +1050,10 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
         action = 'store', type = str, default = None,
         help = 'If set, default all created exchanges to this modifier function.')
 
+    parser.add_argument('--http-exchanges-finalize-func', dest = 'http_exchanges_finalize_func',
+        action = 'store', type = str, default = None,
+        help = 'If set, default all created exchanges to this finalize.')
+
     parser.add_argument('--https-no-verify', dest = 'https_no_verify',
         action = 'store_true', default = False,
         help = 'If set, skip HTTPS/SSL verification.')
@@ -1044,6 +1074,10 @@ def init_from_args(
     global _exchanges_clean_func  # pylint: disable=global-statement
     if (args.http_exchanges_clean_func is not None):
         _exchanges_clean_func = args.http_exchanges_clean_func
+
+    global _exchanges_finalize_func  # pylint: disable=global-statement
+    if (args.http_exchanges_finalize_func is not None):
+        _exchanges_finalize_func = args.http_exchanges_finalize_func
 
     if (args.https_no_verify):
         _disable_https_verification()
