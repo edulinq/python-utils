@@ -1,6 +1,7 @@
 import typing
 import unittest
 
+import edq.util.dirent
 import edq.util.json
 import edq.util.reflection
 
@@ -67,6 +68,23 @@ class BaseTest(unittest.TestCase):
             message = FORMAT_STR % (a_json, b_json)
 
         super().assertListEqual(a, b, msg = message)
+
+    def assertFileHashEqual(self, a: str, b: str) -> None:  # pylint: disable=invalid-name
+        """
+        Assert that the hash of two files matches.
+        Will fail if either path does not exist.
+        """
+
+        if (not edq.util.dirent.exists(a)):
+            self.fail(f"File does not exist: '{a}'.")
+
+        if (not edq.util.dirent.exists(b)):
+            self.fail(f"File does not exist: '{b}'.")
+
+        a_hash = edq.util.dirent.hash_file(a)
+        b_hash = edq.util.dirent.hash_file(b)
+
+        self.assertEqual(a_hash, b_hash, msg = f"Hash mismatch: '{a}' ({a_hash}) vs '{b}' ({b_hash}).")
 
     def format_error_string(self, ex: typing.Union[BaseException, None]) -> str:
         """

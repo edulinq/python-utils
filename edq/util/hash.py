@@ -1,11 +1,11 @@
 import hashlib
 import typing
 
-import edq.util.dirent
+import edq.util.constants
 
 DEFAULT_CLIP_HASH_LENGTH: int = 8
 
-def sha256_hex(payload: typing.Any, encoding: str = edq.util.dirent.DEFAULT_ENCODING) -> str:
+def sha256_hex(payload: typing.Any, encoding: str = edq.util.constants.DEFAULT_ENCODING) -> str:
     """ Compute and return the hex string of the SHA3-256 encoding of the payload. """
 
     if (isinstance(payload, str)):

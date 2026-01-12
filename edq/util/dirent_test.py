@@ -1,4 +1,5 @@
 import os
+import sys
 
 import edq.testing.unittest
 import edq.util.dirent
@@ -916,6 +917,75 @@ class TestDirent(edq.testing.unittest.BaseTest):
 
         self._check_nonexisting_paths(temp_dir, remove_relpaths)
         self._check_existing_paths(temp_dir, expected_paths)
+
+    def test_tree_base(self):
+        """
+        Test getting a recursive tree for a directory.
+        """
+
+        temp_dir = self._prep_temp_dir()
+
+        expected = {
+            "edq_test_dirent": {
+                "a.txt": "87428fc522803d31065e7bce3cf03fe475096631e5e07bbd7a0fde60c4cf25c7",
+                "dir_1": {
+                    "b.txt": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f",
+                    "dir_2": {
+                        "c.txt": "a3a5e715f0cc574a73c3f9bebb6bc24f32ffd5b67b387244c2c909da779a1478"
+                    }
+                },
+                "dir_empty": {},
+                "file_empty": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+                "symlink_a.txt": "18b7cb099a9ea3f50ba899b5ba81e0d377a5f3b16f8f6eeb8b3e58cd4692b993",
+                "symlink_dir_1": {
+                    "b.txt": "0263829989b6fd954f72baaf2fc64bc2e2f01d692d4de72986ea808f6e99813f",
+                    "dir_2": {
+                        "c.txt": "a3a5e715f0cc574a73c3f9bebb6bc24f32ffd5b67b387244c2c909da779a1478"
+                    }
+                },
+                "symlink_dir_empty": {},
+                "symlink_file_empty": "d6c5062a84a73af45c634ede745be0d3bde0c3e676fe6a2732ca38e3e4fb5f37"
+            }
+        }
+
+        # Windows will have different hashes.
+        if (sys.platform == 'win32'):
+            expected = {
+                "edq_test_dirent": {
+                    "a.txt": "8e4621379786ef42a4fec155cd525c291dd7db3c1fde3478522f4f61c03fd1bd",
+                    "dir_1": {
+                        "b.txt": "679e273f78fc8f8ba114db23c2dce80cc77c91083939825ca830152f2f080d08",
+                        "dir_2": {
+                            "c.txt": "ef1fac987a48a7c02176f7e1c2d0e5cbda826c9558290ba153c90ea16d5d5a96"
+                        }
+                    },
+                    "dir_empty": {},
+                    "file_empty": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+                    "symlink_a.txt": "abc123",
+                    "symlink_dir_1": {
+                        "b.txt": "679e273f78fc8f8ba114db23c2dce80cc77c91083939825ca830152f2f080d08",
+                        "dir_2": {
+                            "c.txt": "ef1fac987a48a7c02176f7e1c2d0e5cbda826c9558290ba153c90ea16d5d5a96"
+                        }
+                    },
+                    "symlink_dir_empty": {},
+                    "symlink_file_empty": "abc123"
+                }
+            }
+
+        actual = edq.util.dirent.tree(temp_dir, hash_files = True)
+
+        # Normalize the top-level key.
+        key = list(actual.keys())[0]
+        actual['edq_test_dirent'] = actual.pop(key)
+
+        # Normalize symlinks.
+        expected['edq_test_dirent']['symlink_a.txt'] = 'abc123'
+        expected['edq_test_dirent']['symlink_file_empty'] = 'abc123'
+        actual['edq_test_dirent']['symlink_a.txt'] = 'abc123'
+        actual['edq_test_dirent']['symlink_file_empty'] = 'abc123'
+
+        self.assertJSONEqual(expected, actual)
 
     def _prep_temp_dir(self):
         return create_test_dir('edq_test_dirent_')
