@@ -1,0 +1,10 @@
+{
+    "cli": "edq.cli.config.set",
+    "arguments": [
+        "user=user@test.edulinq.org",
+        "--global",
+        "--config-global", "__TEMP_DIR__(edq-config.json)",
+    ],
+    "work_dir": "__TEMP_DIR__()"
+}
+---

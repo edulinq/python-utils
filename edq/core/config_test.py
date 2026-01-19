@@ -5,9 +5,9 @@ import edq.core.config
 import edq.util.dirent
 import edq.util.json
 
-def creat_test_dir(temp_dir_prefix: str) -> str:
+def create_test_dir(temp_dir_prefix: str) -> str:
     """
-    Creat a temp dir and populate it with dirents for testing.
+    Create a temp dir and populate it with dirents for testing.
 
     This test data directory is laid out as:
     .
@@ -32,6 +32,7 @@ def creat_test_dir(temp_dir_prefix: str) -> str:
     │   └── nest1
     │       ├── nest2a
     │       └── nest2b
+    │           ├── config.json
     │           └── edq-config.json
     ├── old-name
     │   ├── config.json
@@ -83,6 +84,10 @@ def creat_test_dir(temp_dir_prefix: str) -> str:
         {"user": "user@test.edulinq.org"},
         os.path.join(nested_dir_path, "nest1", "nest2b", edq.core.config.DEFAULT_CONFIG_FILENAME),
     )
+    edq.util.json.dump_path(
+        {"user": "user@test.edulinq.org"},
+        os.path.join(nested_dir_path, "nest1", "nest2b", "config.json"),
+    )
 
     simple_config_dir_path = os.path.join(temp_dir, "simple")
     edq.util.dirent.mkdir(simple_config_dir_path)
@@ -108,13 +113,14 @@ class TestConfig(edq.testing.unittest.BaseTest):
         Test that configuration files are loaded correctly from the file system with the expected tier.
         """
 
-        temp_dir = creat_test_dir(temp_dir_prefix = "edq-test-config-get-tiered-config-")
+        temp_dir = create_test_dir(temp_dir_prefix = "edq-test-config-get-tiered-config-")
 
         # [(work directory, extra arguments, expected config, expected source, error substring), ...]
         test_cases = [
             # No Config
             (
                 "empty-dir",
+                {},
                 {},
                 {},
                 {},
@@ -128,7 +134,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "empty-dir",
                 {
                     "cli_arguments": {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
                 {
@@ -140,6 +146,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
+                {
+                      edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
 
@@ -148,11 +157,14 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "empty-dir",
                 {
                     "cli_arguments": {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
                 {},
                 {},
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
 
@@ -161,9 +173,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "empty-dir",
                 {
                     "cli_arguments": {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty-key", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "empty-key", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
+                {},
                 {},
                 {},
                 "Found an empty configuration option key associated with the value 'user@test.edulinq.org'.",
@@ -174,11 +187,14 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "empty-dir",
                 {
                     "cli_arguments": {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "dir-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "dir-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
                 {},
                 {},
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "dir-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
 
@@ -187,11 +203,14 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "empty-dir",
                 {
                     "cli_arguments": {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty-dir", "non-existent-config.json"),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "empty-dir", "non-existent-config.json"),
                     },
                 },
                 {},
                 {},
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "empty-dir", "non-existent-config.json"),
+                },
                 None,
             ),
 
@@ -200,9 +219,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "empty-dir",
                 {
                     "cli_arguments": {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "malformed", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "malformed", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
+                {},
                 {},
                 {},
                 "Failed to read JSON file",
@@ -213,7 +233,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "empty-dir",
                 {
                     "cli_arguments": {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
                         edq.core.config.IGNORE_CONFIGS_KEY: [
                             "pass",
                         ],
@@ -228,6 +248,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
+                {
+
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
 
@@ -236,7 +260,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "empty-dir",
                 {
                     "cli_arguments": {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                         edq.core.config.IGNORE_CONFIGS_KEY: [
                             "non-existing-option",
                         ],
@@ -250,6 +274,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         label = edq.core.config.CONFIG_SOURCE_GLOBAL,
                         path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
+                },
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 None,
             ),
@@ -269,6 +296,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
+                {
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
 
@@ -276,7 +306,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 "custom-name",
                 {
-                    "config_filename": "custom-edq-config.json",
+                    edq.core.config.FILENAME_KEY: "custom-edq-config.json",
                 },
                 {
                     "user": "user@test.edulinq.org",
@@ -286,6 +316,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         label = edq.core.config.CONFIG_SOURCE_LOCAL,
                         path = os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                     ),
+                },
+                {
+                    edq.core.config.FILENAME_KEY: "custom-edq-config.json",
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "custom-name","custom-edq-config.json"),
                 },
                 None,
             ),
@@ -305,6 +339,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "old-name", "config.json"),
                     ),
                 },
+                {
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "old-name", "config.json"),
+                },
                 None,
             ),
 
@@ -321,6 +358,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "nested", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
+                {
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "nested", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
 
@@ -332,6 +372,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {},
                 {},
+                {},
                 None,
             ),
 
@@ -341,12 +382,16 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 {},
+                {
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
 
             # Empty Key Config JSON
             (
                 "empty-key",
+                {},
                 {},
                 {},
                 {},
@@ -359,12 +404,14 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 {},
+                {},
                 None,
             ),
 
             # Malformed Config JSON
             (
                 "malformed",
+                {},
                 {},
                 {},
                 {},
@@ -390,6 +437,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
+                {
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
 
@@ -412,6 +462,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
+                {
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME)
+                },
                 None,
             ),
 
@@ -429,6 +482,12 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     "user": edq.core.config.ConfigSource(
                         label = edq.core.config.CONFIG_SOURCE_LOCAL,
                         path = os.path.join(temp_dir, "nested", "nest1", "nest2b", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    ),
+                },
+                {
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(
+                        temp_dir, "nested", "nest1", "nest2b",
+                        edq.core.config.DEFAULT_CONFIG_FILENAME,
                     ),
                 },
                 None,
@@ -461,6 +520,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "nested", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
+                {},
                 None,
             ),
 
@@ -484,6 +544,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
+                {},
                 None,
             ),
 
@@ -497,6 +558,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         ],
                     },
                 },
+                {},
                 {},
                 {},
                 None,
@@ -514,6 +576,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {},
                 {},
+                {},
                 "Found an empty configuration option key associated with the value 'user@test.edulinq.org'.",
             ),
 
@@ -527,6 +590,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         ],
                     },
                 },
+                {},
                 {},
                 {},
                 "IsADirectoryError",
@@ -544,6 +608,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {},
                 {},
+                {},
                 "FileNotFoundError",
             ),
 
@@ -557,6 +622,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         ],
                     },
                 },
+                {},
                 {},
                 {},
                 "Failed to read JSON file",
@@ -584,6 +650,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
+                {},
                 None,
             ),
 
@@ -609,6 +676,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
+                {},
                 None,
             ),
 
@@ -631,6 +699,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
+                {},
                 None,
             ),
 
@@ -644,6 +713,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         ],
                     },
                 },
+                {},
                 {},
                 {},
                 "Found an empty configuration option key associated with the value 'user@test.edulinq.org'.",
@@ -665,6 +735,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
+                {},
                 None,
             ),
 
@@ -684,6 +755,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "pass": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
+                {},
                 None,
             ),
 
@@ -697,6 +769,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         ],
                     },
                 },
+                {},
                 {},
                 {},
                 "Invalid configuration option 'useruser@test.edulinq.org'.",
@@ -722,6 +795,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
+                {},
                 None,
             ),
 
@@ -744,6 +818,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
+                {},
                 None,
             ),
 
@@ -754,7 +829,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 "simple",
                 {
                     "cli_arguments": {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
                 {
@@ -765,6 +840,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         label = edq.core.config.CONFIG_SOURCE_LOCAL,
                         path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
+                },
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 None,
             ),
@@ -777,7 +856,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         edq.core.config.CONFIG_PATHS_KEY: [
                             os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                         ],
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
                 {
@@ -788,6 +867,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
                         path = os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     ),
+                },
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 None,
             ),
@@ -800,7 +882,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         edq.core.config.CONFIGS_KEY: [
                             "user=user@test.edulinq.org",
                         ],
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
                 {
@@ -808,6 +890,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
+                },
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 None,
             ),
@@ -831,6 +916,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         path = os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                     ),
                 },
+                {
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
 
@@ -849,6 +937,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
+                },
+                {
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 None,
             ),
@@ -872,6 +963,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
+                {},
                 None,
             ),
 
@@ -886,7 +978,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         edq.core.config.CONFIG_PATHS_KEY: [
                             os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                         ],
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
                 {
@@ -894,6 +986,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
+                },
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 None,
             ),
@@ -906,7 +1001,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         edq.core.config.CONFIGS_KEY: [
                             "user=user@test.edulinq.org",
                         ],
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
                 {
@@ -914,6 +1009,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
+                },
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 None,
             ),
@@ -926,7 +1025,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         edq.core.config.CONFIG_PATHS_KEY: [
                             os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                         ],
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
                 {
@@ -937,6 +1036,10 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         label = edq.core.config.CONFIG_SOURCE_CLI_FILE,
                         path = os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                     ),
+                },
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
                 },
                 None,
             ),
@@ -960,6 +1063,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     "user": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
+                {
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
 
@@ -974,7 +1080,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                         edq.core.config.CONFIGS_KEY: [
                             "pass=password1234",
                         ],
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     },
                 },
                 {
@@ -988,23 +1094,27 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     ),
                     "pass": edq.core.config.ConfigSource(label = edq.core.config.CONFIG_SOURCE_CLI),
                 },
+                {
+                    edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                },
                 None,
             ),
         ]
 
         for (i, test_case) in enumerate(test_cases):
-            (test_work_dir, extra_args, expected_config, expected_source, error_substring) = test_case
+            (test_work_dir, extra_args, expected_config, expected_source, expected_config_params, error_substring) = test_case
 
             with self.subTest(msg = f"Case {i} ('{test_work_dir}'):"):
                 cli_args = extra_args.get("cli_arguments", None)
                 if cli_args is None:
                     extra_args["cli_arguments"] = {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME)
+                        edq.core.config.GLOBAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME)
                     }
                 else:
-                    cli_global_config_path = cli_args.get(edq.core.config.GLOBAL_CONFIG_KEY, None)
+                    cli_global_config_path = cli_args.get(edq.core.config.GLOBAL_CONFIG_PATH_KEY, None)
                     if cli_global_config_path is None:
-                        extra_args["cli_arguments"][edq.core.config.GLOBAL_CONFIG_KEY] = os.path.join(
+                        extra_args["cli_arguments"][edq.core.config.GLOBAL_CONFIG_PATH_KEY] = os.path.join(
                             temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME
                         )
 
@@ -1012,12 +1122,26 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 if (cutoff is None):
                     extra_args["local_config_root_cutoff"] = temp_dir
 
+                global_file_used = expected_config_params.get(edq.core.config.GLOBAL_CONFIG_PATH_KEY, None)
+                if (global_file_used is None):
+                    expected_config_params[edq.core.config.GLOBAL_CONFIG_PATH_KEY] =  os.path.join(
+                        temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME
+                    )
+
+                local_file_used = expected_config_params.get(edq.core.config.LOCAL_CONFIG_PATH_KEY, None)
+                if (local_file_used is None):
+                    expected_config_params[edq.core.config.LOCAL_CONFIG_PATH_KEY] = None
+
+                file_name_used = expected_config_params.get(edq.core.config.FILENAME_KEY, None)
+                if (file_name_used is None):
+                    expected_config_params[edq.core.config.FILENAME_KEY] = edq.core.config.DEFAULT_CONFIG_FILENAME
+
                 previous_work_directory = os.getcwd()
                 initial_work_directory = os.path.join(temp_dir, test_work_dir)
                 os.chdir(initial_work_directory)
 
                 try:
-                    (actual_config, actual_sources) = edq.core.config.get_tiered_config(**extra_args)
+                    (actual_config, actual_sources, actual_config_params) = edq.core.config.get_tiered_config(**extra_args)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
 
@@ -1027,7 +1151,6 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     self.assertIn(error_substring, error_string, 'Error is not as expected.')
 
                     continue
-
                 finally:
                     os.chdir(previous_work_directory)
 
@@ -1036,3 +1159,113 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
                 self.assertJSONDictEqual(expected_config, actual_config)
                 self.assertJSONDictEqual(expected_source, actual_sources)
+                self.assertJSONDictEqual(expected_config_params, actual_config_params)
+
+    def test_write_config_base(self):
+        """
+        Test that the given config is written correctly and paths are created correctly.
+        """
+
+        # [(write config arguments, expected result, error substring), ...]
+        test_cases = [
+            # Non-exisiting Path
+            (
+                {
+                    'file_path': os.path.join('non-exisiting-path', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_write': {'user': 'user@test.edulinq.org'},
+                },
+                {
+                    'path': os.path.join('non-exisiting-path', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {'user': 'user@test.edulinq.org'},
+                },
+                None,
+            ),
+
+            # Directory Path
+            (
+                {
+                    'file_path': os.path.join("dir-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_write': {'user': 'user@test.edulinq.org'},
+                },
+                {},
+                "Cannot open JSON file, expected a file but got a directory",
+            ),
+
+            # Empty Config
+            (
+                {
+                    'file_path': os.path.join('empty', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_write': {'user': 'user@test.edulinq.org'},
+                },
+                {
+                    'path': os.path.join('empty', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {'user': 'user@test.edulinq.org'},
+                },
+                None,
+            ),
+
+            # Non-empty Config
+            (
+                {
+                    'file_path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_write': {'pass': 'password1234'},
+                },
+                {
+                    'path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {'user': 'user@test.edulinq.org', 'pass': 'password1234'},
+                },
+                None,
+            ),
+
+            # Non-empty Config (Overwrite)
+            (
+                {
+                    'file_path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_write': {'user': 'admin@test.edulinq.org'},
+                },
+                {
+                    'path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {'user': 'admin@test.edulinq.org'},
+                },
+                None,
+            ),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            arguments, expected_result, error_substring = test_case
+
+            with self.subTest(msg = f"Case {i}"):
+                temp_dir = create_test_dir(temp_dir_prefix = "edq-test-write-config-")
+
+                arguments['file_path'] = os.path.join(temp_dir, arguments['file_path'])
+
+                previous_work_directory = os.getcwd()
+                os.chdir(temp_dir)
+
+                try:
+                    edq.core.config.write_config_to_file(**arguments)
+                except Exception as ex:
+                    error_string = self.format_error_string(ex)
+
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{error_string}'.")
+
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
+                    continue
+                finally:
+                    os.chdir(previous_work_directory)
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
+                write_file_path = expected_result["path"]
+                write_file_path = os.path.join(temp_dir, write_file_path)
+
+                if (not edq.util.dirent.exists(write_file_path)):
+                    self.fail(f"Expected file does not exist at path: {write_file_path}")
+
+                data_actual = edq.util.json.load_path(write_file_path)
+                data_expected = expected_result['data']
+
+                self.assertJSONDictEqual(data_actual, data_expected)
