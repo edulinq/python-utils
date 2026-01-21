@@ -166,3 +166,45 @@ class TestTime(edq.testing.unittest.BaseTest):
             with self.subTest(msg = f"Case {i} ('text')"):
                 actual = edq.util.time.Timestamp.convert_embedded(text, pretty = True, timezone = timezone)
                 self.assertEqual(expected, actual)
+
+    def test_timestamp_guess(self):
+        """ Test guessing timestamps from values. """
+
+        # [(value, expected), ...]
+        test_cases = [
+            # Empty
+            (None, edq.util.time.Timestamp(0)),
+            ('', edq.util.time.Timestamp(0)),
+
+            # Self
+            (edq.util.time.Timestamp(123), edq.util.time.Timestamp(123)),
+
+            # Int
+            (0, edq.util.time.Timestamp(0)),
+            (123, edq.util.time.Timestamp(123000)),  # Secs
+            (1230000000, edq.util.time.Timestamp(1230000000000)),  # Secs
+            (1230000000000, edq.util.time.Timestamp(1230000000000)),  # MSecs
+            (1230000000000000, edq.util.time.Timestamp(1230000000000)),  # USecs
+            (1230000000000000000, edq.util.time.Timestamp(1230000000000)),  # NSecs
+            ('1230000000', edq.util.time.Timestamp(1230000000000)),
+
+            # Float
+            (1230000000.0, edq.util.time.Timestamp(1230000000000)),
+            ('1230000000.0', edq.util.time.Timestamp(1230000000000)),
+
+            # String
+            ('2023-09-28T04:00:20Z', edq.util.time.Timestamp(1695873620000)),
+            ('2023-09-28T04:00:20+00:00', edq.util.time.Timestamp(1695873620000)),
+            ('2023-09-28T13:10:44+00:00', edq.util.time.Timestamp(1695906644000)),
+            ('2023-09-28T04:00:20.683684Z', edq.util.time.Timestamp(1695873620000)),
+            ('2023-09-28T04:00:20.683684+00:00', edq.util.time.Timestamp(1695873620000)),
+            ('2023-09-28T13:10:44.432050+00:00', edq.util.time.Timestamp(1695906644000)),
+            ('2023-09-28T13:10:44.43205+00:00', edq.util.time.Timestamp(1695906644000)),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (value, expected) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{value}'):"):
+                actual = edq.util.time.Timestamp.guess(value)
+                self.assertEqual(expected, actual)

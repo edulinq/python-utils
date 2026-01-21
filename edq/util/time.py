@@ -15,6 +15,15 @@ DEFAULT_EMBEDDED_PATTERN: str = r'<timestamp:(-?\d+|nil)>'
 UTC: datetime.timezone = datetime.timezone.utc
 """ A shortcut for the UTC timezone. """
 
+UNIXTIME_THRESHOLD_SECS: int = int(1e10)
+""" Epoch time guessing threshold for seconds. """
+
+UNIXTIME_THRESHOLD_MSECS: int = int(1e13)
+""" Epoch time guessing threshold for milliseconds. """
+
+UNIXTIME_THRESHOLD_USECS: int = int(1e16)
+""" Epoch time guessing threshold for nanoseconds. """
+
 class Duration(int):
     """
     A Duration represents some length in time in milliseconds.
@@ -121,6 +130,76 @@ class Timestamp(int):
             text = text.replace(initial_text, replacement_text)
 
         return text
+
+    @staticmethod
+    def guess(value: typing.Any) -> 'Timestamp':
+        """
+        Try to parse a timestamp out of a value.
+        Empty values will get zero timestamps.
+        Purely digit strings will be converted to ints and treated as UNIX times.
+        Floats will be considered UNIX epoch seconds and converted to milliseconds.
+        Other strings will be attempted to be parsed with datetime.fromisoformat().
+        """
+
+        raw_value = value
+
+        # Empty timestamp.
+        if (value is None):
+            return Timestamp(0)
+
+        # Check for already parsed timestamps.
+        if (isinstance(value, Timestamp)):
+            return value
+
+        # Floats are assumed to be epoch seconds.
+        if (isinstance(value, float)):
+            value = int(1000 * value)
+
+        # At this point, we only want to be dealing with strings or ints.
+        if (not isinstance(value, (int, str))):
+            value = str(value)
+
+        # Check for string specifics.
+        if (isinstance(value, str)):
+            # Check for empty strings.
+            value = value.strip()
+            if (len(value) == 0):
+                return Timestamp(0)
+
+            # Check for digit or float strings.
+            if (re.match(r'^\d+\.\d+$', value) is not None):
+                value = int(1000 * float(value))
+            elif (re.match(r'^\d+$', value) is not None):
+                value = int(value)
+
+        if (isinstance(value, int)):
+		    # Use reasonable thresholds to guess the units of the value (sec, msec, usec, nsec).
+            if (value < UNIXTIME_THRESHOLD_SECS):
+                # Time is in seconds.
+                return Timestamp(value * 1000)
+            elif (value < UNIXTIME_THRESHOLD_MSECS):
+                # Time is in milliseconds.
+                return Timestamp(value)
+            elif (value < UNIXTIME_THRESHOLD_USECS):
+                # Time is in microseconds.
+                return Timestamp(value / 1000)
+            else:
+                # Time is in nanoseconds.
+                return Timestamp(value / 1000 / 1000)
+
+        # Try to convert from an ISO string.
+
+        # Parse out some cases that Python <= 3.10 cannot deal with.
+        # This will remove fractional seconds.
+        value = re.sub(r'Z$', '+00:00', value)
+        value = re.sub(r'(\d\d:\d\d)(\.\d+)', r'\1', value)
+
+        try:
+            value = datetime.datetime.fromisoformat(value)
+        except Exception as ex:
+            raise ValueError(f"Failed to parse timestamp string '{raw_value}'.") from ex
+
+        return Timestamp.from_pytime(value)
 
 def get_local_timezone() -> datetime.timezone:
     """ Get the local (system) timezone or raise an exception. """
