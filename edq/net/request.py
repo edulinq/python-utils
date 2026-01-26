@@ -1,3 +1,4 @@
+import atexit
 import http
 import logging
 import os
@@ -19,6 +20,9 @@ _logger = logging.getLogger(__name__)
 DEFAULT_REQUEST_TIMEOUT_SECS: float = 10.0
 """ Default timeout for an HTTP request. """
 
+_exchanges_cache_dir: typing.Union[str, None] = None  # pylint: disable=invalid-name
+""" If not None, all requests made via make_request() will attempt to look in this directory for a matching exchange first. """
+
 _exchanges_out_dir: typing.Union[str, None] = None  # pylint: disable=invalid-name
 """ If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
 
@@ -27,6 +31,9 @@ _module_makerequest_options: typing.Union[typing.Dict[str, typing.Any], None] = 
 Module-wide options for requests.request().
 These should generally only be used in testing.
 """
+
+_cache_servers: typing.Dict[str, edq.net.exchangeserver.HTTPExchangeServer] = {}
+""" A mapping of cache dirs to their active cache server. """
 
 _make_request_exchange_complete_func: typing.Union[edq.net.exchange.HTTPExchangeComplete, None] = None  # pylint: disable=invalid-name
 """ If not None, call this func after make_request() has created its HTTPExchange. """
@@ -54,6 +61,8 @@ def make_request(method: str, url: str,
         files: typing.Union[typing.List[typing.Any], None] = None,
         raise_for_status: bool = True,
         timeout_secs: float = DEFAULT_REQUEST_TIMEOUT_SECS,
+        cache_dir: typing.Union[str, None] = None,
+        ignore_cache: bool = False,
         output_dir: typing.Union[str, None] = None,
         send_anchor_header: bool = True,
         headers_to_skip: typing.Union[typing.List[str], None] = None,
@@ -71,6 +80,12 @@ def make_request(method: str, url: str,
 
     if (add_http_prefix and (not url.lower().startswith('http'))):
         url = 'http://' + url
+
+    if (cache_dir is None):
+        cache_dir = _exchanges_cache_dir
+
+    if (ignore_cache):
+        cache_dir = None
 
     if (output_dir is None):
         output_dir = _exchanges_out_dir
@@ -116,7 +131,7 @@ def make_request(method: str, url: str,
         options['data'] = data
 
     _logger.debug("Making %s request: '%s' (options = %s).", method, url, options)
-    response = requests.request(method, url, **options)  # pylint: disable=missing-timeout
+    response = _make_request_with_cache(method, url, options, cache_dir)
 
     body = response.text
     _logger.debug("Response:\n%s", body)
@@ -202,6 +217,86 @@ def make_post(url: str, **kwargs: typing.Any) -> typing.Tuple[requests.Response,
     """
 
     return make_request('POST', url, **kwargs)
+
+def _make_request_with_cache(
+        method: str,
+        url: str,
+        options: typing.Dict[str, typing.Any],
+        cache_dir: typing.Union[str, None],
+        ) -> requests.Response:
+    """ Make a request, potentially using a cache. """
+
+    response: typing.Union[requests.Response, None] = None
+    if (cache_dir is not None):
+        response = _cache_lookup(method, url, options, cache_dir)
+
+    if (response is None):
+        response = requests.request(method, url, **options)  # pylint: disable=missing-timeout
+
+    return response
+
+def _cache_lookup(
+        method: str,
+        url: str,
+        options: typing.Dict[str, typing.Any],
+        cache_dir: str,
+        ) -> typing.Union[requests.Response, None]:
+    """ Attempt to lookup an exchange from the cache. """
+
+    if (not os.path.isdir(cache_dir)):
+        _logger.warning("Cache dir does not exist or is not a dir: '%s'.", cache_dir)
+        return None
+
+    cache_dir = os.path.abspath(cache_dir)
+
+    server = _ensure_cache_server(cache_dir)
+
+    # Create a URL that points to the cache server.
+    parts = urllib.parse.urlparse(url)
+    cache_url = parts._replace(scheme = 'http', netloc = f"127.0.0.1:{server.port}").geturl()
+
+    response = requests.request(method, cache_url, **options)  # pylint: disable=missing-timeout
+    if (response.status_code == http.HTTPStatus.NOT_FOUND):
+        return None
+
+    return response
+
+def _ensure_cache_server(cache_dir: str) -> edq.net.exchangeserver.HTTPExchangeServer:
+    """
+    Ensure that a cache server is runner on the specified dir.
+    Return the cache server.
+    """
+
+    server = _cache_servers.get(cache_dir, None)
+    if (server is not None):
+        return server
+
+    edq.util.dirent.mkdir(cache_dir)
+
+    server = edq.net.exchangeserver.HTTPExchangeServer()
+    server.load_exchanges_dir(cache_dir)
+    server.start()
+    atexit.register(_cleanup_cache_server, cache_dir)
+
+    _cache_servers[cache_dir] = server
+
+    return server
+
+def _cleanup_cache_server(cache_dir: str) -> None:
+    """ Stop a cache server and remove it from the mapping. """
+
+    server = _cache_servers.get(cache_dir, None)
+    if (server is None):
+        return
+
+    server.stop()
+    del _cache_servers[cache_dir]
+
+def _clear_cache_servers() -> None:
+    """ Stop and remove any cache servers. """
+
+    for cache_dir in list(_cache_servers.keys()):
+        _cleanup_cache_server(cache_dir)
 
 def _disable_https_verification() -> None:
     """ Disable checking the SSL certificate for HTTPS requests. """

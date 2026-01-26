@@ -10,6 +10,10 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     This is a sibling to init_from_args(), as the arguments set here can be interpreted there.
     """
 
+    parser.add_argument('--http-exchanges-cache-dir', dest = 'http_exchanges_cache_dir',
+        action = 'store', type = str, default = None,
+        help = 'If set, try to read HTTP responses from this directory before making a request.')
+
     parser.add_argument('--http-exchanges-out-dir', dest = 'http_exchanges_out_dir',
         action = 'store', type = str, default = None,
         help = 'If set, write all outgoing HTTP requests as exchanges to this directory.')
@@ -34,6 +38,9 @@ def init_from_args(
     Take in args from a parser that was passed to set_cli_args(),
     and call init() with the appropriate arguments.
     """
+
+    if (args.http_exchanges_cache_dir is not None):
+        edq.net.request._exchanges_cache_dir = args.http_exchanges_cache_dir
 
     if (args.http_exchanges_out_dir is not None):
         edq.net.request._exchanges_out_dir = args.http_exchanges_out_dir
