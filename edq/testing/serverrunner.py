@@ -6,8 +6,8 @@ import subprocess
 import time
 import typing
 
+import edq.net.request
 import edq.util.dirent
-import edq.util.net
 
 DEFAULT_SERVER_STARTUP_INITIAL_WAIT_SECS: float = 0.2
 DEFAULT_STARTUP_WAIT_SECS: float = 10.0
@@ -89,7 +89,7 @@ class ServerRunner():
 
         self._old_exchanges_out_dir: typing.Union[str, None] = None
         """
-        The value of edq.util.net._exchanges_out_dir when start() is called.
+        The value of edq.net.request._exchanges_out_dir when start() is called.
         The original value may be changed in start(), and will be reset in stop().
         """
 
@@ -110,8 +110,8 @@ class ServerRunner():
 
         # Store and set networking config.
 
-        self._old_exchanges_out_dir = edq.util.net._exchanges_out_dir
-        edq.util.net._exchanges_out_dir = self.http_exchanges_out_dir
+        self._old_exchanges_out_dir = edq.net.request._exchanges_out_dir
+        edq.net.request._exchanges_out_dir = self.http_exchanges_out_dir
 
         # Start the server.
 
@@ -185,7 +185,7 @@ class ServerRunner():
 
         # Restore networking config.
 
-        edq.util.net._exchanges_out_dir = self._old_exchanges_out_dir
+        edq.net.request._exchanges_out_dir = self._old_exchanges_out_dir
         self._old_exchanges_out_dir = None
 
         if (self._server_output_file is not None):

@@ -9,7 +9,7 @@ import os
 import sys
 
 import edq.core.argparser
-import edq.testing.httpserver
+import edq.net.exchangeserver
 
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
@@ -19,7 +19,7 @@ def run_cli(args: argparse.Namespace) -> int:
         'headers_to_skip': args.ignore_headers,
     }
 
-    server = edq.testing.httpserver.HTTPTestServer(
+    server = edq.net.exchangeserver.HTTPExchangeServer(
             port = args.port,
             match_options = match_options,
             verbose = True,

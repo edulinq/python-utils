@@ -13,7 +13,7 @@ import typing
 
 import edq.core.config
 import edq.core.log
-import edq.util.net
+import edq.net.cli
 
 @typing.runtime_checkable
 class PreParseFunction(typing.Protocol):
@@ -132,6 +132,6 @@ def get_default_parser(description: str,
         parser.register_callbacks('config', config_pre_func, config_post_func)
 
     if (include_net):
-        parser.register_callbacks('net', edq.util.net.set_cli_args, edq.util.net.init_from_args)
+        parser.register_callbacks('net', edq.net.cli.set_cli_args, edq.net.cli.init_from_args)
 
     return parser

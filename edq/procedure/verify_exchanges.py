@@ -8,8 +8,9 @@ import os
 import typing
 import unittest
 
+import edq.net.exchange
+import edq.net.request
 import edq.testing.unittest
-import edq.util.net
 
 _logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ def run(paths: typing.List[str], server: str, fail_fast: bool = False) -> int:
 def _attach_tests(
         paths: typing.List[str],
         server: str,
-        extension: str = edq.util.net.DEFAULT_HTTP_EXCHANGE_EXTENSION,
+        extension: str = edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION,
         ) -> None:
     """ Create tests for each path and attach them to the ExchangeVerification class. """
 
@@ -53,8 +54,8 @@ def _get_test_method(path: str, server: str,
         match_options = {}
 
     def __method(self: edq.testing.unittest.BaseTest) -> None:
-        exchange = edq.util.net.HTTPExchange.from_path(path)
-        response, body = exchange.make_request(server, raise_for_status = False, **match_options)
+        exchange = edq.net.exchange.HTTPExchange.from_path(path)
+        response, body = edq.net.request.make_with_exchange(exchange, server, raise_for_status = False, **match_options)
 
         match, hint = exchange.match_response(response, override_body = body, **match_options)
         if (not match):
@@ -64,7 +65,7 @@ def _get_test_method(path: str, server: str,
 
 def _collect_exchange_paths(
         paths: typing.List[str],
-        extension: str = edq.util.net.DEFAULT_HTTP_EXCHANGE_EXTENSION,
+        extension: str = edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION,
         ) -> typing.List[str]:
     """ Collect exchange files by matching extensions and descending dirs. """
 
