@@ -2,6 +2,7 @@ import atexit
 import http
 import logging
 import os
+import time
 import typing
 import urllib.parse
 import urllib3
@@ -19,6 +20,8 @@ _logger = logging.getLogger(__name__)
 
 DEFAULT_REQUEST_TIMEOUT_SECS: float = 10.0
 """ Default timeout for an HTTP request. """
+
+RETRY_BACKOFF_SECS: float = 0.5
 
 _exchanges_cache_dir: typing.Union[str, None] = None  # pylint: disable=invalid-name
 """ If not None, all requests made via make_request() will attempt to look in this directory for a matching exchange first. """
@@ -73,6 +76,7 @@ def make_request(method: str, url: str,
         exchange_complete_func: typing.Union[edq.net.exchange.HTTPExchangeComplete, None] = None,
         allow_redirects: typing.Union[bool, None] = None,
         use_module_options: bool = True,
+        retries: int = 0,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
     Make an HTTP request and return the response object and text body.
@@ -80,6 +84,8 @@ def make_request(method: str, url: str,
 
     if (add_http_prefix and (not url.lower().startswith('http'))):
         url = 'http://' + url
+
+    retries = max(0, retries)
 
     if (cache_dir is None):
         cache_dir = _exchanges_cache_dir
@@ -109,7 +115,9 @@ def make_request(method: str, url: str,
         parts = urllib.parse.urlparse(url)
         headers[edq.net.exchange.ANCHOR_HEADER_KEY] = parts.fragment.lstrip('#')
 
-    options = {}
+    options: typing.Dict[str, typing.Any] = {
+        'timeout': timeout_secs,
+    }
 
     if (use_module_options and (_module_makerequest_options is not None)):
         options.update(_module_makerequest_options)
@@ -119,7 +127,6 @@ def make_request(method: str, url: str,
     options.update({
         'headers': headers,
         'files': files,
-        'timeout': timeout_secs,
     })
 
     if (allow_redirects is not None):
@@ -131,10 +138,15 @@ def make_request(method: str, url: str,
         options['data'] = data
 
     _logger.debug("Making %s request: '%s' (options = %s).", method, url, options)
-    response = _make_request_with_cache(method, url, options, cache_dir)
+    response = _make_request_with_cache(method, url, options, cache_dir, retries)
 
     body = response.text
-    _logger.debug("Response:\n%s", body)
+    if (_logger.level <= logging.DEBUG):
+        log_body = body
+        if (response.encoding is None):
+            log_body = f"<hash> {edq.util.hash.sha256_hex(response.content)}"
+
+        _logger.debug("Response:\n%s", log_body)
 
     if (raise_for_status):
         # Handle 404s a little special, as their body may contain useful information.
@@ -223,6 +235,7 @@ def _make_request_with_cache(
         url: str,
         options: typing.Dict[str, typing.Any],
         cache_dir: typing.Union[str, None],
+        retries: int,
         ) -> requests.Response:
     """ Make a request, potentially using a cache. """
 
@@ -231,7 +244,24 @@ def _make_request_with_cache(
         response = _cache_lookup(method, url, options, cache_dir)
 
     if (response is None):
-        response = requests.request(method, url, **options)  # pylint: disable=missing-timeout
+        # Try once and then the number of allowed retries.
+        attempt_count = 1 + retries
+
+        last_exception = None
+        for attempt_index in range(attempt_count):
+            if (attempt_index > 0):
+                # Wait before the next retry.
+                time.sleep(attempt_index * RETRY_BACKOFF_SECS)
+
+            try:
+                response = requests.request(method, url, **options)  # pylint: disable=missing-timeout
+                last_exception = None
+                break
+            except Exception as ex:
+                last_exception = ex
+
+        if (last_exception is not None):
+            raise ValueError(f"Failed request after {attempt_count} tries.") from last_exception
 
     return response
 

@@ -84,7 +84,11 @@ def parse_request_body_data(
     else:
         raw_content = body
 
-    content_type = headers.get('Content-Type', '')
+    content_type = headers.get('Content-Type', '').lower()
+
+    if (content_type.startswith('text/plain')):
+        data[''] = raw_content.decode(edq.util.dirent.DEFAULT_ENCODING).strip()
+        return data, files
 
     if (content_type in ['', 'application/x-www-form-urlencoded']):
         data = parse_query_string(raw_content.decode(edq.util.dirent.DEFAULT_ENCODING).strip())
