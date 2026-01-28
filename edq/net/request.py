@@ -9,6 +9,7 @@ import urllib3
 
 import requests
 
+import edq.core.errors
 import edq.net.exchange
 import edq.net.exchangeserver
 import edq.util.dirent
@@ -247,7 +248,7 @@ def _make_request_with_cache(
         # Try once and then the number of allowed retries.
         attempt_count = 1 + retries
 
-        last_exception = None
+        errors = []
         for attempt_index in range(attempt_count):
             if (attempt_index > 0):
                 # Wait before the next retry.
@@ -255,13 +256,12 @@ def _make_request_with_cache(
 
             try:
                 response = requests.request(method, url, **options)  # pylint: disable=missing-timeout
-                last_exception = None
                 break
             except Exception as ex:
-                last_exception = ex
+                errors.append(ex)
 
-        if (last_exception is not None):
-            raise ValueError(f"Failed request after {attempt_count} tries.") from last_exception
+        if (len(errors) > 0):
+            raise edq.core.errors.RetryError(f"Network request failed after {attempt_count} tries.", retry_errors = errors)
 
     return response
 
