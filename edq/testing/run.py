@@ -68,7 +68,9 @@ def run(args: typing.Union[argparse.Namespace, typing.Dict[str, typing.Any], Non
     test_cases = []
 
     for test_dir in test_dirs:
-        discovered_suite = unittest.TestLoader().discover(test_dir, pattern = args.get('filename_pattern', DEFAULT_TEST_FILENAME_PATTERN))
+        discovered_suite = unittest.TestLoader().discover(test_dir,
+                pattern = args.get('filename_pattern', DEFAULT_TEST_FILENAME_PATTERN),
+                top_level_dir = args.get('discover_top_level_dir', None))
         test_cases += _collect_tests(discovered_suite)
 
     # Cleanup class functions from test classes.
@@ -97,6 +99,11 @@ def run(args: typing.Union[argparse.Namespace, typing.Dict[str, typing.Any], Non
     # Perform any cleanup.
     for cleanup_func in cleanup_funcs.values():
         cleanup_func()
+
+    # Cleanup the system path.
+    if (args.get('path_additions', None) is not None):
+        for path in args['path_additions']:
+            sys.path.pop()
 
     if (not result.wasSuccessful()):
         # This value will be used as an exit status, so it should not be larger than a byte.
