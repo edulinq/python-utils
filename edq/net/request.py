@@ -244,24 +244,26 @@ def _make_request_with_cache(
     if (cache_dir is not None):
         response = _cache_lookup(method, url, options, cache_dir)
 
-    if (response is None):
-        # Try once and then the number of allowed retries.
-        attempt_count = 1 + retries
+    if (response is not None):
+        return response
 
-        errors = []
-        for attempt_index in range(attempt_count):
-            if (attempt_index > 0):
-                # Wait before the next retry.
-                time.sleep(attempt_index * RETRY_BACKOFF_SECS)
+    # Try once and then the number of allowed retries.
+    attempt_count = 1 + retries
 
-            try:
-                response = requests.request(method, url, **options)  # pylint: disable=missing-timeout
-                break
-            except Exception as ex:
-                errors.append(ex)
+    errors = []
+    for attempt_index in range(attempt_count):
+        if (attempt_index > 0):
+            # Wait before the next retry.
+            time.sleep(attempt_index * RETRY_BACKOFF_SECS)
 
-        if (len(errors) > 0):
-            raise edq.core.errors.RetryError(f"Network request failed after {attempt_count} tries.", retry_errors = errors)
+        try:
+            response = requests.request(method, url, **options)  # pylint: disable=missing-timeout
+            break
+        except Exception as ex:
+            errors.append(ex)
+
+    if (len(errors) == attempt_count):
+        raise edq.core.errors.RetryError(f"HTTP {method} for '{url}'", attempt_count, retry_errors = errors)
 
     return response
 
