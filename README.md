@@ -10,7 +10,7 @@ Links:
 
 ## Installation / Requirements
 
-This project requires [Python](https://www.python.org/) >= 3.8.
+This project requires [Python](https://www.python.org/) >= 3.9.
 
 The project can be installed from PyPi with:
 ```
