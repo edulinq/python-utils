@@ -1,12 +1,7 @@
-import os
-
 import edq.testing.unittest
 
 import edq.util.dirent
 import edq.util.gzip
-
-THIS_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-DATA_DIR = os.path.join(THIS_DIR, 'testdata', 'gzip')
 
 class TestGzip(edq.testing.unittest.BaseTest):
     """ Test gzipping functionality. """
