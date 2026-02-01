@@ -123,25 +123,27 @@ def _get_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description = 'Run unit tests discovered in this project.')
 
-    parser.add_argument('--work-dir', dest = 'work_dir',
-        action = 'store', type = str, default = os.getcwd(),
-        help = 'Set the working directory when running tests, defaults to the current working directory (%(default)s).')
-
-    parser.add_argument('--tests-dir', dest = 'test_dirs',
-        action = 'append',
-        help = 'Discover tests from these directories. Defaults to the current directory.')
-
-    parser.add_argument('--add-path', dest = 'path_additions',
-        action = 'append',
-        help = 'If supplied, add this path the sys.path before running tests.')
-
-    parser.add_argument('--filename-pattern', dest = 'filename_pattern',
-        action = 'store', type = str, default = DEFAULT_TEST_FILENAME_PATTERN,
-        help = 'The pattern to use to find test files (default: %(default)s).')
-
     parser.add_argument('pattern',
         action = 'store', type = str, default = None, nargs = '?',
         help = 'If supplied, only tests with names matching this pattern will be run. This pattern is used directly in re.search().')
+
+    group = parser.add_argument_group('test runner options')
+
+    group.add_argument('--add-path', dest = 'path_additions',
+        action = 'append',
+        help = 'If supplied, add this path the sys.path before running tests.')
+
+    group.add_argument('--filename-pattern', dest = 'filename_pattern',
+        action = 'store', type = str, default = DEFAULT_TEST_FILENAME_PATTERN,
+        help = 'The pattern to use to find test files (default: %(default)s).')
+
+    group.add_argument('--tests-dir', dest = 'test_dirs',
+        action = 'append',
+        help = 'Discover tests from these directories. Defaults to the current directory.')
+
+    group.add_argument('--work-dir', dest = 'work_dir',
+        action = 'store', type = str, default = os.getcwd(),
+        help = 'Set the working directory when running tests, defaults to the current working directory (%(default)s).')
 
     return parser
 

@@ -267,18 +267,20 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
         action = 'store', type = str,
         help = 'The command to run the LMS server that will be the target of the data generation commands.')
 
-    parser.add_argument('--startup-skip-identify', dest = 'startup_skip_identify',
-        action = 'store_true', default = False,
-        help = 'If set, startup will skip trying to identify the server as a means of checking that the server is started.')
+    group = parser.add_argument_group('server control')
 
-    parser.add_argument('--startup-wait', dest = 'startup_wait_secs',
-        action = 'store', type = float, default = DEFAULT_STARTUP_WAIT_SECS,
-        help = 'The time to wait between starting the server and sending commands (default: %(default)s).')
-
-    parser.add_argument('--server-output-file', dest = 'server_output_path',
+    group.add_argument('--server-output-file', dest = 'server_output_path',
         action = 'store', type = str, default = None,
         help = 'Where server output will be written. Defaults to a random temp file.')
 
-    parser.add_argument('--server-stop-command', dest = 'server_stop_command',
+    group.add_argument('--server-stop-command', dest = 'server_stop_command',
         action = 'store', type = str, default = None,
         help = 'An optional command to stop the server. After this the server will be sent a SIGINT and then a SIGKILL.')
+
+    group.add_argument('--startup-skip-identify', dest = 'startup_skip_identify',
+        action = 'store_true', default = False,
+        help = 'If set, startup will skip trying to identify the server as a means of checking that the server is started.')
+
+    group.add_argument('--startup-wait', dest = 'startup_wait_secs',
+        action = 'store', type = float, default = DEFAULT_STARTUP_WAIT_SECS,
+        help = 'The time to wait between starting the server and sending commands (default: %(default)s).')

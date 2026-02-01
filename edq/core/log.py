@@ -41,18 +41,20 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     This is a sibling to init_from_args(), as the arguments set here can be interpreted there.
     """
 
-    parser.add_argument('--log-level', dest = 'log_level',
+    group = parser.add_argument_group('logging options')
+
+    group.add_argument('--debug', dest = 'debug',
+            action = 'store_true', default = False,
+            help = 'Set the logging level to debug (overrides --log-level and --quiet) (default: %(default)s).')
+
+    group.add_argument('--log-level', dest = 'log_level',
             action = 'store', type = str, default = logging.getLevelName(logging.INFO),
             choices = LEVELS,
             help = 'Set the logging level (default: %(default)s).')
 
-    parser.add_argument('--quiet', dest = 'quiet',
+    group.add_argument('--quiet', dest = 'quiet',
             action = 'store_true', default = False,
             help = 'Set the logging level to warning (overrides --log-level) (default: %(default)s).')
-
-    parser.add_argument('--debug', dest = 'debug',
-            action = 'store_true', default = False,
-            help = 'Set the logging level to debug (overrides --log-level and --quiet) (default: %(default)s).')
 
 def init_from_args(
         parser: argparse.ArgumentParser,

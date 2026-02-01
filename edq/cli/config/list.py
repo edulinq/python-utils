@@ -55,12 +55,14 @@ def _get_parser() -> argparse.ArgumentParser:
 def modify_parser(parser: argparse.ArgumentParser) -> None:
     """ Add this CLI's flags to the given parser. """
 
-    parser.add_argument("--show-origin", dest = 'show_origin',
+    group = parser.add_argument_group('list options')
+
+    group.add_argument("--show-origin", dest = 'show_origin',
         action = 'store_true',
         help = "Display where each configuration's value was obtained from.",
     )
 
-    parser.add_argument("--skip-header", dest = 'skip_header',
+    group.add_argument("--skip-header", dest = 'skip_header',
         action = 'store_true',
         help = 'Skip headers when displaying configs.',
     )

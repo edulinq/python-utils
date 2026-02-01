@@ -202,20 +202,9 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     Set common CLI arguments for configuration.
     """
 
-    parser.add_argument('--config-global', dest = GLOBAL_CONFIG_KEY,
-        action = 'store', type = str, default = get_global_config_path(config_filename),
-        help = 'Set the default global config file path (default: %(default)s).',
-    )
+    group = parser.add_argument_group('config options')
 
-    parser.add_argument('--config-file', dest = CONFIG_PATHS_KEY,
-        action = 'append', type = str, default = [],
-        help = ('Load config options from a JSON file.'
-            + ' This flag can be specified multiple times.'
-            + ' Files are applied in the order provided and later files override earlier ones.'
-            + ' Will override options form both global and local config files.')
-    )
-
-    parser.add_argument('--config', dest = CONFIGS_KEY,
+    group.add_argument('--config', dest = CONFIGS_KEY,
         action = 'append', type = str, default = [],
         help = ('Set a configuration option from the command-line.'
             + ' Specify options as <key>=<value> pairs.'
@@ -224,7 +213,20 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
             + ' Will override options form all config files.')
     )
 
-    parser.add_argument('--ignore-config-option', dest = IGNORE_CONFIGS_KEY,
+    group.add_argument('--config-file', dest = CONFIG_PATHS_KEY,
+        action = 'append', type = str, default = [],
+        help = ('Load config options from a JSON file.'
+            + ' This flag can be specified multiple times.'
+            + ' Files are applied in the order provided and later files override earlier ones.'
+            + ' Will override options form both global and local config files.')
+    )
+
+    group.add_argument('--config-global', dest = GLOBAL_CONFIG_KEY,
+        action = 'store', type = str, default = get_global_config_path(config_filename),
+        help = 'Set the default global config file path (default: %(default)s).',
+    )
+
+    group.add_argument('--ignore-config-option', dest = IGNORE_CONFIGS_KEY,
         action = 'append', type = str, default = [],
         help = ('Ignore any config option with the specified key.'
             + ' The system-provided default value will be used for that option if one exists.'

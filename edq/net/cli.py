@@ -10,23 +10,25 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     This is a sibling to init_from_args(), as the arguments set here can be interpreted there.
     """
 
-    parser.add_argument('--http-exchanges-cache-dir', dest = 'http_exchanges_cache_dir',
+    group = parser.add_argument_group('network options')
+
+    group.add_argument('--http-exchanges-cache-dir', dest = 'http_exchanges_cache_dir',
         action = 'store', type = str, default = None,
         help = 'If set, try to read HTTP responses from this directory before making a request.')
 
-    parser.add_argument('--http-exchanges-out-dir', dest = 'http_exchanges_out_dir',
-        action = 'store', type = str, default = None,
-        help = 'If set, write all outgoing HTTP requests as exchanges to this directory.')
-
-    parser.add_argument('--http-exchanges-clean-func', dest = 'http_exchanges_clean_func',
+    group.add_argument('--http-exchanges-clean-func', dest = 'http_exchanges_clean_func',
         action = 'store', type = str, default = None,
         help = 'If set, default all created exchanges to this modifier function.')
 
-    parser.add_argument('--http-exchanges-finalize-func', dest = 'http_exchanges_finalize_func',
+    group.add_argument('--http-exchanges-finalize-func', dest = 'http_exchanges_finalize_func',
         action = 'store', type = str, default = None,
         help = 'If set, default all created exchanges to this finalize.')
 
-    parser.add_argument('--https-no-verify', dest = 'https_no_verify',
+    group.add_argument('--http-exchanges-out-dir', dest = 'http_exchanges_out_dir',
+        action = 'store', type = str, default = None,
+        help = 'If set, write all outgoing HTTP requests as exchanges to this directory.')
+
+    group.add_argument('--https-no-verify', dest = 'https_no_verify',
         action = 'store_true', default = False,
         help = 'If set, skip HTTPS/SSL verification.')
 
