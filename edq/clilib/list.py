@@ -1,71 +1,14 @@
 """
 Show the CLI tools available in this package.
-
-This will look for objects that "look like" CLI tools.
-A package looks like a CLI package if it has a __main__.py file.
-A module looks like a CLI tool if it has the following functions:
- - `def _get_parser() -> argparse.ArgumentParser:`
- - `def run_cli(args: argparse.Namespace) -> int:`
-
-CLI packages should always have a __main__.py file,
-even if they only contain other packages.
 """
 
 import argparse
 import inspect
 import os
-import typing
 
+import edq.clilib.model
 import edq.util.dirent
 import edq.util.pyimport
-
-class CLIDirent:
-    """ A dirent that looks like it is related to a CLI. """
-
-    def __init__(self,
-            path: str,
-            qualified_path: str,
-            pymodule: typing.Any,
-            ) -> None:
-        self.path: str = path
-        """
-        The path for the given dirent.
-        For a package, this will point to `__main__.py`.
-        """
-
-        self.qualified_path: str = qualified_path
-        """ The Python qualified path to this object. """
-
-        self.pymodule: typing.Any = pymodule
-        """ The loaded module for the given path. """
-
-class CLIPackage(CLIDirent):
-    """
-    A CLI package.
-    Must have a `__main__.py` file.
-    """
-
-    def __init__(self,
-            path: str,
-            qualified_path: str,
-            pymodule: typing.Any,
-            dirents: typing.Union[typing.List[CLIDirent], None] = None,
-            ) -> None:
-        super().__init__(path, qualified_path, pymodule)
-
-        if (dirents is None):
-            dirents = []
-
-        self.dirents: typing.List[CLIDirent] = dirents
-        """ Entries within this package. """
-
-class CLIModule(CLIDirent):
-    """
-    A CLI module.
-    Must have the following functions:
-     - `def _get_parser() -> argparse.ArgumentParser:`
-     - `def run_cli(args: argparse.Namespace) -> int:`
-    """
 
 def auto_list(
         recursive: bool = False,
@@ -108,96 +51,46 @@ def auto_list(
     if (module.__doc__ is None):
         raise ValueError(f"Caller module has no docstring: '{path}'.")
 
-    package = collect_cli_entries(base_dir, module.__package__)
+    package = edq.clilib.model.CLIPackage.from_path(base_dir, module.__package__)
     if (package is None):
         raise ValueError(f"Caller package is not a CLI package: '{base_dir}'.")
 
     print(module.__doc__.strip())
     _list_dir(package, recursive, skip_dirs)
 
-def _list_dir(package: CLIPackage, recursive: bool, skip_dirs: bool) -> None:
+def _list_dir(package: edq.clilib.model.CLIPackage, recursive: bool, skip_dirs: bool) -> None:
     """
     List/descend the given dir.
     Don't output information out this directory itself, just the entries.
     """
 
     for dirent in package.dirents:
-        if (isinstance(dirent, CLIModule)):
+        if (isinstance(dirent, edq.clilib.model.CLIModule)):
             _handle_module(dirent)
-        elif (isinstance(dirent, CLIPackage)):
+        elif (isinstance(dirent, edq.clilib.model.CLIPackage)):
             if (not skip_dirs):
                 _handle_package(dirent)
 
             if (recursive):
                 _list_dir(dirent, recursive, skip_dirs)
 
-def _handle_module(module: CLIModule) -> None:
+def _handle_module(module: edq.clilib.model.CLIModule) -> None:
     """ Process a module. """
 
-    parser = module.pymodule._get_parser()
-    parser.prog = 'python3 -m ' + module.qualified_path
-
     print()
-    print(module.qualified_path)
-    print(parser.description)
-    parser.print_usage()
+    print(module.qualified_name)
+    print(module.parser.description)
+    module.parser.print_usage()
 
-def _handle_package(package: CLIPackage) -> None:
+def _handle_package(package: edq.clilib.model.CLIPackage) -> None:
     """ Process a package. """
 
     description = package.pymodule.__doc__.strip()
 
     print()
-    print(package.qualified_path + '.*')
+    print(package.qualified_name + '.*')
     print(description)
-    print(f"See `python3 -m {package.qualified_path}` for more information.")
-
-def collect_cli_entries(
-        base_dir: str,
-        base_qualified_path: str = '.',
-        ) -> typing.Union[CLIPackage, None]:
-    """ Collect CLI dirents starting from the given base dir/package. """
-
-    base_dir = os.path.abspath(base_dir)
-
-    main_path = os.path.join(base_dir, '__main__.py')
-    if (not os.path.exists(main_path)):
-        return None
-
-    try:
-        main_module = edq.util.pyimport.import_path(main_path)
-    except Exception as ex:
-        raise ValueError(f"Failed to import module __main__.py file: '{main_path}'.") from ex
-
-    package = CLIPackage(base_dir, base_qualified_path, main_module)
-
-    for dirent in sorted(os.listdir(base_dir)):
-        path = os.path.join(base_dir, dirent)
-
-        qualified_path = os.path.splitext(dirent)[0]
-        if (base_qualified_path != '.'):
-            qualified_path = base_qualified_path + '.' + qualified_path
-
-        if (dirent.startswith('__')):
-            continue
-
-        if (os.path.isfile(path)):
-            try:
-                module = edq.util.pyimport.import_path(path)
-            except Exception as ex:
-                raise ValueError(f"Failed to import module: '{path}'.") from ex
-
-            # Check if this looks like a CLI module.
-            if ('_get_parser' not in dir(module)):
-                continue
-
-            package.dirents.append(CLIModule(path, qualified_path, module))
-        else:
-            dirent_package = collect_cli_entries(path, base_qualified_path = qualified_path)
-            if (dirent_package is not None):
-                package.dirents.append(dirent_package)
-
-    return package
+    print(f"See `python3 -m {package.qualified_name}` for more information.")
 
 def _get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
