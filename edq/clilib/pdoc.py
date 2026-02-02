@@ -1,10 +1,14 @@
-import io
 import os
+import typing
 
 import bs4
 
 import edq.clilib.model
 import edq.util.dirent
+
+CSS_CLASS_MODULE_DOCS: str = 'edq-cli-module-docs'
+CSS_CLASS_PACKAGE_DOCS: str = 'edq-cli-package-docs'
+CSS_CLASS_PACKAGE_DIRENT: str = 'edq-cli-package-dirent'
 
 def update_pdoc(package_dir: str, base_qualified_name: str, docs_base_dir: str) -> None:
     """
@@ -37,37 +41,87 @@ def _update_package(package: edq.clilib.model.CLIPackage, docs_base_dir: str) ->
 def _update_package_docs(package: edq.clilib.model.CLIPackage, docs_base_dir: str) -> None:
     """ Update the documentation for a package. """
 
-    # TODO(eriq)
+    path = _get_docs_path(package, docs_base_dir)
+
+    # The base rel name needs to point to the parent.
+    base_rel_name = '.'.join(package.qualified_name.split('.')[0:-1])
+
+    lines: typing.List[str] = []
+    _list_package(package, docs_base_dir, base_rel_name, lines)
+
+    content = '<p>This package contains the following items:</p><hr />'
+    content += "\n<hr />\n".join(lines)
+
+    _insert_html(path, CSS_CLASS_PACKAGE_DOCS, content)
+
+def _list_package(
+        package: edq.clilib.model.CLIPackage,
+        docs_base_dir: str,
+        base_rel_name: str,
+        lines: typing.List[str],
+        ) -> None:
+    """ List the contents of a package for a docs page. """
+
+    for entry in package.dirents:
+        rel_name = entry.qualified_name.removeprefix(base_rel_name + '.')
+
+        parts = rel_name.split('.')
+        parts[-1] += '.html'
+        rel_href = '/'.join(parts)
+
+        if (isinstance(entry, edq.clilib.model.CLIModule)):
+            html = f"""
+                <div class='{CSS_CLASS_PACKAGE_DIRENT}'>
+                    <a href='{rel_href}'>{entry.qualified_name}</a>
+                    <p>
+                        {entry.get_description()}
+                    </p><pre><code>{entry.get_usage_text()}</code></pre>
+                </div>
+            """
+            lines.append(html)
+        elif (isinstance(entry, edq.clilib.model.CLIPackage)):
+            html = f"""
+                <div class='{CSS_CLASS_PACKAGE_DIRENT}'>
+                    <a href='{rel_href}'>{entry.qualified_name}.*</a>
+                    <p>
+                        {entry.get_description()}
+                    </p>
+                </div>
+            """
+            lines.append(html)
+
+            _list_package(entry, docs_base_dir, base_rel_name, lines)
+        else:
+            raise ValueError(f"Unknown CLI type: '{type(entry)}'.")
 
 def _update_module_docs(module: edq.clilib.model.CLIModule, docs_base_dir: str) -> None:
     """ Update the documentation for a module. """
 
-    buffer = io.StringIO()
-    module.parser.print_help(file = buffer)
-    help_text = buffer.getvalue()
-    buffer.close()
+    path = _get_docs_path(module, docs_base_dir)
+    content = f"<div class='.{CSS_CLASS_MODULE_DOCS}'><pre><code>{module.get_help_text()}</code></pre></div>"
+    _insert_html(path, CSS_CLASS_MODULE_DOCS, content)
 
-    docs_path = _get_docs_path(module, docs_base_dir)
+def _insert_html(path: str, css_class: str, content: str) -> None:
+    """ Insert HTML into a doc file. """
 
-    text = edq.util.dirent.read_file(docs_path)
+    text = edq.util.dirent.read_file(path)
     document = bs4.BeautifulSoup(text, 'html.parser')
 
     # Check for previous content.
-    tags = document.select('div.edq-cli-docs')
+    tags = document.select(f"div.{css_class}")
     for tag in tags:
         tag.decompose()
 
     # Add in new content.
     parents = document.select('.module-info .docstring')
     if (len(parents) != 1):
-        raise ValueError(f"Could not find exactly one HTML docstring (found {len(parents)}): '{docs_path}'.")
+        raise ValueError(f"Could not find exactly one HTML docstring (found {len(parents)}): '{path}'.")
 
-    content = f"<div class='.edq-cli-docs'><pre><code>{help_text}</code></pre></div>"
     new_tag = bs4.BeautifulSoup(content, 'html.parser')
 
     parents[0].append(new_tag)
 
-    edq.util.dirent.write_file(docs_path, str(document))
+    edq.util.dirent.write_file(path, str(document))
 
 def _get_docs_path(dirent: edq.clilib.model.CLIDirent, docs_base_dir: str) -> str:
     """ Create the relative path for a CLI dirent's HTML documentation from its qualified name. """

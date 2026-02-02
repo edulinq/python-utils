@@ -1,6 +1,6 @@
 """
 This will look for objects that "look like" CLI tools.
-A package looks like a CLI package if it has a __main__.py file.
+A package looks like a CLI package if it has __main__.py and __init__.py files.
 A module looks like a CLI tool if it has the following functions:
  - `def _get_parser() -> argparse.ArgumentParser:`
  - `def run_cli(args: argparse.Namespace) -> int:`
@@ -9,14 +9,16 @@ CLI packages should always have a __main__.py file,
 even if they only contain other packages.
 """
 
+import abc
 import argparse
+import io
 import os
 import typing
 
 import edq.util.dirent
 import edq.util.pyimport
 
-class CLIDirent:
+class CLIDirent(abc.ABC):
     """ A dirent that looks like it is related to a CLI. """
 
     def __init__(self,
@@ -27,7 +29,7 @@ class CLIDirent:
         self.path: str = path
         """
         The path for the given dirent.
-        For a package, this will point to `__main__.py`.
+        For a package, this will point to `__init__.py`.
         """
 
         self.qualified_name: str = qualified_name
@@ -35,6 +37,15 @@ class CLIDirent:
 
         self.pymodule: typing.Any = pymodule
         """ The loaded module for the given path. """
+
+    def base_name(self) -> str:
+        """ Get the base (unqualified) name for this dirent. """
+
+        return self.qualified_name.split('.')[-1]
+
+    @abc.abstractmethod
+    def get_description(self) -> str:
+        """ Get the description of this dirent. """
 
     @staticmethod
     def from_path(path: str, qualified_name: str = '.') -> typing.Union['CLIDirent', None]:
@@ -74,6 +85,9 @@ class CLIPackage(CLIDirent):
         self.dirents: typing.List[CLIDirent] = dirents
         """ Entries within this package. """
 
+    def get_description(self) -> str:
+        return self.pymodule.__doc__.strip()
+
     @staticmethod
     def from_path(path: str, qualified_name: str = '.') -> typing.Union['CLIPackage', None]:
         """ Load a representation of the CLI package (or None if the path is not a CLI dirent). """
@@ -87,12 +101,16 @@ class CLIPackage(CLIDirent):
         if (not os.path.exists(main_path)):
             return None
 
-        try:
-            main_module = edq.util.pyimport.import_path(main_path)
-        except Exception as ex:
-            raise ValueError(f"Failed to import module __main__.py file: '{main_path}'.") from ex
+        init_path = os.path.join(path, '__init__.py')
+        if (not os.path.exists(init_path)):
+            return None
 
-        package = CLIPackage(path, qualified_name, main_module)
+        try:
+            init_module = edq.util.pyimport.import_path(init_path)
+        except Exception as ex:
+            raise ValueError(f"Failed to import module __init__.py file: '{init_path}'.") from ex
+
+        package = CLIPackage(path, qualified_name, init_module)
 
         for dirent in sorted(os.listdir(path)):
             dirent_path = os.path.join(path, dirent)
@@ -125,6 +143,32 @@ class CLIModule(CLIDirent):
 
         self.parser: argparse.ArgumentParser = parser
         """ The argument parser for this CLI module. """
+
+    def get_description(self) -> str:
+        if (self.parser.description is None):
+            return ''
+
+        return self.parser.description
+
+    def get_help_text(self) -> str:
+        """ Get the help text from the parser. """
+
+        buffer = io.StringIO()
+        self.parser.print_help(file = buffer)
+        text = buffer.getvalue()
+        buffer.close()
+
+        return text
+
+    def get_usage_text(self) -> str:
+        """ Get the help text from the parser. """
+
+        buffer = io.StringIO()
+        self.parser.print_usage(file = buffer)
+        text = buffer.getvalue()
+        buffer.close()
+
+        return text
 
     @staticmethod
     def from_path(path: str, qualified_name: str = '.') -> typing.Union['CLIModule', None]:

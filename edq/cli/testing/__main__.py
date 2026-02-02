@@ -1,7 +1,3 @@
-"""
-The `edq.cli.testing` package contains tools for testing code.
-"""
-
 import sys
 
 import edq.clilib.list

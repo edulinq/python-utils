@@ -48,14 +48,11 @@ def auto_list(
     if (module.__package__ is None):
         raise ValueError(f"Caller module has no package information: '{path}'.")
 
-    if (module.__doc__ is None):
-        raise ValueError(f"Caller module has no docstring: '{path}'.")
-
     package = edq.clilib.model.CLIPackage.from_path(base_dir, module.__package__)
     if (package is None):
         raise ValueError(f"Caller package is not a CLI package: '{base_dir}'.")
 
-    print(module.__doc__.strip())
+    print(package.get_description())
     _list_dir(package, recursive, skip_dirs)
 
 def _list_dir(package: edq.clilib.model.CLIPackage, recursive: bool, skip_dirs: bool) -> None:
@@ -79,17 +76,15 @@ def _handle_module(module: edq.clilib.model.CLIModule) -> None:
 
     print()
     print(module.qualified_name)
-    print(module.parser.description)
-    module.parser.print_usage()
+    print(module.get_description())
+    print(module.get_usage_text())
 
 def _handle_package(package: edq.clilib.model.CLIPackage) -> None:
     """ Process a package. """
 
-    description = package.pymodule.__doc__.strip()
-
     print()
     print(package.qualified_name + '.*')
-    print(description)
+    print(package.get_description())
     print(f"See `python3 -m {package.qualified_name}` for more information.")
 
 def _get_parser() -> argparse.ArgumentParser:

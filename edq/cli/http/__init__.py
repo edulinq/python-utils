@@ -1,3 +1,3 @@
 """
-The edq.cli.http package provides CLI utilities involving HTTP.
+The edq.cli.http package contains tools for working with HTTP/web resources.
 """

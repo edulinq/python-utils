@@ -1,7 +1,3 @@
-"""
-The `edq.cli.http` package contains tools for working with HTTP/web resources.
-"""
-
 import sys
 
 import edq.clilib.list

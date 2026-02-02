@@ -1,7 +1,3 @@
-"""
-The `edq.cli.config` package contains tools for interacting with configuration options.
-"""
-
 import sys
 
 import edq.clilib.list
