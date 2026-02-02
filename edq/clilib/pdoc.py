@@ -19,7 +19,7 @@ def update_pdoc(package_dir: str, base_qualified_name: str, docs_base_dir: str) 
     e.g., `edq.cli.version` -> `<base docs dir>/edq/cli/version.html`.
     """
 
-    package = edq.clilib.model.CLIPackage.from_path(package_dir, 'edq.cli')
+    package = edq.clilib.model.CLIPackage.from_path(package_dir, base_qualified_name)
     if (package is None):
         raise ValueError(f"Target dir is not a CLI package: '{package_dir}'.")
 
@@ -49,7 +49,10 @@ def _update_package_docs(package: edq.clilib.model.CLIPackage, docs_base_dir: st
     lines: typing.List[str] = []
     _list_package(package, docs_base_dir, base_rel_name, lines)
 
-    content = '<p>This package contains the following items:</p><hr />'
+    if (len(lines) == 0):
+        return
+
+    content = '<p>This package contains the following CLI tools:</p><hr />'
     content += "\n<hr />\n".join(lines)
 
     _insert_html(path, CSS_CLASS_PACKAGE_DOCS, content)

@@ -86,6 +86,9 @@ class CLIPackage(CLIDirent):
         """ Entries within this package. """
 
     def get_description(self) -> str:
+        if (self.pymodule.__doc__ is None):
+            return ''
+
         return self.pymodule.__doc__.strip()
 
     @staticmethod
@@ -175,6 +178,9 @@ class CLIModule(CLIDirent):
         """ Load a representation of the CLI module (or None if the path is not a CLI dirent). """
 
         path = os.path.abspath(path)
+
+        if (not path.endswith('.py')):
+            return None
 
         if (not os.path.isfile(path)):
             raise ValueError(f"CLI module path does not point to a file: '{path}'.")
