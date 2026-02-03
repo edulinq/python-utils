@@ -242,9 +242,12 @@ def read_test_file(path: str) -> typing.Tuple[typing.Dict[str, typing.Any], str]
     text = edq.util.dirent.read_file(path, strip = False)
 
     accumulator = json_lines
+    switched_accumulator = False
+
     for line in text.split("\n"):
-        if (line.strip() == TEST_CASE_SEP):
+        if ((not switched_accumulator) and (line.strip() == TEST_CASE_SEP)):
             accumulator = output_lines
+            switched_accumulator = True
             continue
 
         accumulator.append(line)
