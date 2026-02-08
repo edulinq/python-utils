@@ -14,7 +14,7 @@ CONFIG_SOURCE_CLI: str = "<cli argument>"
 
 CONFIG_PATHS_KEY: str = 'config_paths'
 CONFIGS_KEY: str = 'configs'
-GLOBAL_CONFIG_PATH_KEY: str = 'global_config_path'
+GLOBAL_CONFIG_KEY: str = 'global_config_path'
 LOCAL_CONFIG_PATH_KEY: str = 'local_config_path'
 FILENAME_KEY: str = 'config_filename'
 IGNORE_CONFIGS_KEY: str = 'ignore_configs'
@@ -80,8 +80,8 @@ def get_tiered_config(
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
 
-    global_config_path = cli_arguments.get(GLOBAL_CONFIG_PATH_KEY, get_global_config_path(config_filename))
-    config_params[GLOBAL_CONFIG_PATH_KEY] = global_config_path
+    global_config_path = cli_arguments.get(GLOBAL_CONFIG_KEY, get_global_config_path(config_filename))
+    config_params[GLOBAL_CONFIG_KEY] = global_config_path
 
     # Check the global user config file.
     if (os.path.isfile(global_config_path)):

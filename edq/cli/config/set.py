@@ -27,7 +27,7 @@ def run_cli(args: argparse.Namespace) -> int:
             local_config_path = args._config_params[edq.core.config.FILENAME_KEY]
         edq.core.config.write_config_to_file(local_config_path, config)
     elif (args.write_global):
-        global_config_path = args._config_params[edq.core.config.GLOBAL_CONFIG_PATH_KEY]
+        global_config_path = args._config_params[edq.core.config.GLOBAL_CONFIG_KEY]
         edq.core.config.write_config_to_file(global_config_path, config)
     elif (args.write_file_path is not None):
         edq.core.config.write_config_to_file(args.write_file_path, config)
