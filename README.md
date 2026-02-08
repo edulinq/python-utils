@@ -2,15 +2,15 @@
 
 Common utilities used by EduLinq Python projects.
 
-Links:
  - [API Reference](https://edulinq.github.io/python-utils)
+ - [CLI Reference](https://edulinq.github.io/python-utils/docs/latest/edq/cli.html)
  - [Installation / Requirements](#installation--requirements)
  - [Configuration System](#configuration-system)
    - [Configuration Sources](#configuration-sources)
 
 ## Installation / Requirements
 
-This project requires [Python](https://www.python.org/) >= 3.8.
+This project requires [Python](https://www.python.org/) >= 3.9.
 
 The project can be installed from PyPi with:
 ```

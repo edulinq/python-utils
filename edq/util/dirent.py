@@ -16,7 +16,10 @@ import tempfile
 import typing
 import uuid
 
-DEFAULT_ENCODING: str = 'utf-8'
+import edq.util.constants
+import edq.util.hash
+
+DEFAULT_ENCODING: str = edq.util.constants.DEFAULT_ENCODING
 """ The default encoding that will be used when reading and writing. """
 
 DEPTH_LIMIT: int = 10000
@@ -178,12 +181,15 @@ def copy(raw_source: str, raw_dest: str, no_clobber: bool = False) -> None:
     if (not exists(source)):
         raise ValueError(f"Source of copy does not exist: '{raw_source}'.")
 
+    if (contains_path(source, dest)):
+        raise ValueError(f"Source of copy cannot contain the destination. Source: '{raw_source}', Destination: '{raw_dest}'.")
+
+    if (contains_path(dest, source)):
+        raise ValueError(f"Destination of copy cannot contain the source. Destination: '{raw_dest}', Source: '{raw_source}'.")
+
     if (exists(dest)):
         if (no_clobber):
             raise ValueError(f"Destination of copy already exists: '{raw_dest}'.")
-
-        if (contains_path(dest, source)):
-            raise ValueError(f"Destination of copy cannot contain the source. Destination: '{raw_dest}', Source: '{raw_source}'.")
 
         remove(dest)
 
@@ -291,12 +297,18 @@ def read_file_bytes(raw_path: str) -> bytes:
         return file.read()
 
 def write_file_bytes(
-        raw_path: str, contents: typing.Union[bytes, None],
+        raw_path: str, contents: typing.Union[bytes, str, None],
         no_clobber: bool = False) -> None:
     """
     Write the contents of a file as bytes.
     If clobbering, any existing dirent will be removed before write.
     """
+
+    if (contents is None):
+        contents = b''
+
+    if (isinstance(contents, str)):
+        contents = contents.encode(DEFAULT_ENCODING)
 
     path = os.path.abspath(raw_path)
 
@@ -305,9 +317,6 @@ def write_file_bytes(
             raise ValueError(f"Destination of write bytes already exists: '{raw_path}'.")
 
         remove(path)
-
-    if (contents is None):
-        contents = b''
 
     with open(path, 'wb') as file:
         file.write(contents)
@@ -338,3 +347,60 @@ def contains_path(parent: str, child: str) -> bool:
         child = new_child
 
     raise ValueError("Depth limit reached.")
+
+def hash_file(raw_path: str) -> str:
+    """
+    Compute the SHA256 hash of the file (see edq.util.hash.sha256_hex()).
+    Links will has their path (according to os.readlink()).
+    Directories will raise an exception.
+    """
+
+    path = os.path.abspath(raw_path)
+
+    contents: typing.Any = None
+
+    if (not exists(path)):
+        raise ValueError(f"Target of hash file does not exist: '{raw_path}'.")
+
+    if (os.path.islink(path)):
+        contents = os.readlink(path)
+    elif (os.path.isfile(path)):
+        contents = read_file_bytes(raw_path)
+    else:
+        raise ValueError(f"Target of hash file is not a file: '{raw_path}'.")
+
+    return edq.util.hash.sha256_hex(contents)
+
+def tree(raw_path: str, hash_files: bool = False) -> typing.Dict[str, typing.Union[None, str, typing.Dict[str, typing.Any]]]:
+    """
+    Return a tree structure that includes all descendants of the given dirent (including the dirent itself).
+    If `hash_files` is true, then the value of non-dir keys will be the SHA256 hash of the file (see hash_file()),
+    otherwise the value will be None.
+    """
+
+    path = os.path.abspath(raw_path)
+
+    if (not exists(path)):
+        raise ValueError(f"Target of tree does not exist: '{raw_path}'.")
+
+    return {
+        os.path.basename(path): _tree(path, hash_files, 0),
+    }
+
+def _tree(path: str, hash_files: bool, level: int) -> typing.Union[str, None, typing.Dict[str, typing.Any]]:
+    """ Recursive helper for tree(). """
+
+    if (level > DEPTH_LIMIT):
+        raise ValueError("Depth limit reached.")
+
+    if (not os.path.isdir(path)):
+        if (hash_files):
+            return hash_file(path)
+
+        return None
+
+    result = {}
+    for child in sorted(os.listdir(path)):
+        result[child] = _tree(os.path.join(path, child), hash_files, level + 1)
+
+    return result

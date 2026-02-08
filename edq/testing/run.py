@@ -64,11 +64,13 @@ def run(args: typing.Union[argparse.Namespace, typing.Dict[str, typing.Any], Non
     if (len(test_dirs) == 0):
         test_dirs.append('.')
 
-    runner = unittest.TextTestRunner(verbosity = 3)
+    runner = unittest.TextTestRunner(verbosity = 3, failfast = args.get('fail_fast', False))
     test_cases = []
 
     for test_dir in test_dirs:
-        discovered_suite = unittest.TestLoader().discover(test_dir, pattern = args.get('filename_pattern', DEFAULT_TEST_FILENAME_PATTERN))
+        discovered_suite = unittest.TestLoader().discover(test_dir,
+                pattern = args.get('filename_pattern', DEFAULT_TEST_FILENAME_PATTERN),
+                top_level_dir = args.get('discover_top_level_dir', None))
         test_cases += _collect_tests(discovered_suite)
 
     # Cleanup class functions from test classes.
@@ -98,6 +100,11 @@ def run(args: typing.Union[argparse.Namespace, typing.Dict[str, typing.Any], Non
     for cleanup_func in cleanup_funcs.values():
         cleanup_func()
 
+    # Cleanup the system path.
+    if (args.get('path_additions', None) is not None):
+        for path in args['path_additions']:
+            sys.path.pop()
+
     if (not result.wasSuccessful()):
         # This value will be used as an exit status, so it should not be larger than a byte.
         # (Some higher values are used specially, so just keep it at a round number.)
@@ -116,25 +123,27 @@ def _get_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description = 'Run unit tests discovered in this project.')
 
-    parser.add_argument('--work-dir', dest = 'work_dir',
-        action = 'store', type = str, default = os.getcwd(),
-        help = 'Set the working directory when running tests, defaults to the current working directory (%(default)s).')
-
-    parser.add_argument('--tests-dir', dest = 'test_dirs',
-        action = 'append',
-        help = 'Discover tests from these directories. Defaults to the current directory.')
-
-    parser.add_argument('--add-path', dest = 'path_additions',
-        action = 'append',
-        help = 'If supplied, add this path the sys.path before running tests.')
-
-    parser.add_argument('--filename-pattern', dest = 'filename_pattern',
-        action = 'store', type = str, default = DEFAULT_TEST_FILENAME_PATTERN,
-        help = 'The pattern to use to find test files (default: %(default)s).')
-
     parser.add_argument('pattern',
         action = 'store', type = str, default = None, nargs = '?',
         help = 'If supplied, only tests with names matching this pattern will be run. This pattern is used directly in re.search().')
+
+    group = parser.add_argument_group('test runner options')
+
+    group.add_argument('--add-path', dest = 'path_additions',
+        action = 'append',
+        help = 'If supplied, add this path the sys.path before running tests.')
+
+    group.add_argument('--filename-pattern', dest = 'filename_pattern',
+        action = 'store', type = str, default = DEFAULT_TEST_FILENAME_PATTERN,
+        help = 'The pattern to use to find test files (default: %(default)s).')
+
+    group.add_argument('--tests-dir', dest = 'test_dirs',
+        action = 'append',
+        help = 'Discover tests from these directories. Defaults to the current directory.')
+
+    group.add_argument('--work-dir', dest = 'work_dir',
+        action = 'store', type = str, default = os.getcwd(),
+        help = 'Set the working directory when running tests, defaults to the current working directory (%(default)s).')
 
     return parser
 

@@ -41,6 +41,9 @@ ABS_DATA_DIR_ID: str = '__ABS_DATA_DIR__'
 TEMP_DIR_ID: str = '__TEMP_DIR__'
 BASE_DIR_ID: str = '__BASE_DIR__'
 
+REPLACE_LIMIT: int = 10000
+""" The maximum number of replacements that will be made with a single test replacement. """
+
 DEFAULT_ASSERTION_FUNC_NAME: str = 'edq.testing.asserts.content_equals_normalize'
 
 BASE_TEMP_DIR_ATTR: str = '_edq_cli_base_test_dir'
@@ -188,14 +191,14 @@ class CLITestInfo:
         """
 
         replacements = [
-            (DATA_DIR_ID, self.data_dir),
-            (TEMP_DIR_ID, self.temp_dir),
-            (BASE_DIR_ID, self.base_dir),
-            (ABS_DATA_DIR_ID, os.path.abspath(self.data_dir)),
+            (DATA_DIR_ID, self.data_dir, False),
+            (TEMP_DIR_ID, self.temp_dir, False),
+            (BASE_DIR_ID, self.base_dir, False),
+            (ABS_DATA_DIR_ID, self.data_dir, True),
         ]
 
-        for (key, target_dir) in replacements:
-            text = replace_path_pattern(text, key, target_dir)
+        for (key, target_dir, normalize) in replacements:
+            text = replace_path_pattern(text, key, target_dir, normalize_path = normalize)
 
         return text
 
@@ -247,9 +250,12 @@ def read_test_file(path: str) -> typing.Tuple[typing.Dict[str, typing.Any], str]
     text = edq.util.dirent.read_file(path, strip = False)
 
     accumulator = json_lines
+    switched_accumulator = False
+
     for line in text.split("\n"):
-        if (line.strip() == TEST_CASE_SEP):
+        if ((not switched_accumulator) and (line.strip() == TEST_CASE_SEP)):
             accumulator = output_lines
+            switched_accumulator = True
             continue
 
         accumulator.append(line)
@@ -259,11 +265,14 @@ def read_test_file(path: str) -> typing.Tuple[typing.Dict[str, typing.Any], str]
 
     return options, output
 
-def replace_path_pattern(text: str, key: str, target_dir: str) -> str:
+def replace_path_pattern(text: str, key: str, target_dir: str, normalize_path: bool = False) -> str:
     """ Make any test replacement inside the given string. """
 
-    match = re.search(rf'{key}\(([^)]*)\)', text)
-    if (match is not None):
+    for _ in range(REPLACE_LIMIT):
+        match = re.search(rf'{key}\(([^)]*)\)', text)
+        if (match is None):
+            break
+
         filename = match.group(1)
 
         # Normalize any path separators.
@@ -273,6 +282,9 @@ def replace_path_pattern(text: str, key: str, target_dir: str) -> str:
             path = target_dir
         else:
             path = os.path.join(target_dir, filename)
+
+        if (normalize_path):
+            path = os.path.abspath(path)
 
         text = text.replace(match.group(0), path)
 

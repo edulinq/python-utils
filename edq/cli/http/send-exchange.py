@@ -8,13 +8,14 @@ import argparse
 import sys
 
 import edq.core.argparser
-import edq.util.net
+import edq.net.exchange
+import edq.net.request
 
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
-    exchange = edq.util.net.HTTPExchange.from_path(args.path)
-    _, body = exchange.make_request(args.server)
+    exchange = edq.net.exchange.HTTPExchange.from_path(args.path)
+    _, body = edq.net.request.make_with_exchange(exchange, args.server)
 
     print(body)
 

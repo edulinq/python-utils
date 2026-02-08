@@ -234,11 +234,15 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     Set common CLI arguments for configuration.
     """
 
-    group = parser.add_argument_group("load config options")
+    group = parser.add_argument_group('config options')
 
-    group.add_argument('--config-global', dest = GLOBAL_CONFIG_PATH_KEY,
-        action = 'store', type = str, default = get_global_config_path(config_filename),
-        help = 'Set the default global config file path (default: %(default)s).',
+    group.add_argument('--config', dest = CONFIGS_KEY, metavar = "<KEY>=<VALUE>",
+        action = 'append', type = str, default = [],
+        help = ('Set a configuration option from the command-line.'
+            + ' Specify options as <key>=<value> pairs.'
+            + ' This flag can be specified multiple times.'
+            + ' The options are applied in the order provided and later options override earlier ones.'
+            + ' Will override options form all config files.')
     )
 
     group.add_argument('--config-file', dest = CONFIG_PATHS_KEY,
@@ -249,13 +253,9 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
             + ' Will override options form both global and local config files.')
     )
 
-    group.add_argument('--config', dest = CONFIGS_KEY, metavar = "<KEY>=<VALUE>",
-        action = 'append', type = str, default = [],
-        help = ('Set a configuration option from the command-line.'
-            + ' Specify options as <key>=<value> pairs.'
-            + ' This flag can be specified multiple times.'
-            + ' The options are applied in the order provided and later options override earlier ones.'
-            + ' Will override options form all config files.')
+    group.add_argument('--config-global', dest = GLOBAL_CONFIG_KEY,
+        action = 'store', type = str, default = get_global_config_path(config_filename),
+        help = 'Set the default global config file path (default: %(default)s).',
     )
 
     group.add_argument('--ignore-config-option', dest = IGNORE_CONFIGS_KEY,

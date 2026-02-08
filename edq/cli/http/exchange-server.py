@@ -9,7 +9,7 @@ import os
 import sys
 
 import edq.core.argparser
-import edq.testing.httpserver
+import edq.net.exchangeserver
 
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
@@ -19,7 +19,7 @@ def run_cli(args: argparse.Namespace) -> int:
         'headers_to_skip': args.ignore_headers,
     }
 
-    server = edq.testing.httpserver.HTTPTestServer(
+    server = edq.net.exchangeserver.HTTPExchangeServer(
             port = args.port,
             match_options = match_options,
             verbose = True,
@@ -53,15 +53,17 @@ def _get_parser() -> argparse.ArgumentParser:
         type = str, nargs = '+',
         help = 'Path to exchange files or dirs (which will be recursively searched for all exchange files).')
 
-    parser.add_argument('--port', dest = 'port',
+    group = parser.add_argument_group('server options')
+
+    group.add_argument('--port', dest = 'port',
         action = 'store', type = int, default = None,
         help = 'The port to run this test server on. If not set, a random open port will be chosen.')
 
-    parser.add_argument('--ignore-param', dest = 'ignore_params',
+    group.add_argument('--ignore-param', dest = 'ignore_params',
         action = 'append', type = str, default = [],
         help = 'Ignore this parameter during exchange matching.')
 
-    parser.add_argument('--ignore-header', dest = 'ignore_headers',
+    group.add_argument('--ignore-header', dest = 'ignore_headers',
         action = 'append', type = str, default = [],
         help = 'Ignore this header during exchange matching.')
 

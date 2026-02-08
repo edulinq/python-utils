@@ -1,38 +1,23 @@
-"""
-Utilities for network and HTTP.
-"""
-
-import argparse
-import email.message
-import errno
-import http.server
-import io
-import logging
+import copy
+import http
 import os
 import pathlib
-import socket
-import time
 import typing
 import urllib.parse
 
 import requests
-import requests_toolbelt.multipart.decoder
 
+import edq.net.util
 import edq.util.dirent
+import edq.util.encoding
 import edq.util.hash
 import edq.util.json
 import edq.util.pyimport
 
-DEFAULT_START_PORT: int = 30000
-DEFAULT_END_PORT: int = 40000
-DEFAULT_PORT_SEARCH_WAIT_SEC: float = 0.01
-
-DEFAULT_REQUEST_TIMEOUT_SECS: float = 10.0
-
 DEFAULT_HTTP_EXCHANGE_EXTENSION: str= '.httpex.json'
 
 QUERY_CLIP_LENGTH: int = 100
-""" If the query portion of an HTTPExhange being saved is longer than this, then clip the name. """
+""" If the filename of an HTTPExhange being saved is longer than this, then clip it. """
 
 ANCHOR_HEADER_KEY: str = 'edq-anchor'
 """
@@ -96,28 +81,18 @@ Some are sent automatically and we don't need to record (like content-length),
 and some are additional information we don't need.
 """
 
-_exchanges_out_dir: typing.Union[str, None] = None
-""" If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
+_exchanges_clean_func: typing.Union[str, None] = None  # pylint: disable=invalid-name
+"""
+If not None, all created exchanges (in HTTPExchange.make_request() and HTTPExchange.from_response()) will use this response modifier.
+This function will be called with the response and response body before parsing the rest of the data to build the exchange.
+"""
 
-_exchanges_clean_func: typing.Union[str, None] = None
-""" If not None, all created exchanges (in HTTPExchange.make_request() and HTTPExchange.from_response()) will use this response modifier. """
-
-@typing.runtime_checkable
-class ResponseModifierFunction(typing.Protocol):
-    """
-    A function that can be used to modify an exchange's response.
-    Exchanges can use these functions to normalize their responses before saving.
-    """
-
-    def __call__(self,
-            response: requests.Response,
-            body: str,
-            ) -> str:
-        """
-        Modify the http response.
-        Headers may be modified in the response directly,
-        while the modified (or same) body must be returned.
-        """
+_exchanges_finalize_func: typing.Union[str, None] = None  # pylint: disable=invalid-name
+"""
+If not None, all created exchanges (in HTTPExchange.make_request()) will use this finalize function.
+This function will be called with the created exchange right after construction and before passing back to the caller
+(or writing).
+"""
 
 class FileInfo(edq.util.json.DictConverter):
     """ Store info about files used in HTTP exchanges. """
@@ -126,6 +101,7 @@ class FileInfo(edq.util.json.DictConverter):
             path: typing.Union[str, None] = None,
             name: typing.Union[str, None] = None,
             content: typing.Union[str, bytes, None] = None,
+            b64_encoded: bool = False,
             **kwargs: typing.Any) -> None:
         # Normalize the path from POSIX-style to the system's style.
         if (path is not None):
@@ -146,20 +122,45 @@ class FileInfo(edq.util.json.DictConverter):
         self.content: typing.Union[str, bytes, None] = content
         """ The contents of this file. """
 
+        self.b64_encoded: bool = b64_encoded
+        """ Whether the content is a string encoded in Base64. """
+
         if ((self.path is None) and (self.content is None)):
             raise ValueError("File must have either path or content specified.")
 
-    def resolve_path(self, base_dir: str) -> None:
+    def resolve_path(self, base_dir: str, load_file: bool = True) -> None:
         """ Resolve this path relative to the given base dir. """
 
-        if ((self.path is None) or os.path.isabs(self.path)):
-            return
+        if ((self.path is not None) and (not os.path.isabs(self.path))):
+            self.path = os.path.abspath(os.path.join(base_dir, self.path))
 
-        self.path = os.path.abspath(os.path.join(base_dir, self.path))
+        if ((self.path is not None) and (self.content is None) and load_file):
+            self.content = edq.util.dirent.read_file_bytes(self.path)
+
+    def hash_content(self) -> str:
+        """
+        Compute a hash for the content present.
+        If no content is provided, use the path.
+        """
+
+        hash_content = self.content
+
+        if (self.b64_encoded and isinstance(hash_content, str)):
+            hash_content = edq.util.encoding.from_base64(hash_content)
+
+        if (hash_content is None):
+            hash_content = self.path
+
+        return edq.util.hash.sha256_hex(hash_content)
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         data = vars(self).copy()
-        del data['content']
+
+        # JSON does not support raw bytes, so we will need to base64 encode any binary content.
+        if (isinstance(self.content, bytes)):
+            data['content'] = edq.util.encoding.to_base64(self.content)
+            data['b64_encoded'] = True
+
         return data
 
     @classmethod
@@ -177,7 +178,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             url_path: typing.Union[str, None] = None,
             url_anchor: typing.Union[str, None] = None,
             parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, str]]], None] = None,
+            files: typing.Union[typing.List[typing.Union[FileInfo, typing.Dict[str, typing.Any]]], None] = None,
             headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
             allow_redirects: typing.Union[bool, None] = None,
             response_code: int = http.HTTPStatus.OK,
@@ -186,6 +187,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             response_body: typing.Union[str, dict, list, None] = None,
             source_path: typing.Union[str, None] = None,
             response_modifier: typing.Union[str, None] = None,
+            finalize: typing.Union[str, None] = None,
             extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             **kwargs: typing.Any) -> None:
         method = str(method).upper()
@@ -284,6 +286,12 @@ class HTTPExchange(edq.util.json.DictConverter):
         This reference must be importable via edq.util.pyimport.fetch().
         """
 
+        self.finalize: typing.Union[str, None] = finalize
+        """
+        This function reference will be used to finalize echanges before sent back to the caller.
+        This reference must be importable via edq.util.pyimport.fetch().
+        """
+
         self.source_path: typing.Union[str, None] = source_path
         """
         The path that this exchange was loaded from (if it was loaded from a file).
@@ -364,7 +372,7 @@ class HTTPExchange(edq.util.json.DictConverter):
 
             # Check for any parameters.
 
-            url_params = parse_query_string(parts.query)
+            url_params = edq.net.util.parse_query_string(parts.query)
             for (key, value) in url_params.items():
                 if (key not in parameters):
                     parameters[key] = value
@@ -422,9 +430,9 @@ class HTTPExchange(edq.util.json.DictConverter):
         if (not match):
             return False, hint
 
-        # Check file names, not file content.
-        query_filenames = {file.name for file in query.files}
-        target_filenames = {file.name for file in self.files}
+        # Check file names and hash contents.
+        query_filenames = {(file.name, file.hash_content()) for file in query.files}
+        target_filenames = {(file.name, file.hash_content()) for file in self.files}
         if (query_filenames != target_filenames):
             return False, f"File names do not match (query = {query_filenames}, target = {target_filenames})."
 
@@ -473,34 +481,6 @@ class HTTPExchange(edq.util.json.DictConverter):
             url += ('#' + self.url_anchor)
 
         return url
-
-    def make_request(self, base_url: str, raise_for_status: bool = True, **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
-        """ Perform the HTTP request described by this exchange. """
-
-        files = []
-        for file_info in self.files:
-            content = file_info.content
-            if (content is None):
-                content = open(file_info.path, 'rb')  # type: ignore[assignment,arg-type]  # pylint: disable=consider-using-with
-
-            files.append((file_info.name, content))
-
-        url = f"{base_url}/{self.get_url()}"
-
-        response, body = make_request(self.method, url,
-                headers = self.headers,
-                data = self.parameters,
-                files = files,
-                raise_for_status = raise_for_status,
-                allow_redirects = self.allow_redirects,
-                **kwargs,
-        )
-
-        if (self.response_modifier is not None):
-            modify_func = edq.util.pyimport.fetch(self.response_modifier)
-            body = modify_func(response, body)
-
-        return response, body
 
     def match_response(self, response: requests.Response,
             override_body: typing.Union[str, None] = None,
@@ -552,6 +532,44 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         return True, None
 
+    def compute_relpath(self, http_exchange_extension: str = DEFAULT_HTTP_EXCHANGE_EXTENSION) -> str:
+        """ Create a consistent, semi-unique, and relative path for this exchange. """
+
+        url = self.get_url().strip()
+        parts = url.split('/')
+
+
+        if (url in ['', '/']):
+            filename = '_index_'
+            dirname = ''
+        else:
+            filename = parts[-1]
+
+            if (len(parts) > 1):
+                dirname = os.path.join(*parts[0:-1])
+            else:
+                dirname = ''
+
+        parameters = {}
+        for key in sorted(self.parameters.keys()):
+            parameters[key] = self.parameters[key]
+
+        # Treat files as params as well.
+        for file_info in self.files:
+            parameters[f"file-{file_info.name}"] = file_info.hash_content()
+
+        query = urllib.parse.urlencode(parameters)
+        if (query != ''):
+            # The query can get very long, so we may have to clip it.
+            query_text = edq.util.hash.clip_text(query, QUERY_CLIP_LENGTH)
+
+            # Note that the '?' is URL encoded.
+            filename += f"%3F{query_text}"
+
+        filename += f"_{self.method}{http_exchange_extension}"
+
+        return os.path.join(dirname, filename)
+
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return vars(self)
 
@@ -596,6 +614,10 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         # Use a clean function (if one exists).
         if (_exchanges_clean_func is not None):
+            # Make a copy of the response to avoid cleaning functions modifying it.
+            # Note that this is not a very complete solution, since we can't rely on the deep copy getting everything right.
+            response = copy.deepcopy(response)
+
             modify_func = edq.util.pyimport.fetch(_exchanges_clean_func)
             body = modify_func(response, body)
 
@@ -609,7 +631,7 @@ class HTTPExchange(edq.util.json.DictConverter):
             request_headers.pop(key, None)
             response_headers.pop(key, None)
 
-        request_data, request_files = parse_request_data(response.request.url, response.request.headers, response.request.body)
+        request_data, request_files = edq.net.util.parse_request_data(response.request.url, response.request.headers, response.request.body)
 
         # Clean parameters.
         for key in params_to_skip:
@@ -631,7 +653,16 @@ class HTTPExchange(edq.util.json.DictConverter):
             'allow_redirects': allow_redirects,
         }
 
-        return HTTPExchange(**data)
+        exchange = HTTPExchange(**data)
+
+        # Use a finalize function (if one exists).
+        if (_exchanges_finalize_func is not None):
+            finalize_func = edq.util.pyimport.fetch(_exchanges_finalize_func)
+
+            exchange = finalize_func(exchange)
+            exchange.finalize = _exchanges_finalize_func
+
+        return exchange
 
 @typing.runtime_checkable
 class HTTPExchangeComplete(typing.Protocol):
@@ -645,306 +676,3 @@ class HTTPExchangeComplete(typing.Protocol):
         """
         Called after an HTTP exchange has been completed.
         """
-
-_make_request_exchange_complete_func: typing.Union[HTTPExchangeComplete, None] = None  # pylint: disable=invalid-name
-""" If not None, call this func after make_request() has created its HTTPExchange. """
-
-def find_open_port(
-        start_port: int = DEFAULT_START_PORT, end_port: int = DEFAULT_END_PORT,
-        wait_time: float = DEFAULT_PORT_SEARCH_WAIT_SEC) -> int:
-    """
-    Find an open port on this machine within the given range (inclusive).
-    If no open port is found, an error is raised.
-    """
-
-    for port in range(start_port, end_port + 1):
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(('127.0.0.1', port))
-
-            # Explicitly close the port and wait a short amount of time for the port to clear.
-            # This should not be required because of the socket option above,
-            # but the cost is small.
-            sock.close()
-            time.sleep(DEFAULT_PORT_SEARCH_WAIT_SEC)
-
-            return port
-        except socket.error as ex:
-            sock.close()
-
-            if (ex.errno == errno.EADDRINUSE):
-                continue
-
-            # Unknown error.
-            raise ex
-
-    raise ValueError(f"Could not find open port in [{start_port}, {end_port}].")
-
-def make_request(method: str, url: str,
-        headers: typing.Union[typing.Dict[str, typing.Any], None] = None,
-        data: typing.Union[typing.Dict[str, typing.Any], None] = None,
-        files: typing.Union[typing.List[typing.Any], None] = None,
-        raise_for_status: bool = True,
-        timeout_secs: float = DEFAULT_REQUEST_TIMEOUT_SECS,
-        output_dir: typing.Union[str, None] = None,
-        send_anchor_header: bool = True,
-        headers_to_skip: typing.Union[typing.List[str], None] = None,
-        params_to_skip: typing.Union[typing.List[str], None] = None,
-        http_exchange_extension: str = DEFAULT_HTTP_EXCHANGE_EXTENSION,
-        add_http_prefix: bool = True,
-        additional_requests_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-        exchange_complete_func: typing.Union[HTTPExchangeComplete, None] = None,
-        allow_redirects: typing.Union[bool, None] = None,
-        **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
-    """
-    Make an HTTP request and return the response object and text body.
-    """
-
-    if (add_http_prefix and (not url.lower().startswith('http'))):
-        url = 'http://' + url
-
-    if (output_dir is None):
-        output_dir = _exchanges_out_dir
-
-    if (headers is None):
-        headers = {}
-
-    if (data is None):
-        data = {}
-
-    if (files is None):
-        files = []
-
-    if (additional_requests_options is None):
-        additional_requests_options = {}
-
-    # Add in the anchor as a header (since it is not traditionally sent in an HTTP request).
-    if (send_anchor_header):
-        headers = headers.copy()
-
-        parts = urllib.parse.urlparse(url)
-        headers[ANCHOR_HEADER_KEY] = parts.fragment.lstrip('#')
-
-    options = additional_requests_options.copy()
-    options.update({
-        'headers': headers,
-        'files': files,
-        'timeout': timeout_secs,
-    })
-
-    if (allow_redirects is not None):
-        options['allow_redirects'] = allow_redirects
-
-    if (method == 'GET'):
-        options['params'] = data
-    else:
-        options['data'] = data
-
-    logging.debug("Making %s request: '%s' (options = %s).", method, url, options)
-    response = requests.request(method, url, **options)
-
-    body = response.text
-    logging.debug("Response:\n%s", body)
-
-    if (raise_for_status):
-        # Handle 404s a little special, as their body may contain useful information.
-        if ((response.status_code == http.HTTPStatus.NOT_FOUND) and (body is not None) and (body.strip() != '')):
-            response.reason += f" (Body: '{body.strip()}')"
-
-        response.raise_for_status()
-
-    exchange = None
-    if ((output_dir is not None) or (exchange_complete_func is not None) or (_make_request_exchange_complete_func is not None)):
-        exchange = HTTPExchange.from_response(response,
-                headers_to_skip = headers_to_skip, params_to_skip = params_to_skip,
-                allow_redirects = options.get('allow_redirects', None))
-
-    if ((output_dir is not None) and (exchange is not None)):
-        url = exchange.get_url()
-        if (url == ''):
-            url = '_index_'
-
-        path = os.path.abspath(os.path.join(output_dir, *url.split('/')))
-
-        query = urllib.parse.urlencode(exchange.parameters)
-        if (query != ''):
-            # The query can get very long, so we may have to clip it.
-            query_text = edq.util.hash.clip_text(query, QUERY_CLIP_LENGTH)
-
-            # Note that the '?' is URL encoded.
-            path += f"%3F{query_text}"
-
-        path += f"_{method}{http_exchange_extension}"
-
-        edq.util.dirent.mkdir(os.path.dirname(path))
-        edq.util.json.dump_path(exchange, path, indent = 4, sort_keys = False)
-
-    if ((exchange_complete_func is not None) and (exchange is not None)):
-        exchange_complete_func(exchange)
-
-    if ((_make_request_exchange_complete_func is not None) and (exchange is not None)):
-        _make_request_exchange_complete_func(exchange)  # pylint: disable=not-callable
-
-    return response, body
-
-def make_get(url: str, **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
-    """
-    Make a GET request and return the response object and text body.
-    """
-
-    return make_request('GET', url, **kwargs)
-
-def make_post(url: str, **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
-    """
-    Make a POST request and return the response object and text body.
-    """
-
-    return make_request('POST', url, **kwargs)
-
-def parse_request_data(
-        url: str,
-        headers: typing.Union[email.message.Message, typing.Dict[str, typing.Any]],
-        body: typing.Union[bytes, str, io.BufferedIOBase],
-        ) -> typing.Tuple[typing.Dict[str, typing.Any], typing.Dict[str, bytes]]:
-    """ Parse data and files from an HTTP request URL and body. """
-
-    # Parse data from the request body.
-    request_data, request_files = parse_request_body_data(headers, body)
-
-    # Parse parameters from the URL.
-    url_parts = urllib.parse.urlparse(url)
-    request_data.update(parse_query_string(url_parts.query))
-
-    return request_data, request_files
-
-def parse_request_body_data(
-        headers: typing.Union[email.message.Message, typing.Dict[str, typing.Any]],
-        body: typing.Union[bytes, str, io.BufferedIOBase],
-        ) -> typing.Tuple[typing.Dict[str, typing.Any], typing.Dict[str, bytes]]:
-    """ Parse data and files from an HTTP request body. """
-
-    data: typing.Dict[str, typing.Any] = {}
-    files: typing.Dict[str, bytes] = {}
-
-    length = int(headers.get('Content-Length', 0))
-    if (length == 0):
-        return data, files
-
-    if (isinstance(body, io.BufferedIOBase)):
-        raw_content = body.read(length)
-    elif (isinstance(body, str)):
-        raw_content = body.encode(edq.util.dirent.DEFAULT_ENCODING)
-    else:
-        raw_content = body
-
-    content_type = headers.get('Content-Type', '')
-
-    if (content_type in ['', 'application/x-www-form-urlencoded']):
-        data = parse_query_string(raw_content.decode(edq.util.dirent.DEFAULT_ENCODING).strip())
-        return data, files
-
-    if (content_type.startswith('multipart/form-data')):
-        decoder = requests_toolbelt.multipart.decoder.MultipartDecoder(
-            raw_content, content_type, encoding = edq.util.dirent.DEFAULT_ENCODING)
-
-        for multipart_section in decoder.parts:
-            values = parse_content_dispositions(multipart_section.headers)
-
-            name = values.get('name', None)
-            if (name is None):
-                raise ValueError("Could not find name for multipart section.")
-
-            # Look for a "filename" field to indicate a multipart section is a file.
-            # The file's desired name is still in "name", but an alternate name is in "filename".
-            if ('filename' in values):
-                filename = values.get('name', '')
-                if (filename == ''):
-                    raise ValueError("Unable to find filename for multipart section.")
-
-                files[filename] = multipart_section.content
-            else:
-                # Normal Parameter
-                data[name] = multipart_section.text
-
-        return data, files
-
-    raise ValueError(f"Unknown content type: '{content_type}'.")
-
-def parse_content_dispositions(headers: typing.Union[email.message.Message, typing.Dict[str, typing.Any]]) -> typing.Dict[str, typing.Any]:
-    """ Parse a request's content dispositions from headers. """
-
-    values = {}
-    for (key, value) in headers.items():
-        if (isinstance(key, bytes)):
-            key = key.decode(edq.util.dirent.DEFAULT_ENCODING)
-
-        if (isinstance(value, bytes)):
-            value = value.decode(edq.util.dirent.DEFAULT_ENCODING)
-
-        key = key.strip().lower()
-        if (key != 'content-disposition'):
-            continue
-
-        # The Python stdlib recommends using the email library for this parsing,
-        # but I have not had a good experience with it.
-        for part in value.strip().split(';'):
-            part = part.strip()
-
-            parts = part.split('=')
-            if (len(parts) != 2):
-                continue
-
-            cd_key = parts[0].strip()
-            cd_value = parts[1].strip().strip('"')
-
-            values[cd_key] = cd_value
-
-    return values
-
-def parse_query_string(text: str,
-        replace_single_lists: bool = True,
-        keep_blank_values: bool = True,
-        **kwargs: typing.Any) -> typing.Dict[str, typing.Any]:
-    """
-    Parse a query string (like urllib.parse.parse_qs()), and normalize the result.
-    If specified, lists with single values (as returned from urllib.parse.parse_qs()) will be replaced with the single value.
-    """
-
-    results = urllib.parse.parse_qs(text, keep_blank_values = True)
-    for (key, value) in results.items():
-        if (replace_single_lists and (len(value) == 1)):
-            results[key] = value[0]  # type: ignore[assignment]
-
-    return results
-
-def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, typing.Any]) -> None:
-    """
-    Set common CLI arguments.
-    This is a sibling to init_from_args(), as the arguments set here can be interpreted there.
-    """
-
-    parser.add_argument('--http-exchanges-out-dir', dest = 'http_exchanges_out_dir',
-        action = 'store', type = str, default = None,
-        help = 'If set, write all outgoing HTTP requests as exchanges to this directory.')
-
-    parser.add_argument('--http-exchanges-clean-func', dest = 'http_exchanges_clean_func',
-        action = 'store', type = str, default = None,
-        help = 'If set, default all created exchanges to this modifier function.')
-
-def init_from_args(
-        parser: argparse.ArgumentParser,
-        args: argparse.Namespace,
-        extra_state: typing.Dict[str, typing.Any]) -> None:
-    """
-    Take in args from a parser that was passed to set_cli_args(),
-    and call init() with the appropriate arguments.
-    """
-
-    global _exchanges_out_dir  # pylint: disable=global-statement
-    if (args.http_exchanges_out_dir is not None):
-        _exchanges_out_dir = args.http_exchanges_out_dir
-
-    global _exchanges_clean_func  # pylint: disable=global-statement
-    if (args.http_exchanges_clean_func is not None):
-        _exchanges_clean_func = args.http_exchanges_clean_func
