@@ -49,6 +49,8 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
 
     @classmethod
     def setUpClass(cls) -> None:
+        super().setUpClass()
+
         if (not cls._child_class_setup_called):
             cls.child_class_setup()
             cls._child_class_setup_called = True
@@ -65,6 +67,8 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
 
     @classmethod
     def tearDownClass(cls) -> None:
+        super().tearDownClass()
+
         if (cls.server_key not in cls._servers):
             return
 

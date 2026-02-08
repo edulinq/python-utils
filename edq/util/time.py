@@ -24,6 +24,18 @@ UNIXTIME_THRESHOLD_MSECS: int = int(1e13)
 UNIXTIME_THRESHOLD_USECS: int = int(1e16)
 """ Epoch time guessing threshold for nanoseconds. """
 
+_testing_timezone: typing.Union[datetime.timezone, None] = None  # pylint: disable=invalid-name
+""" A timezone to use for testing. """
+
+def set_testing_local_timezone(timezone: typing.Union[datetime.timezone, None] = UTC):
+    """
+    Force the local timezone to be a specific value (UTC by default).
+    This will only affect this package (e.g., the stdlib will not be affected).
+    """
+
+    global _testing_timezone  # pylint: disable=global-statement
+    _testing_timezone = timezone
+
 class Duration(int):
     """
     A Duration represents some length in time in milliseconds.
@@ -203,6 +215,9 @@ class Timestamp(int):
 
 def get_local_timezone() -> datetime.timezone:
     """ Get the local (system) timezone or raise an exception. """
+
+    if (_testing_timezone is not None):
+        return _testing_timezone
 
     local_timezone = datetime.datetime.now().astimezone().tzinfo
     if ((local_timezone is None) or (not isinstance(local_timezone, datetime.timezone))):

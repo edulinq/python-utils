@@ -1,9 +1,11 @@
+import datetime
 import typing
 import unittest
 
 import edq.util.dirent
 import edq.util.json
 import edq.util.reflection
+import edq.util.time
 
 FORMAT_STR: str = "\n--- Expected ---\n%s\n--- Actual ---\n%s\n---\n"
 
@@ -14,6 +16,20 @@ class BaseTest(unittest.TestCase):
 
     maxDiff = None
     """ Don't limit the size of diffs. """
+
+    testing_timezone: typing.Union[datetime.timezone, None] = edq.util.time.UTC
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+
+        edq.util.time.set_testing_local_timezone(cls.testing_timezone)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        super().tearDownClass()
+
+        edq.util.time.set_testing_local_timezone(None)
 
     def assertJSONEqual(self, a: typing.Any, b: typing.Any, message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
