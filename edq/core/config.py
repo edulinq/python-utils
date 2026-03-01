@@ -64,7 +64,9 @@ def get_tiered_config(
     ) -> typing.Tuple[typing.Dict[str, str], typing.Dict[str, ConfigSource], typing.Dict[str, typing.Union[str, None]]]:
     """
     Load all configuration options from files and command-line arguments.
-    Returns a configuration dictionary with the values based on tiering rules and a source dictionary mapping each key to its origin.
+    Returns a configuration dictionary with the values based on tiering rules,
+    a source dictionary that maps each configuration key to where it was loaded from,
+    and a configuration parameters dictionary containing the global and local config file paths and the configuration filename.
     """
 
     if (cli_arguments is None):
