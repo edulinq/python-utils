@@ -1171,7 +1171,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Non-exisiting Path
             (
                 {
-                    'file_path': os.path.join('non-exisiting-path', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('non-exisiting-path', edq.core.config.DEFAULT_CONFIG_FILENAME),
                     'config_to_write': {'user': 'user@test.edulinq.org'},
                 },
                 {
@@ -1184,7 +1184,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Directory Path
             (
                 {
-                    'file_path': os.path.join("dir-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join("dir-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
                     'config_to_write': {'user': 'user@test.edulinq.org'},
                 },
                 {},
@@ -1194,7 +1194,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Empty Config
             (
                 {
-                    'file_path': os.path.join('empty', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('empty', edq.core.config.DEFAULT_CONFIG_FILENAME),
                     'config_to_write': {'user': 'user@test.edulinq.org'},
                 },
                 {
@@ -1207,7 +1207,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Non-empty Config
             (
                 {
-                    'file_path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
                     'config_to_write': {'pass': 'password1234'},
                 },
                 {
@@ -1220,7 +1220,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Non-empty Config (Overwrite)
             (
                 {
-                    'file_path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
                     'config_to_write': {'user': 'admin@test.edulinq.org'},
                 },
                 {
@@ -1237,13 +1237,13 @@ class TestConfig(edq.testing.unittest.BaseTest):
             with self.subTest(msg = f"Case {i}"):
                 temp_dir = create_test_dir(temp_dir_prefix = "edq-test-write-config-")
 
-                arguments['file_path'] = os.path.join(temp_dir, arguments['file_path'])
+                arguments['path'] = os.path.join(temp_dir, arguments['path'])
 
                 previous_work_directory = os.getcwd()
                 os.chdir(temp_dir)
 
                 try:
-                    edq.core.config.write_config_to_file(**arguments)
+                    edq.core.config.update_config_file(**arguments)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
 

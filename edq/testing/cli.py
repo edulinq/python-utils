@@ -107,12 +107,13 @@ class CLITestInfo:
 
         edq.util.dirent.mkdir(temp_dir)
 
-        self.work_dir: str = os.getcwd()
-        """ The directory the test runs from. """
-
         if (work_dir is not None):
-            work_dir_expanded = self._expand_paths(work_dir)
-            self.work_dir = work_dir_expanded
+            work_dir = self._expand_paths(work_dir)
+        else:
+            work_dir = os.getcwd()
+
+        self.work_dir: str = work_dir
+        """ The directory the test runs from. """
 
         if (cli is None):
             raise ValueError("Missing CLI module.")

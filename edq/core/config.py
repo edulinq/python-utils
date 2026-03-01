@@ -39,17 +39,17 @@ class ConfigSource:
     def __str__(self) -> str:
         return f"({self.label}, {self.path})"
 
-def write_config_to_file(file_path: str, config_to_write: typing.Dict[str, str]) -> None:
+def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
     """ Write configs to a specified file path. Create the path if it do not exist. """
 
     config = {}
-    if (edq.util.dirent.exists(file_path)):
-        config = edq.util.json.load_path(file_path)
+    if (edq.util.dirent.exists(path)):
+        config = edq.util.json.load_path(path)
 
     config.update(config_to_write)
 
-    edq.util.dirent.mkdir(os.path.dirname(file_path))
-    edq.util.json.dump_path(config, file_path, indent = 4)
+    edq.util.dirent.mkdir(os.path.dirname(path))
+    edq.util.json.dump_path(config, path, indent = 4)
 
 def get_global_config_path(config_filename: str) -> str:
     """ Get the path for the global config file. """
@@ -107,7 +107,7 @@ def get_tiered_config(
     # Check the command-line config options.
     cli_configs = cli_arguments.get(CONFIGS_KEY, [])
     for cli_config_option in cli_configs:
-        (key, value) = _parse_cli_config_option(cli_config_option)
+        (key, value) = parse_string_config_option(cli_config_option)
 
         config[key] = value
         sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
@@ -120,15 +120,18 @@ def get_tiered_config(
 
     return config, sources, config_params
 
-def _parse_cli_config_option(
+def parse_string_config_option(
         config_option: str,
     ) -> typing.Tuple[str, str]:
-    """ Parse and validate a CLI configuration option string, returs the resulting config option as a key value pair. """
+    """
+    Parse and validate a configuration option string in the format of '<key>=<value>'.
+    Returns the resulting config option as a key value pair.
+    """
 
     if ("=" not in config_option):
         raise ValueError(
             f"Invalid configuration option '{config_option}'."
-            + " Configuration options must be provided in the format `<key>=<value>` when passed via the CLI.")
+            + " Configuration options must be provided in the format `<key>=<value>`.")
 
     (key, value) = config_option.split('=', maxsplit = 1)
     key = _validate_config_key(key, value)
@@ -136,7 +139,7 @@ def _parse_cli_config_option(
     return key, value
 
 def _validate_config_key(config_key: str, config_value: str) -> str:
-    """ Validate a configuration key and return its stripped version. """
+    """ Validate a configuration key and return its clean version. """
 
     key = config_key.strip()
     if (key == ''):
