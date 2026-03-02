@@ -3,6 +3,7 @@ Write a configuration option.
 """
 
 import argparse
+import os
 import sys
 import typing
 
@@ -17,25 +18,31 @@ def run_cli(args: argparse.Namespace) -> int:
         (key, value) = edq.core.config.parse_string_config_option(config_option)
         config_to_set[key] = value
 
+    config_options = args._config_info.get("config_options_dict", {})
+
     # Default to the local configuration if no configuration type is specified.
     if (not (args.write_local or args.write_global or (args.write_file_path is not None))):
         args.write_local = True
 
     if (args.write_local):
-        local_config_path = args._config_params[edq.core.config.LOCAL_CONFIG_PATH_KEY]
+        local_config_path = config_options[edq.core.config.LOCAL_CONFIG_PATH_KEY]
 
         # If no local config file was found on the path to root.
+        # Set local config path to the default config filename in the current directory.
         if (local_config_path is None):
-            local_config_path = args._config_params[edq.core.config.FILENAME_KEY]
+            local_config_path = config_options[edq.core.config.FILENAME_KEY]
 
         edq.core.config.update_config_file(local_config_path, config_to_set)
+        print(f"Wrote config options to: {os.path.join(os.getcwd(), local_config_path)}")
     elif (args.write_global):
-        global_config_path = args._config_params[edq.core.config.GLOBAL_CONFIG_KEY]
+        global_config_path = config_options[edq.core.config.GLOBAL_CONFIG_KEY]
         edq.core.config.update_config_file(global_config_path, config_to_set)
+        print(f"Wrote config options to: {global_config_path}")
     elif (args.write_file_path is not None):
         edq.core.config.update_config_file(args.write_file_path, config_to_set)
+        print(f"Wrote config options to: {args.write_file_path}")
     else:
-        raise ValueError("Unknown config type.")
+        raise ValueError("Trying to write to a unknown config scope.")
 
     return 0
 
@@ -51,7 +58,6 @@ def _get_parser() -> argparse.ArgumentParser:
     modify_parser(parser)
 
     return parser
-
 def modify_parser(parser: argparse.ArgumentParser) -> None:
     """ Add this CLI's flags to the given parser. """
 
@@ -61,26 +67,24 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
             +  ' Expected config format is <key>=<value>.'),
     )
 
-    group = parser.add_argument_group("set config options").add_mutually_exclusive_group()
+    group = parser.add_argument_group("config scope options").add_mutually_exclusive_group()
 
     group.add_argument('--local',
         action = 'store_true', dest = 'write_local',
         help = ('Write config option(s) to the local config file if one exists.'
-        + ' If no local config file is found, a new one will be created in the current directory.'),
+            + ' If no local config file is found, a new one will be created in the current directory.'),
     )
 
     group.add_argument('--global',
         action = 'store_true', dest = 'write_global',
         help =  ('Write config option(s) to the global config file if it exists.'
-        +  " If it doesn't exist, a new one will be created."
-        +  " See the '--config-global' help message for more information about the global config path."),
+            +  " If it doesn't exist, a new one will be created."),
     )
 
     group.add_argument('--file', metavar = "<FILE>",
         action = 'store', type = str, default = None, dest = 'write_file_path',
         help = ('Write config option(s) to the specified config file.'
-            +  " If the given file path doesn't exist, it will be created.")
+            +  " If the given file doesn't exist, it will be created.")
     )
-
 if (__name__ == '__main__'):
     sys.exit(main())

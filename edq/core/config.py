@@ -14,11 +14,23 @@ CONFIG_SOURCE_CLI: str = "<cli argument>"
 
 CONFIG_PATHS_KEY: str = 'config_paths'
 CONFIGS_KEY: str = 'configs'
+IGNORE_CONFIGS_KEY: str = 'ignore_configs'
+FILENAME_KEY: str = 'config_filename'
+
 GLOBAL_CONFIG_KEY: str = 'global_config_path'
 LOCAL_CONFIG_PATH_KEY: str = 'local_config_path'
-FILENAME_KEY: str = 'config_filename'
-IGNORE_CONFIGS_KEY: str = 'ignore_configs'
+
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
+
+_config_filename: typing.Dict[str, str] = {'name': DEFAULT_CONFIG_FILENAME}
+
+def set_config_filename(filename: str = DEFAULT_CONFIG_FILENAME) -> None:
+    """ Sets the config filename. """
+    _config_filename['name'] = filename
+
+def get_config_filename() -> str:
+    """ Gets the config filename. """
+    return _config_filename['name']
 
 class ConfigSource:
     """ A class for storing config source information. """
@@ -40,7 +52,11 @@ class ConfigSource:
         return f"({self.label}, {self.path})"
 
 def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
-    """ Write configs to a specified file path. Create the path if it do not exist. """
+    """
+    Write configs to a specified file path.
+    Create the path if it do not exist.
+    Existing keys in the file will be overwritten by values from the update.
+    """
 
     config = {}
     if (edq.util.dirent.exists(path)):
@@ -51,13 +67,12 @@ def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> Non
     edq.util.dirent.mkdir(os.path.dirname(path))
     edq.util.json.dump_path(config, path, indent = 4)
 
-def get_global_config_path(config_filename: str) -> str:
+def get_global_config_path() -> str:
     """ Get the path for the global config file. """
 
-    return platformdirs.user_config_dir(config_filename)
+    return platformdirs.user_config_dir(get_config_filename())
 
 def get_tiered_config(
-        config_filename: str = DEFAULT_CONFIG_FILENAME,
         legacy_config_filename: typing.Union[str, None] = None,
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
@@ -74,16 +89,16 @@ def get_tiered_config(
 
     config: typing.Dict[str, str] = {}
     sources: typing.Dict[str, ConfigSource] = {}
-    config_params: typing.Dict[str, typing.Union[str, None]] = {}
+    config_options: typing.Dict[str, typing.Union[str, None]] = {}
 
-    config_params[FILENAME_KEY] = config_filename
+    config_options[FILENAME_KEY] = get_config_filename()
 
     # Ensure CLI arguments are always a dict, even if provided as argparse.Namespace.
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
 
-    global_config_path = cli_arguments.get(GLOBAL_CONFIG_KEY, get_global_config_path(config_filename))
-    config_params[GLOBAL_CONFIG_KEY] = global_config_path
+    global_config_path = cli_arguments.get(GLOBAL_CONFIG_KEY, get_global_config_path())
+    config_options[GLOBAL_CONFIG_KEY] = global_config_path
 
     # Check the global user config file.
     if (os.path.isfile(global_config_path)):
@@ -91,12 +106,11 @@ def get_tiered_config(
 
     # Check the local user config file.
     local_config_path = _get_local_config_path(
-        config_filename = config_filename,
         legacy_config_filename = legacy_config_filename,
         local_config_root_cutoff = local_config_root_cutoff,
     )
 
-    config_params[LOCAL_CONFIG_PATH_KEY] = local_config_path
+    config_options[LOCAL_CONFIG_PATH_KEY] = local_config_path
 
     if (local_config_path is not None):
         _load_config_file(local_config_path, config, sources, CONFIG_SOURCE_LOCAL)
@@ -120,14 +134,14 @@ def get_tiered_config(
         config.pop(ignore_config, None)
         sources.pop(ignore_config, None)
 
-    return config, sources, config_params
+    return config, sources, config_options
 
 def parse_string_config_option(
         config_option: str,
     ) -> typing.Tuple[str, str]:
     """
     Parse and validate a configuration option string in the format of '<key>=<value>'.
-    Returns the resulting config option as a key value pair.
+    Returns the resulting config option as a key-value pair.
     """
 
     if ("=" not in config_option):
@@ -165,7 +179,6 @@ def _load_config_file(
         sources[key] = ConfigSource(label = source_label, path = config_path)
 
 def _get_local_config_path(
-        config_filename: str,
         legacy_config_filename: typing.Union[str, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
     ) -> typing.Union[str, None]:
@@ -182,8 +195,8 @@ def _get_local_config_path(
     """
 
     # Provided config file is in current directory.
-    if (os.path.isfile(config_filename)):
-        return os.path.abspath(config_filename)
+    if (os.path.isfile(get_config_filename())):
+        return os.path.abspath(get_config_filename())
 
     # Provided legacy config file is in current directory.
     if (legacy_config_filename is not None):
@@ -194,13 +207,11 @@ def _get_local_config_path(
     parent_dir = os.path.dirname(os.getcwd())
     return _get_ancestor_config_file_path(
         parent_dir,
-        config_filename = config_filename,
         local_config_root_cutoff = local_config_root_cutoff,
     )
 
 def _get_ancestor_config_file_path(
         current_directory: str,
-        config_filename: str,
         local_config_root_cutoff: typing.Union[str, None] = None,
     ) -> typing.Union[str, None]:
     """
@@ -215,7 +226,7 @@ def _get_ancestor_config_file_path(
 
     current_directory = os.path.abspath(current_directory)
     for _ in range(edq.util.dirent.DEPTH_LIMIT):
-        config_file_path = os.path.join(current_directory, config_filename)
+        config_file_path = os.path.join(current_directory, get_config_filename())
         if (os.path.isfile(config_file_path)):
             return config_file_path
 
@@ -232,7 +243,6 @@ def _get_ancestor_config_file_path(
     return None
 
 def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, typing.Any],
-        config_filename: str = DEFAULT_CONFIG_FILENAME,
         **kwargs: typing.Any,
     ) -> None:
     """
@@ -259,7 +269,7 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
     )
 
     group.add_argument('--config-global', dest = GLOBAL_CONFIG_KEY,
-        action = 'store', type = str, default = get_global_config_path(config_filename),
+        action = 'store', type = str, default = get_global_config_path(),
         help = 'Set the default global config file path (default: %(default)s).',
     )
 
@@ -275,7 +285,6 @@ def load_config_into_args(
         parser: argparse.ArgumentParser,
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any],
-        config_filename: str = DEFAULT_CONFIG_FILENAME,
         legacy_config_filename: typing.Union[str, None] = None,
         cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
         **kwargs: typing.Any,
@@ -299,12 +308,10 @@ def load_config_into_args(
         if (value is not None):
             getattr(args, CONFIGS_KEY).append(f"{config_key}={value}")
 
-    (config_dict, sources_dict, config_params_dict) = get_tiered_config(
+    (config_dict, sources_dict, config_options_dict) = get_tiered_config(
         cli_arguments = args,
-        config_filename = config_filename,
         legacy_config_filename = legacy_config_filename,
     )
 
-    setattr(args, "_config", config_dict)
-    setattr(args, "_config_sources", sources_dict)
-    setattr(args, "_config_params", config_params_dict)
+    config_info = {"config_dict": config_dict, "sources_dict": sources_dict, "config_options_dict": config_options_dict}
+    setattr(args, "_config_info", config_info)

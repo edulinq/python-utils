@@ -3,6 +3,7 @@
     "arguments": [
         "--config-global", "__DATA_DIR__(configs/empty/edq-config.json)",
     ],
+    "work_dir": "__TEMP_DIR__()"
 }
 ---
 Key	Value

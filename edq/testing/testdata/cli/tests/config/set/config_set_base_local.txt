@@ -7,3 +7,4 @@
     "work_dir": "__TEMP_DIR__()"
 }
 ---
+Wrote config options to: __TEMP_DIR__(edq-config.json)

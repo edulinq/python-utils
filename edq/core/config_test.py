@@ -115,11 +115,12 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
         temp_dir = create_test_dir(temp_dir_prefix = "edq-test-config-get-tiered-config-")
 
-        # [(work directory, extra arguments, expected config, expected source, error substring), ...]
+        # [(work directory, config file name, extra arguments, expected config, expected source, expected config options, error substring), ...]
         test_cases = [
             # No Config
             (
                 "empty-dir",
+                None,
                 {},
                 {},
                 {},
@@ -132,6 +133,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Custom Global Config Path
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
@@ -155,6 +157,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Empty Config JSON
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME),
@@ -171,6 +174,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Empty Key Config JSON
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty-key", edq.core.config.DEFAULT_CONFIG_FILENAME),
@@ -185,6 +189,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Directory Config JSON
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "dir-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
@@ -201,6 +206,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Non-Existent Config JSON
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty-dir", "non-existent-config.json"),
@@ -217,6 +223,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Malformed Config JSON
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "malformed", edq.core.config.DEFAULT_CONFIG_FILENAME),
@@ -231,6 +238,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Ignore Config Option
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "multiple-options", edq.core.config.DEFAULT_CONFIG_FILENAME),
@@ -258,6 +266,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Ignore Non-Existing Config Option
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "simple", edq.core.config.DEFAULT_CONFIG_FILENAME),
@@ -286,6 +295,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Default config file in current directory.
             (
                 "simple",
+                None,
                 {},
                 {
                     "user": "user@test.edulinq.org",
@@ -305,9 +315,8 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Custom config file in current directory.
             (
                 "custom-name",
-                {
-                    edq.core.config.FILENAME_KEY: "custom-edq-config.json",
-                },
+                "custom-edq-config.json",
+                {},
                 {
                     "user": "user@test.edulinq.org",
                 },
@@ -327,6 +336,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Legacy config file in current directory.
             (
                 "old-name",
+                None,
                 {
                     "legacy_config_filename": "config.json",
                 },
@@ -348,6 +358,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Default config file in an ancestor directory.
             (
                 os.path.join("nested", "nest1", "nest2a"),
+                None,
                 {},
                 {
                     "server": "http://test.edulinq.org",
@@ -367,6 +378,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Legacy config file in an ancestor directory.
             (
                 os.path.join("old-name", "nest1", "nest2"),
+                None,
                 {
                     "legacy_config_filename": "config.json",
                 },
@@ -379,6 +391,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Empty Config JSON
             (
                 "empty",
+                None,
                 {},
                 {},
                 {},
@@ -391,6 +404,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Empty Key Config JSON
             (
                 "empty-key",
+                None,
                 {},
                 {},
                 {},
@@ -401,6 +415,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Directory Config JSON
             (
                 "dir-config",
+                None,
                 {},
                 {},
                 {},
@@ -411,6 +426,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Malformed Config JSON
             (
                 "malformed",
+                None,
                 {},
                 {},
                 {},
@@ -421,6 +437,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Ignore Config Option
             (
                 "multiple-options",
+                None,
                 {
                     "cli_arguments":{
                         edq.core.config.IGNORE_CONFIGS_KEY: [
@@ -446,6 +463,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Ignore Non-Existing Config Option
             (
                 "simple",
+                None,
                 {
                     "cli_arguments":{
                         edq.core.config.IGNORE_CONFIGS_KEY: [
@@ -472,6 +490,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # All 3 local config locations present at the same time.
             (
                 os.path.join("nested", "nest1", "nest2b"),
+                None,
                 {
                     "legacy_config_filename": "config.json",
                 },
@@ -498,6 +517,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Distinct Keys
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -527,6 +547,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Overwriting Keys
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -551,6 +572,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Empty Config JSON
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -567,6 +589,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Empty Key Config JSON
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -583,6 +606,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Directory Config JSON
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -599,6 +623,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Non-Existent Config JSON
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -615,6 +640,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Malformed Config JSON
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -631,6 +657,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Ignore Config Option
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -657,6 +684,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Ignore Non-Existing Config Option
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -686,6 +714,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # CLI arguments only (direct key: value).
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -706,6 +735,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Empty Config Key
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -722,6 +752,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Empty Config Value
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -742,6 +773,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Separator In Config Value
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -762,6 +794,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Invalid Config Option Format
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -778,6 +811,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Ignore Config Option
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -802,6 +836,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Ignore Non-Existing Config Option
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -827,6 +862,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Global Config + Local Config
             (
                 "simple",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.core.config.DEFAULT_CONFIG_FILENAME),
@@ -851,6 +887,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Global Config + CLI Provided Config
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -877,6 +914,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Global + CLI Bare Options
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -900,6 +938,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Local Config + CLI Provided Config
             (
                 "simple",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -925,6 +964,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Local Config + CLI Bare Options
             (
                 "simple",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -947,6 +987,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             #  CLI Provided Config + CLI Bare Options
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -970,6 +1011,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Global Config + CLI Provided Config + CLI Bare Options
             (
                 "empty-dir",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -996,6 +1038,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Global Config + Local Config + CLI Bare Options
             (
                 "simple",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -1020,6 +1063,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Global Config + Local Config + CLI Provided Config
             (
                 "simple",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -1047,6 +1091,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Local Config + CLI Provided Config + CLI Bare Options
             (
                 "simple",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIGS_KEY: [
@@ -1072,6 +1117,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             # Global Config + Local Config + CLI Provided Config + CLI Bare Options
             (
                 "simple",
+                None,
                 {
                     "cli_arguments": {
                         edq.core.config.CONFIG_PATHS_KEY: [
@@ -1103,45 +1149,51 @@ class TestConfig(edq.testing.unittest.BaseTest):
         ]
 
         for (i, test_case) in enumerate(test_cases):
-            (test_work_dir, extra_args, expected_config, expected_source, expected_config_params, error_substring) = test_case
+            (test_work_dir, config_filename, extra_args, expected_config, expected_source, expected_config_options, error_substring) = test_case
 
             with self.subTest(msg = f"Case {i} ('{test_work_dir}'):"):
+                edq.core.config.set_config_filename()
+                if (config_filename is not None):
+                    edq.core.config.set_config_filename(config_filename)
+
+                config_filename = edq.core.config.get_config_filename()
+
                 cli_args = extra_args.get("cli_arguments", None)
                 if cli_args is None:
                     extra_args["cli_arguments"] = {
-                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME)
+                        edq.core.config.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty", config_filename)
                     }
                 else:
                     cli_global_config_path = cli_args.get(edq.core.config.GLOBAL_CONFIG_KEY, None)
                     if cli_global_config_path is None:
                         extra_args["cli_arguments"][edq.core.config.GLOBAL_CONFIG_KEY] = os.path.join(
-                            temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME
+                            temp_dir, "empty", config_filename
                         )
 
                 cutoff = extra_args.get("local_config_root_cutoff", None)
                 if (cutoff is None):
                     extra_args["local_config_root_cutoff"] = temp_dir
 
-                global_file_used = expected_config_params.get(edq.core.config.GLOBAL_CONFIG_KEY, None)
+                global_file_used = expected_config_options.get(edq.core.config.GLOBAL_CONFIG_KEY, None)
                 if (global_file_used is None):
-                    expected_config_params[edq.core.config.GLOBAL_CONFIG_KEY] =  os.path.join(
-                        temp_dir, "empty", edq.core.config.DEFAULT_CONFIG_FILENAME
+                    expected_config_options[edq.core.config.GLOBAL_CONFIG_KEY] =  os.path.join(
+                        temp_dir, "empty", config_filename
                     )
 
-                local_file_used = expected_config_params.get(edq.core.config.LOCAL_CONFIG_PATH_KEY, None)
+                local_file_used = expected_config_options.get(edq.core.config.LOCAL_CONFIG_PATH_KEY, None)
                 if (local_file_used is None):
-                    expected_config_params[edq.core.config.LOCAL_CONFIG_PATH_KEY] = None
+                    expected_config_options[edq.core.config.LOCAL_CONFIG_PATH_KEY] = None
 
-                file_name_used = expected_config_params.get(edq.core.config.FILENAME_KEY, None)
+                file_name_used = expected_config_options.get(edq.core.config.FILENAME_KEY, None)
                 if (file_name_used is None):
-                    expected_config_params[edq.core.config.FILENAME_KEY] = edq.core.config.DEFAULT_CONFIG_FILENAME
+                    expected_config_options[edq.core.config.FILENAME_KEY] = config_filename
 
                 previous_work_directory = os.getcwd()
                 initial_work_directory = os.path.join(temp_dir, test_work_dir)
                 os.chdir(initial_work_directory)
 
                 try:
-                    (actual_config, actual_sources, actual_config_params) = edq.core.config.get_tiered_config(**extra_args)
+                    (actual_config, actual_sources, actual_config_options) = edq.core.config.get_tiered_config(**extra_args)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
 
@@ -1159,7 +1211,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
                 self.assertJSONDictEqual(expected_config, actual_config)
                 self.assertJSONDictEqual(expected_source, actual_sources)
-                self.assertJSONDictEqual(expected_config_params, actual_config_params)
+                self.assertJSONDictEqual(expected_config_options, actual_config_options)
 
     def test_write_config_base(self):
         """
@@ -1232,18 +1284,18 @@ class TestConfig(edq.testing.unittest.BaseTest):
         ]
 
         for (i, test_case) in enumerate(test_cases):
-            arguments, expected_result, error_substring = test_case
+            kwargs, expected_result, error_substring = test_case
 
             with self.subTest(msg = f"Case {i}"):
                 temp_dir = create_test_dir(temp_dir_prefix = "edq-test-write-config-")
 
-                arguments['path'] = os.path.join(temp_dir, arguments['path'])
+                kwargs['path'] = os.path.join(temp_dir, kwargs['path'])
 
                 previous_work_directory = os.getcwd()
                 os.chdir(temp_dir)
 
                 try:
-                    edq.core.config.update_config_file(**arguments)
+                    edq.core.config.update_config_file(**kwargs)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
 

@@ -14,10 +14,13 @@ def run_cli(args: argparse.Namespace) -> int:
 
     rows = []
 
-    for (key, value) in args._config.items():
+    config_info = args._config_info
+    config_dict = config_info.get("config_dict", {})
+    sources_dict = config_info.get("sources_dict", {})
+    for (key, value) in config_dict.items():
         row = [key, str(value)]
         if (args.show_origin):
-            config_source_obj = args._config_sources.get(key)
+            config_source_obj = sources_dict.get(key)
 
             origin = config_source_obj.path
             if (origin is None):
