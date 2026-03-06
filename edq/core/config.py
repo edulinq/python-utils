@@ -99,7 +99,7 @@ def get_tiered_config(
     Load all configuration options from files and command-line arguments.
     Returns a configuration dictionary with the values based on tiering rules,
     a source dictionary that maps each configuration key to where it was loaded from,
-    and a configuration parameters dictionary containing the global and local config file paths and the configuration filename.
+    and a configuration options dictionary containing the global and local config file paths and the configuration filename.
     """
 
     if (cli_arguments is None):
@@ -163,8 +163,8 @@ def parse_string_config_option(
 
     if ("=" not in config_option):
         raise ValueError(
-            f"Invalid configuration option '{config_option}'."
-            + " Configuration options must be provided in the format `<key>=<value>`.")
+            f"Invalid configuration option string '{config_option}'."
+            + " Configuration options must be provided in the format '<key>=<value>'.")
 
     (key, value) = config_option.split('=', maxsplit = 1)
     key = _validate_config_key(key, value)

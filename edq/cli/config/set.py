@@ -10,6 +10,11 @@ import typing
 import edq.core.argparser
 import edq.core.config
 
+def print_config_write_path(path: str) -> None:
+    """ Display where the config options were written. """
+
+    print(f"Wrote config options to: {path}")
+
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
@@ -33,14 +38,14 @@ def run_cli(args: argparse.Namespace) -> int:
             local_config_path = config_options[edq.core.config.FILENAME_KEY]
 
         edq.core.config.update_config_file(local_config_path, config_to_set)
-        print(f"Wrote config options to: {os.path.join(os.getcwd(), local_config_path)}")
+        print_config_write_path(os.path.join(os.getcwd(), local_config_path))
     elif (args.write_global):
         global_config_path = config_options[edq.core.config.GLOBAL_CONFIG_KEY]
         edq.core.config.update_config_file(global_config_path, config_to_set)
-        print(f"Wrote config options to: {global_config_path}")
+        print_config_write_path(global_config_path)
     elif (args.write_file_path is not None):
         edq.core.config.update_config_file(args.write_file_path, config_to_set)
-        print(f"Wrote config options to: {args.write_file_path}")
+        print_config_write_path(args.write_file_path)
     else:
         raise ValueError("Trying to write to a unknown config scope.")
 
@@ -58,6 +63,7 @@ def _get_parser() -> argparse.ArgumentParser:
     modify_parser(parser)
 
     return parser
+
 def modify_parser(parser: argparse.ArgumentParser) -> None:
     """ Add this CLI's flags to the given parser. """
 
@@ -86,5 +92,6 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
         help = ('Write config option(s) to the specified config file.'
             +  " If the given file doesn't exist, it will be created.")
     )
+
 if (__name__ == '__main__'):
     sys.exit(main())

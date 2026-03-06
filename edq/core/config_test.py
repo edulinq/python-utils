@@ -807,7 +807,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 {},
-                "Invalid configuration option 'useruser@test.edulinq.org'.",
+                "Invalid configuration option string 'useruser@test.edulinq.org'.",
             ),
 
             # Ignore Config Option
