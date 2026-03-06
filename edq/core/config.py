@@ -16,21 +16,40 @@ CONFIG_PATHS_KEY: str = 'config_paths'
 CONFIGS_KEY: str = 'configs'
 IGNORE_CONFIGS_KEY: str = 'ignore_configs'
 FILENAME_KEY: str = 'config_filename'
+LEGACY_FILENAME_KEY: str = 'legacy_config_filename'
 
 GLOBAL_CONFIG_KEY: str = 'global_config_path'
 LOCAL_CONFIG_PATH_KEY: str = 'local_config_path'
 
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 
-_config_filename: typing.Dict[str, str] = {'name': DEFAULT_CONFIG_FILENAME}
+_config_filenames_dict: typing.Dict[str, typing.Union[str, None]] = {
+    FILENAME_KEY: DEFAULT_CONFIG_FILENAME,
+    LEGACY_FILENAME_KEY: None
+}
 
 def set_config_filename(filename: str = DEFAULT_CONFIG_FILENAME) -> None:
     """ Sets the config filename. """
-    _config_filename['name'] = filename
+
+    _config_filenames_dict[FILENAME_KEY] = filename
 
 def get_config_filename() -> str:
     """ Gets the config filename. """
-    return _config_filename['name']
+
+    config_filename = _config_filenames_dict[FILENAME_KEY]
+    if (config_filename is None):
+        raise ValueError("Config filename is set to 'None'.")
+
+    return config_filename
+
+def set_legacy_config_filename(legacy_filename: typing.Union[str, None] = None) -> None:
+    """ Sets the legacy config filename. """
+
+    _config_filenames_dict[LEGACY_FILENAME_KEY] = legacy_filename
+
+def get_legacy_config_filename() -> typing.Union[str, None]:
+    """ Gets the config legacy filename. """
+    return _config_filenames_dict[LEGACY_FILENAME_KEY]
 
 class ConfigSource:
     """ A class for storing config source information. """
@@ -73,7 +92,6 @@ def get_global_config_path() -> str:
     return platformdirs.user_config_dir(get_config_filename())
 
 def get_tiered_config(
-        legacy_config_filename: typing.Union[str, None] = None,
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
     ) -> typing.Tuple[typing.Dict[str, str], typing.Dict[str, ConfigSource], typing.Dict[str, typing.Union[str, None]]]:
@@ -106,7 +124,6 @@ def get_tiered_config(
 
     # Check the local user config file.
     local_config_path = _get_local_config_path(
-        legacy_config_filename = legacy_config_filename,
         local_config_root_cutoff = local_config_root_cutoff,
     )
 
@@ -179,7 +196,6 @@ def _load_config_file(
         sources[key] = ConfigSource(label = source_label, path = config_path)
 
 def _get_local_config_path(
-        legacy_config_filename: typing.Union[str, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
     ) -> typing.Union[str, None]:
     """
@@ -187,16 +203,19 @@ def _get_local_config_path(
     Begins with the provided config file name,
     optionally checks the legacy config file name if specified,
     then continues up the directory tree looking for the provided config file name.
-    Returns the path to the first config file found.
+    Returns the absolut path to the first config file found.
 
     If no config file is found, returns None.
 
     The cutoff parameter limits the search depth, preventing detection of config file in higher-level directories during testing.
     """
 
+    config_filename = get_config_filename()
+    legacy_config_filename = get_legacy_config_filename()
+
     # Provided config file is in current directory.
-    if (os.path.isfile(get_config_filename())):
-        return os.path.abspath(get_config_filename())
+    if (os.path.isfile(config_filename)):
+        return os.path.abspath(config_filename)
 
     # Provided legacy config file is in current directory.
     if (legacy_config_filename is not None):
@@ -285,7 +304,6 @@ def load_config_into_args(
         parser: argparse.ArgumentParser,
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any],
-        legacy_config_filename: typing.Union[str, None] = None,
         cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
         **kwargs: typing.Any,
     ) -> None:
@@ -310,7 +328,6 @@ def load_config_into_args(
 
     (config_dict, sources_dict, config_options_dict) = get_tiered_config(
         cli_arguments = args,
-        legacy_config_filename = legacy_config_filename,
     )
 
     config_info = {"config_dict": config_dict, "sources_dict": sources_dict, "config_options_dict": config_options_dict}
