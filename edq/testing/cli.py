@@ -14,6 +14,7 @@ then this method will be called with the test info right after the test info is 
 
 If a test class implements a class method with the signature `get_test_basename(cls, path: str) -> str`,
 then this method will be called to create the base name for the test case at the given path.
+Otherwise, the file's basename will be used.
 
 The expected output or any argument can reference the test's current temp or data dirs with `__TEMP_DIR__()` or `__DATA_DIR__()`, respectively.
 An optional slash-separated path can be used as an argument to reference a path within those base directories.
@@ -281,6 +282,32 @@ def replace_path_pattern(text: str, key: str, target_dir: str, normalize_path: b
         text = text.replace(match.group(0), path)
 
     return text
+
+def compute_ancestor_basename(path: str, cli_tests_dir: str) -> str:
+    """
+    Get the test's name based off of its filename and location.
+    A useful fuction to use in get_test_basename().
+    """
+
+    path = os.path.abspath(path)
+
+    name = os.path.splitext(os.path.basename(path))[0]
+
+    # Clean drive identifiers (for Windows).
+    cli_tests_dir_path = os.path.splitdrive(os.path.abspath(cli_tests_dir))[1]
+    path = os.path.splitdrive(path)[1]
+
+    ancestors = os.path.dirname(path).replace(cli_tests_dir_path, '')
+    prefix = ancestors.replace(os.sep, '_')
+
+    if (prefix.startswith('_')):
+        prefix = prefix.replace('_', '', 1)
+
+    if (len(prefix) > 0):
+        name = f"{prefix}_{name}"
+
+    return name
+
 
 def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callable:
     """ Get a test method that represents the test case at the given path. """
