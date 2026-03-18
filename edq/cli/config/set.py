@@ -1,5 +1,5 @@
 """
-Write a configuration option.
+Update configuration options.
 """
 
 import argparse
@@ -9,11 +9,6 @@ import typing
 
 import edq.core.argparser
 import edq.core.config
-
-def print_config_write_path(path: str) -> None:
-    """ Display where the config options were written. """
-
-    print(f"Wrote config options to: {path}")
 
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
