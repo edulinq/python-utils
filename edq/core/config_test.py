@@ -115,7 +115,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
         temp_dir = create_test_dir(temp_dir_prefix = "edq-test-config-get-tiered-config-")
 
-        # [(work directory, config filenames, extra arguments, expected config, expected source, expected config options, error substring), ...]
+        # [(work directory, config filenames, extra arguments, expected config, expected sources, expected config options, error substring), ...]
         test_cases = [
             # No Config
             (
@@ -1151,7 +1151,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
         ]
 
         for (i, test_case) in enumerate(test_cases):
-            (test_work_dir, config_filenames, extra_args, expected_config, expected_source, expected_config_options, error_substring) = test_case
+            (test_work_dir, config_filenames, extra_args, expected_config, expected_sources,  expected_config_options, error_substring) = test_case
 
             with self.subTest(msg = f"Case {i} ('{test_work_dir}'):"):
                 edq.core.config.set_config_filename(edq.core.config.DEFAULT_CONFIG_FILENAME)
@@ -1193,9 +1193,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 if (file_name_used is None):
                     expected_config_options[edq.core.config.CONFIG_FILENAME_KEY] = config_filename
 
-                expected_config_info = edq.core.config.ConfigInfo(
-                    config_dict = expected_config,
-                    source_dict = expected_source,
+                expected_config_info = edq.core.config.TieredConfigInfo(
+                    config = expected_config,
+                    sources = expected_sources,
                     **expected_config_options
                 )
 

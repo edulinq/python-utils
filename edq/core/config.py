@@ -67,24 +67,31 @@ class ConfigSource:
     def __str__(self) -> str:
         return f"({self.label}, {self.path})"
 
-class ConfigInfo(edq.util.json.DictConverter):
+class TieredConfigInfo(edq.util.json.DictConverter):
     """ A class for storing information about the state of a config. """
 
     def __init__(self,
             config_filename: str,
             local_config_path: typing.Union[str, None],
             global_config_path: str,
-            config_dict: typing.Dict[str, str],
-            source_dict: typing.Dict[str, ConfigSource],
+            config: typing.Dict[str, str],
+            sources: typing.Dict[str, ConfigSource],
         ) -> None:
 
-        self.config_filename = config_filename
+        self.config_filename: str = config_filename
+        """ Config filename searched for. """
 
-        self.local_config_path = local_config_path
-        self.global_config_path = global_config_path
+        self.local_config_path: typing.Union[str, None] = local_config_path
+        """ Local config file path that was found. """
 
-        self.config_dict = config_dict
-        self.source_dict = source_dict
+        self.global_config_path: str = global_config_path
+        """ Global config file path that was found. """
+
+        self.config: typing.Dict[str, str] = config
+        """ Key-value configurations. """
+
+        self.sources: typing.Dict[str, ConfigSource] = sources
+        """ Where configs came from. """
 
 def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
     """
@@ -110,7 +117,7 @@ def get_global_config_path() -> str:
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
-    ) -> ConfigInfo:
+    ) -> TieredConfigInfo:
     """
     Load all configuration options from files and command-line arguments.
     Returns a configuration dictionary with the values based on tiering rules,
@@ -161,7 +168,7 @@ def get_tiered_config(
         config.pop(ignore_config, None)
         sources.pop(ignore_config, None)
 
-    return ConfigInfo(get_config_filename(), local_config_path, global_config_path, config, sources)
+    return TieredConfigInfo(get_config_filename(), local_config_path, global_config_path, config, sources)
 
 def parse_string_config_option(
         config_option: str,

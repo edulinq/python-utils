@@ -16,10 +16,10 @@ def run_cli(args: argparse.Namespace) -> int:
 
     config_info = args._config_info
 
-    for (key, value) in config_info.config_dict.items():
+    for (key, value) in config_info.config.items():
         row = [key, str(value)]
         if (args.show_origin):
-            config_source_obj = config_info.source_dict.get(key)
+            config_source_obj = config_info.sources.get(key)
 
             origin = config_source_obj.path
             if (origin is None):
