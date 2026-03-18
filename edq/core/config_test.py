@@ -316,7 +316,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 "custom-name",
                 {
-                    edq.core.config.FILENAME_KEY: "custom-edq-config.json",
+                    edq.core.config.CONFIG_FILENAME_KEY: "custom-edq-config.json",
                 },
                 {},
                 {
@@ -329,7 +329,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     ),
                 },
                 {
-                    edq.core.config.FILENAME_KEY: "custom-edq-config.json",
+                    edq.core.config.CONFIG_FILENAME_KEY: "custom-edq-config.json",
                     edq.core.config.LOCAL_CONFIG_PATH_KEY: os.path.join(temp_dir, "custom-name","custom-edq-config.json"),
                 },
                 None,
@@ -339,7 +339,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 "old-name",
                 {
-                    edq.core.config.LEGACY_FILENAME_KEY: "config.json",
+                    edq.core.config.LEGACY_CONFIG_FILENAME_KEY: "config.json",
                 },
                 {},
                 {
@@ -381,7 +381,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 os.path.join("old-name", "nest1", "nest2"),
                 {
-                    edq.core.config.LEGACY_FILENAME_KEY: "config.json",
+                    edq.core.config.LEGACY_CONFIG_FILENAME_KEY: "config.json",
                 },
                 {},
                 {},
@@ -493,7 +493,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 os.path.join("nested", "nest1", "nest2b"),
                 {
-                    edq.core.config.LEGACY_FILENAME_KEY:"config.json",
+                    edq.core.config.LEGACY_CONFIG_FILENAME_KEY:"config.json",
                 },
                 {},
                 {
@@ -1154,13 +1154,13 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (test_work_dir, config_filenames, extra_args, expected_config, expected_source, expected_config_options, error_substring) = test_case
 
             with self.subTest(msg = f"Case {i} ('{test_work_dir}'):"):
-                edq.core.config.set_config_filename()
-                edq.core.config.set_legacy_config_filename()
+                edq.core.config.set_config_filename(edq.core.config.DEFAULT_CONFIG_FILENAME)
+                edq.core.config.set_legacy_config_filename(edq.core.config.DEFAULT_LEGACY_CONFIG_FILENAME)
 
-                config_filename = config_filenames.get(edq.core.config.FILENAME_KEY, edq.core.config.DEFAULT_CONFIG_FILENAME)
+                config_filename = config_filenames.get(edq.core.config.CONFIG_FILENAME_KEY, edq.core.config.DEFAULT_CONFIG_FILENAME)
                 edq.core.config.set_config_filename(config_filename)
 
-                legacy_config_filename = config_filenames.get(edq.core.config.LEGACY_FILENAME_KEY, None)
+                legacy_config_filename = config_filenames.get(edq.core.config.LEGACY_CONFIG_FILENAME_KEY, None)
                 edq.core.config.set_legacy_config_filename(legacy_config_filename)
 
                 cli_args = extra_args.get("cli_arguments", None)
@@ -1189,16 +1189,22 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 if (local_file_used is None):
                     expected_config_options[edq.core.config.LOCAL_CONFIG_PATH_KEY] = None
 
-                file_name_used = expected_config_options.get(edq.core.config.FILENAME_KEY, None)
+                file_name_used = expected_config_options.get(edq.core.config.CONFIG_FILENAME_KEY, None)
                 if (file_name_used is None):
-                    expected_config_options[edq.core.config.FILENAME_KEY] = config_filename
+                    expected_config_options[edq.core.config.CONFIG_FILENAME_KEY] = config_filename
+
+                expected_config_info = edq.core.config.ConfigInfo(
+                    config_dict = expected_config,
+                    source_dict = expected_source,
+                    **expected_config_options
+                )
 
                 previous_work_directory = os.getcwd()
                 initial_work_directory = os.path.join(temp_dir, test_work_dir)
                 os.chdir(initial_work_directory)
 
                 try:
-                    (actual_config, actual_sources, actual_config_options) = edq.core.config.get_tiered_config(**extra_args)
+                    actual_config_info = edq.core.config.get_tiered_config(**extra_args)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
 
@@ -1214,9 +1220,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 if (error_substring is not None):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
-                self.assertJSONDictEqual(expected_config, actual_config)
-                self.assertJSONDictEqual(expected_source, actual_sources)
-                self.assertJSONDictEqual(expected_config_options, actual_config_options)
+                self.assertJSONDictEqual(actual_config_info, expected_config_info)
 
     def test_write_config_base(self):
         """

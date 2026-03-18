@@ -23,31 +23,31 @@ def run_cli(args: argparse.Namespace) -> int:
         (key, value) = edq.core.config.parse_string_config_option(config_option)
         config_to_set[key] = value
 
-    config_options = args._config_info.get("config_options_dict", {})
+    config_info = args._config_info
 
     # Default to the local configuration if no configuration type is specified.
     if (not (args.write_local or args.write_global or (args.write_file_path is not None))):
         args.write_local = True
 
+    path_to_write_config = None
     if (args.write_local):
-        local_config_path = config_options[edq.core.config.LOCAL_CONFIG_PATH_KEY]
+        local_config_path = config_info.local_config_path
 
         # If no local config file was found on the path to root.
         # Set local config path to the default config filename in the current directory.
         if (local_config_path is None):
-            local_config_path = config_options[edq.core.config.FILENAME_KEY]
+            local_config_path = config_info.config_filename
 
-        edq.core.config.update_config_file(local_config_path, config_to_set)
-        print_config_write_path(os.path.join(os.getcwd(), local_config_path))
+        path_to_write_config = os.path.join(os.getcwd(), local_config_path)
     elif (args.write_global):
-        global_config_path = config_options[edq.core.config.GLOBAL_CONFIG_KEY]
-        edq.core.config.update_config_file(global_config_path, config_to_set)
-        print_config_write_path(global_config_path)
+        path_to_write_config = config_info.global_config_path
     elif (args.write_file_path is not None):
-        edq.core.config.update_config_file(args.write_file_path, config_to_set)
-        print_config_write_path(args.write_file_path)
+        path_to_write_config = args.write_file_path
     else:
         raise ValueError("Trying to write to a unknown config scope.")
+
+    edq.core.config.update_config_file(path_to_write_config, config_to_set)
+    print(f"Wrote config options to: {path_to_write_config}")
 
     return 0
 
