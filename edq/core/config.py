@@ -23,8 +23,8 @@ LEGACY_CONFIG_FILENAME_KEY: str = 'legacy_config_filename'
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 DEFAULT_LEGACY_CONFIG_FILENAME: typing.Union[str, None] = None
 
-_config_filename: str = DEFAULT_CONFIG_FILENAME
-_legacy_config_filename: typing.Union[str, None] = DEFAULT_LEGACY_CONFIG_FILENAME
+_config_filename: str = DEFAULT_CONFIG_FILENAME  # pylint: disable=invalid-name
+_legacy_config_filename: typing.Union[str, None] = DEFAULT_LEGACY_CONFIG_FILENAME  # pylint: disable=invalid-name
 
 def set_config_filename(filename: str) -> None:
     """ Sets the config filename. """
