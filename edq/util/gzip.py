@@ -58,3 +58,9 @@ def compress_path(path: str) -> bytes:
 
     data = edq.util.dirent.read_file_bytes(path)
     return gzip.compress(data)
+
+def compress_to_path(raw_data: bytes, path: str) -> None:
+    """ Write the compressed representation of some bytes to a file. """
+
+    data = compress(raw_data)
+    edq.util.dirent.write_file_bytes(path, data)

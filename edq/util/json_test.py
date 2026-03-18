@@ -3,6 +3,7 @@ import typing
 
 import edq.testing.unittest
 import edq.util.dirent
+import edq.util.gzip
 import edq.util.json
 import edq.util.reflection
 
@@ -54,6 +55,8 @@ class TestJSON(edq.testing.unittest.BaseTest):
             (self._subtest_loads_dumps, 'subtest_loads_dumps'),
             (self._subtest_load_dump, 'subtest_load_dump'),
             (self._subtest_load_dump_path, 'subtest_load_dump_path'),
+            (self._subtest_load_gzip, 'subtest_load_gzip'),
+            (self._subtest_load_dump_path_gzip, 'subtest_load_dump_path_gzip'),
         ]
 
         for (test_method, test_method_name) in test_methods:
@@ -106,6 +109,17 @@ class TestJSON(edq.testing.unittest.BaseTest):
         self.assertDictEqual(dict_content, text_load)
         self.assertDictEqual(dict_load, text_load)
 
+    def _subtest_load_gzip(self, text_content, dict_content, strict):
+        temp_dir = edq.util.dirent.get_temp_dir(prefix = 'edq_test_json_gzip_')
+
+        path = os.path.join(temp_dir, 'test.json.gz')
+        edq.util.gzip.compress_to_path(text_content.encode(edq.util.dirent.DEFAULT_ENCODING), path)
+
+        with open(path, 'rb') as file:
+            load_data = edq.util.json.load(file, strict = strict, gzipped = True)
+
+        self.assertDictEqual(dict_content, load_data)
+
     def _subtest_load_dump_path(self, text_content, dict_content, strict):
         temp_dir = edq.util.dirent.get_temp_dir(prefix = 'edq_test_json_path_')
 
@@ -120,6 +134,24 @@ class TestJSON(edq.testing.unittest.BaseTest):
 
         self.assertDictEqual(dict_content, text_load)
         self.assertDictEqual(dict_load, text_load)
+
+    def _subtest_load_dump_path_gzip(self, text_content, dict_content, strict):
+        # Trigger error on parsing tests.
+        edq.util.json.loads(text_content, strict = strict)
+
+        temp_dir = edq.util.dirent.get_temp_dir(prefix = 'edq_test_json_path_gzip_', rm = False)
+
+        path_ext = os.path.join(temp_dir, 'test.json.gz')
+        path_noext = os.path.join(temp_dir, 'test')
+
+        edq.util.json.dump_path(dict_content, path_ext)
+        edq.util.json.dump_path(dict_content, path_noext, gzipped = True)
+
+        load_ext = edq.util.json.load_path(path_ext, strict = strict)
+        load_noext = edq.util.json.load_path(path_noext, strict = strict, gzipped = True)
+
+        self.assertDictEqual(dict_content, load_ext)
+        self.assertDictEqual(dict_content, load_noext)
 
     def test_object_base(self):
         """
