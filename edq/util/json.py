@@ -5,6 +5,8 @@ and strict when writing (using vanilla JSON).
 """
 
 import enum
+import gzip
+import io
 import json
 import os
 import typing
@@ -86,12 +88,23 @@ def _custom_handle(value: typing.Any) -> typing.Union[typing.Dict[str, typing.An
 
     raise ValueError(f"Could not JSON serialize object: '{value}'.")
 
-def load(file_obj: typing.TextIO, strict: bool = False, **kwargs: typing.Any) -> typing.Any:
+def load(
+        file_obj: typing.TextIO,
+        strict: bool = False,
+        gzipped: bool = False,
+        encoding: str = edq.util.dirent.DEFAULT_ENCODING,
+        **kwargs: typing.Any) -> typing.Any:
     """
     Load a file object/handler as JSON.
     If strict is set, then use standard Python JSON,
     otherwise use JSON5.
+
+    If `gzipped` is set, the file object is treated as a gzipped bytes stream (e.g. `open('test.json.gz', 'rb')`).
     """
+
+    if (gzipped):
+        binary_file_obj = gzip.GzipFile(fileobj = file_obj)  # type: ignore[call-overload]
+        file_obj = io.TextIOWrapper(binary_file_obj, encoding = encoding)
 
     if (strict):
         return json.load(file_obj, **kwargs)
@@ -113,22 +126,35 @@ def loads(text: str, strict: bool = False, **kwargs: typing.Any) -> typing.Any:
 def load_path(
         path: str,
         strict: bool = False,
+        gzipped: typing.Union[bool, None] = None,
         encoding: str = edq.util.dirent.DEFAULT_ENCODING,
         **kwargs: typing.Any) -> typing.Any:
     """
     Load a file path as JSON.
     If strict is set, then use standard Python JSON,
     otherwise use JSON5.
+
+    If `gzipped` is not set, the behavior is guessed from the extension (".gz").
     """
+
+    if (not os.path.exists(path)):
+        raise FileNotFoundError(f"File does not exist: '{path}'.")
 
     if (os.path.isdir(path)):
         raise IsADirectoryError(f"Cannot open JSON file, expected a file but got a directory at '{path}'.")
 
-    try:
-        with open(path, 'r', encoding = encoding) as file:
+    if (gzipped is None):
+        gzipped = (os.path.splitext(path)[-1] == '.gz')
+
+    open_func = open
+    if (gzipped):
+        open_func = gzip.open  # type: ignore[assignment]
+
+    with open_func(path, 'rt', encoding = encoding) as file:
+        try:
             return load(file, strict = strict, **kwargs)
-    except Exception as ex:
-        raise ValueError(f"Failed to read JSON file '{path}'.") from ex
+        except Exception as ex:
+            raise ValueError(f"Failed to read JSON file '{path}'.") from ex
 
 def loads_object(text: str, cls: typing.Type[DictConverter], **kwargs: typing.Any) -> DictConverter:
     """ Load a JSON string into an object (which is a subclass of DictConverter). """
@@ -172,9 +198,21 @@ def dump_path(
         path: str,
         default: typing.Union[typing.Callable, None] = _custom_handle,
         sort_keys: bool = True,
+        gzipped: typing.Union[bool, None] = None,
         encoding: str = edq.util.dirent.DEFAULT_ENCODING,
         **kwargs: typing.Any) -> None:
-    """ Dump an object as a JSON file. """
+    """
+    Dump an object as a JSON file.
 
-    with open(path, 'w', encoding = encoding) as file:
-        dump(data, file, default = default, sort_keys = sort_keys, **kwargs)
+    If `gzipped` is not set, the behavior is guessed from the extension (".gz").
+    """
+
+    if (gzipped is None):
+        gzipped = (os.path.splitext(path)[-1] == '.gz')
+
+    open_func = open
+    if (gzipped):
+        open_func = gzip.open  # type: ignore[assignment]
+
+    with open_func(path, 'wt', encoding = encoding) as file:
+        dump(data, file, default = default, sort_keys = sort_keys, **kwargs)  # type: ignore[arg-type]
