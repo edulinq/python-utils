@@ -42,6 +42,8 @@ ABS_DATA_DIR_ID: str = '__ABS_DATA_DIR__'
 TEMP_DIR_ID: str = '__TEMP_DIR__'
 BASE_DIR_ID: str = '__BASE_DIR__'
 
+OS_PATH_SEP: str = '__OS_PATH_SEP__'
+
 REPLACE_LIMIT: int = 10000
 """ The maximum number of replacements that will be made with a single test replacement. """
 
@@ -160,10 +162,10 @@ class CLITestInfo:
         """
 
         # Make any path normalizations over the arguments and expected output.
-        self.expected_stdout = self._expand_paths(self.expected_stdout)
-        self.expected_stderr = self._expand_paths(self.expected_stderr)
+        self.expected_stdout = self._process_text(self.expected_stdout)
+        self.expected_stderr = self._process_text(self.expected_stderr)
         for (i, argument) in enumerate(self.arguments):
-            self.arguments[i] = self._expand_paths(argument)
+            self.arguments[i] = self._process_text(argument)
 
         if (extra_options is None):
             extra_options = {}
@@ -177,20 +179,29 @@ class CLITestInfo:
         if (len(kwargs) > 0):
             raise ValueError(f"Found unknown CLI test options: '{kwargs}'.")
 
-    def _expand_paths(self, text: str) -> str:
+    def _process_text(self, text: str) -> str:
         """
-        Expand path replacements in testing text.
+        Process text with and desired replacements.
+
+        This will expand path replacements in testing text.
         This allows for consistent paths (even absolute paths) in the test text.
         """
 
-        replacements = [
+        text_replacements = [
+            (OS_PATH_SEP, os.sep),
+        ]
+
+        for (target, replacement) in text_replacements:
+            text = text.replace(target, replacement)
+
+        path_replacements = [
             (DATA_DIR_ID, self.data_dir, False),
             (TEMP_DIR_ID, self.temp_dir, False),
             (BASE_DIR_ID, self.base_dir, False),
             (ABS_DATA_DIR_ID, self.data_dir, True),
         ]
 
-        for (key, target_dir, normalize) in replacements:
+        for (key, target_dir, normalize) in path_replacements:
             text = replace_path_pattern(text, key, target_dir, normalize_path = normalize)
 
         return text
