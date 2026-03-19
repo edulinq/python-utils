@@ -339,7 +339,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 "old-name",
                 {
-                    edq.core.config.LEGACY_CONFIG_FILENAME_KEY: "config.json",
+                    "legacy_config_filename": "config.json",
                 },
                 {},
                 {
@@ -381,7 +381,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 os.path.join("old-name", "nest1", "nest2"),
                 {
-                    edq.core.config.LEGACY_CONFIG_FILENAME_KEY: "config.json",
+                    "legacy_config_filename": "config.json",
                 },
                 {},
                 {},
@@ -493,7 +493,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             (
                 os.path.join("nested", "nest1", "nest2b"),
                 {
-                    edq.core.config.LEGACY_CONFIG_FILENAME_KEY:"config.json",
+                    "legacy_config_filename":"config.json",
                 },
                 {},
                 {
@@ -1155,12 +1155,12 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
             with self.subTest(msg = f"Case {i} ('{test_work_dir}'):"):
                 edq.core.config.set_config_filename(edq.core.config.DEFAULT_CONFIG_FILENAME)
-                edq.core.config.set_legacy_config_filename(edq.core.config.DEFAULT_LEGACY_CONFIG_FILENAME)
+                edq.core.config.set_legacy_config_filename(None)
 
                 config_filename = config_filenames.get(edq.core.config.CONFIG_FILENAME_KEY, edq.core.config.DEFAULT_CONFIG_FILENAME)
                 edq.core.config.set_config_filename(config_filename)
 
-                legacy_config_filename = config_filenames.get(edq.core.config.LEGACY_CONFIG_FILENAME_KEY, None)
+                legacy_config_filename = config_filenames.get("legacy_config_filename", None)
                 edq.core.config.set_legacy_config_filename(legacy_config_filename)
 
                 cli_args = extra_args.get("cli_arguments", None)
@@ -1187,7 +1187,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
                 local_file_used = expected_config_options.get(edq.core.config.LOCAL_CONFIG_PATH_KEY, None)
                 if (local_file_used is None):
-                    expected_config_options[edq.core.config.LOCAL_CONFIG_PATH_KEY] = None
+                    expected_config_options[edq.core.config.LOCAL_CONFIG_PATH_KEY] = os.path.join(
+                        temp_dir, test_work_dir, config_filename
+                    )
 
                 file_name_used = expected_config_options.get(edq.core.config.CONFIG_FILENAME_KEY, None)
                 if (file_name_used is None):

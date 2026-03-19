@@ -13,36 +13,36 @@ import edq.core.config
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
+    config_info = args._config_info
+
     config_to_set: typing.Dict[str, str] = {}
     for config_option in args.config_to_set:
         (key, value) = edq.core.config.parse_string_config_option(config_option)
         config_to_set[key] = value
 
-    config_info = args._config_info
-
     # Default to the local configuration if no configuration type is specified.
     if (not (args.write_local or args.write_global or (args.write_file_path is not None))):
         args.write_local = True
 
-    path_to_write_config = None
+    out_path = None
     if (args.write_local):
         local_config_path = config_info.local_config_path
 
-        # If no local config file was found on the path to root.
-        # Set local config path to the default config filename in the current directory.
+        # If no local config file was found on the path to root,
+        # set local config path to the default config filename in the current directory.
         if (local_config_path is None):
             local_config_path = config_info.config_filename
 
-        path_to_write_config = os.path.join(os.getcwd(), local_config_path)
+        out_path = local_config_path
     elif (args.write_global):
-        path_to_write_config = config_info.global_config_path
+        out_path = config_info.global_config_path
     elif (args.write_file_path is not None):
-        path_to_write_config = args.write_file_path
+        out_path = args.write_file_path
     else:
-        raise ValueError("Trying to write to a unknown config scope.")
+        raise ValueError("Failed to write to a unknown config location (e.g., not local or global).")
 
-    edq.core.config.update_config_file(path_to_write_config, config_to_set)
-    print(f"Wrote config options to: {path_to_write_config}")
+    edq.core.config.update_config_file(out_path, config_to_set)
+    print(f"Wrote config options to: {os.path.abspath(out_path)}")
 
     return 0
 
@@ -68,7 +68,7 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
             +  ' Expected config format is <key>=<value>.'),
     )
 
-    group = parser.add_argument_group("config scope options").add_mutually_exclusive_group()
+    group = parser.add_argument_group("config location options").add_mutually_exclusive_group()
 
     group.add_argument('--local',
         action = 'store_true', dest = 'write_local',
@@ -78,13 +78,13 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
 
     group.add_argument('--global',
         action = 'store_true', dest = 'write_global',
-        help =  ('Write config option(s) to the global config file if it exists.'
-            +  " If it doesn't exist, a new one will be created."),
+        help =  ("Write config option(s) to the global config file if one exists."
+            +  f" If no global config file is found, a new one will be created at {edq.core.config.get_global_config_path()}"),
     )
 
     group.add_argument('--file', metavar = "<FILE>",
         action = 'store', type = str, default = None, dest = 'write_file_path',
-        help = ('Write config option(s) to the specified config file.'
+        help = ("Write config option(s) to the specified config file if it exists."
             +  " If the given file doesn't exist, it will be created.")
     )
 

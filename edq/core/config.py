@@ -18,35 +18,11 @@ LOCAL_CONFIG_PATH_KEY: str = 'local_config_path'
 CONFIGS_KEY: str = 'configs'
 IGNORE_CONFIGS_KEY: str = 'ignore_configs'
 CONFIG_FILENAME_KEY: str = 'config_filename'
-LEGACY_CONFIG_FILENAME_KEY: str = 'legacy_config_filename'
 
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
-DEFAULT_LEGACY_CONFIG_FILENAME: typing.Union[str, None] = None
 
 _config_filename: str = DEFAULT_CONFIG_FILENAME  # pylint: disable=invalid-name
-_legacy_config_filename: typing.Union[str, None] = DEFAULT_LEGACY_CONFIG_FILENAME  # pylint: disable=invalid-name
-
-def set_config_filename(filename: str) -> None:
-    """ Sets the config filename. """
-
-    global _config_filename  # pylint: disable=global-statement
-    _config_filename = filename
-
-def get_config_filename() -> str:
-    """ Gets the config filename. """
-
-    return _config_filename
-
-def set_legacy_config_filename(legacy_filename: str) -> None:
-    """ Sets the legacy config filename. """
-
-    global _legacy_config_filename  # pylint: disable=global-statement
-    _legacy_config_filename = legacy_filename
-
-def get_legacy_config_filename() -> typing.Union[str, None]:
-    """ Gets the config legacy filename. """
-
-    return _legacy_config_filename
+_legacy_config_filename: typing.Union[str, None] = None  # pylint: disable=invalid-name
 
 class ConfigSource:
     """ A class for storing config source information. """
@@ -68,36 +44,62 @@ class ConfigSource:
         return f"({self.label}, {self.path})"
 
 class TieredConfigInfo(edq.util.json.DictConverter):
-    """ A class for storing information about the state of a config. """
+    """ A class for storing information about the state of a config read from a hierarchy of files/sources. """
 
     def __init__(self,
             config_filename: str,
-            local_config_path: typing.Union[str, None],
+            local_config_path: str,
             global_config_path: str,
-            config: typing.Dict[str, str],
+            config: typing.Dict[str, typing.Union[str, int, bool]],
             sources: typing.Dict[str, ConfigSource],
-        ) -> None:
-
+            ) -> None:
         self.config_filename: str = config_filename
         """ Config filename searched for. """
 
-        self.local_config_path: typing.Union[str, None] = local_config_path
-        """ Local config file path that was found. """
+        self.local_config_path: str  = local_config_path
+        """ Path searched for local config. (The file might not exist) """
 
         self.global_config_path: str = global_config_path
-        """ Global config file path that was found. """
+        """ Path searched for global config. (The file might not exist) """
 
-        self.config: typing.Dict[str, str] = config
+        self.config: typing.Dict[str, typing.Union[str, int, bool]] = config
         """ Key-value configurations. """
 
         self.sources: typing.Dict[str, ConfigSource] = sources
         """ Where configs came from. """
 
+def set_config_filename(filename: str) -> None:
+    """ Sets the config filename. """
+
+    global _config_filename  # pylint: disable=global-statement
+    _config_filename = filename
+
+def set_legacy_config_filename(legacy_filename: str) -> None:
+    """ Sets the legacy config filename. """
+
+    global _legacy_config_filename  # pylint: disable=global-statement
+    _legacy_config_filename = legacy_filename
+
+def get_config_filename() -> str:
+    """ Gets the config filename. """
+
+    return _config_filename
+
+def get_legacy_config_filename() -> typing.Union[str, None]:
+    """ Gets the config legacy filename. """
+
+    return _legacy_config_filename
+
+def get_global_config_path() -> str:
+    """ Get the path for the global config file. """
+
+    return platformdirs.user_config_dir(get_config_filename())
+
 def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
     """
     Write configs to a specified file path.
-    Create the path if it do not exist.
-    Existing keys in the file will be overwritten by values from the update.
+    Create the path if it does not exist.
+    Existing keys in the file will be overwritten by the new values.
     """
 
     config = {}
@@ -108,11 +110,6 @@ def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> Non
 
     edq.util.dirent.mkdir(os.path.dirname(path))
     edq.util.json.dump_path(config, path, indent = 4)
-
-def get_global_config_path() -> str:
-    """ Get the path for the global config file. """
-
-    return platformdirs.user_config_dir(get_config_filename())
 
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
@@ -128,7 +125,7 @@ def get_tiered_config(
     if (cli_arguments is None):
         cli_arguments = {}
 
-    config: typing.Dict[str, str] = {}
+    config: typing.Dict[str, typing.Union[str, int, bool]] = {}
     sources: typing.Dict[str, ConfigSource] = {}
 
 
@@ -141,6 +138,7 @@ def get_tiered_config(
     if (os.path.isfile(global_config_path)):
         _load_config_file(global_config_path, config, sources, CONFIG_SOURCE_GLOBAL)
 
+
     # Check the local user config file.
     local_config_path = _get_local_config_path(
         local_config_root_cutoff = local_config_root_cutoff,
@@ -148,6 +146,8 @@ def get_tiered_config(
 
     if (local_config_path is not None):
         _load_config_file(local_config_path, config, sources, CONFIG_SOURCE_LOCAL)
+    else:
+        local_config_path = os.path.abspath(get_config_filename())
 
     # Check the config file specified on the command-line.
     config_paths = cli_arguments.get(CONFIG_PATHS_KEY, [])
@@ -199,7 +199,7 @@ def _validate_config_key(config_key: str, config_value: str) -> str:
 
 def _load_config_file(
         config_path: str,
-        config: typing.Dict[str, str],
+        config: typing.Dict[str, typing.Union[str, int, bool]],
         sources: typing.Dict[str, ConfigSource],
         source_label: str,
     ) -> None:
@@ -220,7 +220,7 @@ def _get_local_config_path(
     Begins with the provided config file name,
     optionally checks the legacy config file name if specified,
     then continues up the directory tree looking for the provided config file name.
-    Returns the absolut path to the first config file found.
+    Returns the absolute path to the first config file found.
 
     If no config file is found, returns None.
 

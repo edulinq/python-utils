@@ -12,10 +12,9 @@ CONFIG_FIELD_SEPARATOR: str = "\t"
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
-    rows = []
-
     config_info = args._config_info
 
+    rows = []
     for (key, value) in config_info.config.items():
         row = [key, str(value)]
         if (args.show_origin):
