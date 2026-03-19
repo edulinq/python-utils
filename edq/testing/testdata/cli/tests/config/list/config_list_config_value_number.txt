@@ -4,6 +4,7 @@
         "--config-global", "__DATA_DIR__(configs/empty/edq-config.json)",
         "--config-file", "__DATA_DIR__(configs/value-number/edq-config.json)",
     ],
+    "work_dir": "__TEMP_DIR__()"
 }
 ---
 Key	Value

@@ -6,6 +6,7 @@
         "--config", "pass=password1234",
         "--show-origin",
     ],
+    "work_dir": "__TEMP_DIR__()"
 }
 ---
 Key	Value	Origin

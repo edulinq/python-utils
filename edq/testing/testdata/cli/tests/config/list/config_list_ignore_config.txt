@@ -8,6 +8,7 @@
         "--config-file", "__DATA_DIR__(configs/simple-2/edq-config.json)",
         "--config", "pass=password1234",
     ],
+    "work_dir": "__TEMP_DIR__()"
 }
 ---
 Key	Value

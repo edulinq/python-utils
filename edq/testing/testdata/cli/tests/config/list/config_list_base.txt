@@ -7,6 +7,7 @@
         "--config", "pass=password1234",
         "--config", "server=http://test.edulinq.org"
     ],
+    "work_dir": "__TEMP_DIR__()"
 }
 ---
 Key	Value
