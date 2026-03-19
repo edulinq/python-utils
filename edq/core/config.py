@@ -50,7 +50,7 @@ class TieredConfigInfo(edq.util.json.DictConverter):
             config_filename: str,
             local_config_path: str,
             global_config_path: str,
-            config: typing.Dict[str, typing.Union[str, int, bool]],
+            config: typing.Dict[str, typing.Any],
             sources: typing.Dict[str, ConfigSource],
             ) -> None:
         self.config_filename: str = config_filename
@@ -62,7 +62,7 @@ class TieredConfigInfo(edq.util.json.DictConverter):
         self.global_config_path: str = global_config_path
         """ Path searched for global config. (The file might not exist) """
 
-        self.config: typing.Dict[str, typing.Union[str, int, bool]] = config
+        self.config: typing.Dict[str, typing.Any] = config
         """ Key-value configurations. """
 
         self.sources: typing.Dict[str, ConfigSource] = sources
@@ -125,7 +125,7 @@ def get_tiered_config(
     if (cli_arguments is None):
         cli_arguments = {}
 
-    config: typing.Dict[str, typing.Union[str, int, bool]] = {}
+    config: typing.Dict[str, typing.Any] = {}
     sources: typing.Dict[str, ConfigSource] = {}
 
 
@@ -199,7 +199,7 @@ def _validate_config_key(config_key: str, config_value: str) -> str:
 
 def _load_config_file(
         config_path: str,
-        config: typing.Dict[str, typing.Union[str, int, bool]],
+        config: typing.Dict[str, typing.Any],
         sources: typing.Dict[str, ConfigSource],
         source_label: str,
     ) -> None:

@@ -113,7 +113,7 @@ class CLITestInfo:
         if (work_dir is None):
             work_dir = os.getcwd()
         else:
-            work_dir = self._expand_paths(work_dir)
+            work_dir = self._process_text(work_dir)
 
         self.work_dir: str = work_dir
         """ The directory the test runs from. """

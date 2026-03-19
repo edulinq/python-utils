@@ -64,16 +64,16 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument('config_to_set', metavar = "<KEY>=<VALUE>",
         action = 'store', nargs = '+', type = str,
-        help = ('Configuration option to be set.'
-            +  ' Expected config format is <key>=<value>.'),
+        help = ("Configuration option to be set."
+            +  " Expected config format is <key>=<value>."),
     )
 
     group = parser.add_argument_group("config location options").add_mutually_exclusive_group()
 
     group.add_argument('--local',
         action = 'store_true', dest = 'write_local',
-        help = ('Write config option(s) to the local config file if one exists.'
-            + ' If no local config file is found, a new one will be created in the current directory.'),
+        help = ("Write config option(s) to the local config file if one exists."
+            + " If no local config file is found, a new one will be created in the current directory."),
     )
 
     group.add_argument('--global',
