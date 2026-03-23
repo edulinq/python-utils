@@ -14,10 +14,8 @@ CONFIG_SOURCE_LOCAL: str = "<local config file>"
 
 CONFIG_PATHS_KEY: str = 'config_paths'
 GLOBAL_CONFIG_KEY: str = 'global_config_path'
-LOCAL_CONFIG_PATH_KEY: str = 'local_config_path'
 CONFIGS_KEY: str = 'configs'
 IGNORE_CONFIGS_KEY: str = 'ignore_configs'
-CONFIG_FILENAME_KEY: str = 'config_filename'
 
 DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 
@@ -44,7 +42,7 @@ class ConfigSource:
         return f"({self.label}, {self.path})"
 
 class TieredConfigInfo(edq.util.json.DictConverter):
-    """ A class for storing information about the state of a config read from a hierarchy of files/sources. """
+    """ A class for storing config information read from a hierarchy of files and sources. """
 
     def __init__(self,
             config_filename: str,
@@ -57,10 +55,16 @@ class TieredConfigInfo(edq.util.json.DictConverter):
         """ Config filename searched for. """
 
         self.local_config_path: str  = local_config_path
-        """ Path searched for local config. (The file might not exist) """
+        """
+        Path searched for local config.
+        The file might not exist.
+        """
 
         self.global_config_path: str = global_config_path
-        """ Path searched for global config. (The file might not exist) """
+        """
+        Path searched for global config.
+        The file might not exist.
+        """
 
         self.config: typing.Dict[str, typing.Any] = config
         """ Key-value configurations. """
@@ -117,9 +121,7 @@ def get_tiered_config(
     ) -> TieredConfigInfo:
     """
     Load all configuration options from files and command-line arguments.
-    Returns a configuration dictionary with the values based on tiering rules,
-    a source dictionary that maps each configuration key to where it was loaded from,
-    and a configuration options dictionary containing the global and local config file paths and the configuration filename.
+    Returns a TieredConfigInfo object.
     """
 
     if (cli_arguments is None):
@@ -128,30 +130,31 @@ def get_tiered_config(
     config: typing.Dict[str, typing.Any] = {}
     sources: typing.Dict[str, ConfigSource] = {}
 
-
-    # Ensure CLI arguments are always a dict, even if provided as argparse.Namespace.
+    # Ensure CLI arguments are always a dict,
+    # even if provided as argparse.Namespace.
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
 
-    # Check the global user config file.
+    # Load the global user config file.
     global_config_path = cli_arguments.get(GLOBAL_CONFIG_KEY, get_global_config_path())
-    if (os.path.isfile(global_config_path)):
-        _load_config_file(global_config_path, config, sources, CONFIG_SOURCE_GLOBAL)
+    _load_config_file(global_config_path, config, sources, CONFIG_SOURCE_GLOBAL)
 
-
-    # Check the local user config file.
+    # Get and load local user config path.
     local_config_path = _get_local_config_path(
         local_config_root_cutoff = local_config_root_cutoff,
     )
 
-    if (local_config_path is not None):
-        _load_config_file(local_config_path, config, sources, CONFIG_SOURCE_LOCAL)
-    else:
+    if (local_config_path is None):
         local_config_path = os.path.abspath(get_config_filename())
+
+    _load_config_file(local_config_path, config, sources, CONFIG_SOURCE_LOCAL)
 
     # Check the config file specified on the command-line.
     config_paths = cli_arguments.get(CONFIG_PATHS_KEY, [])
     for path in config_paths:
+        if (not os.path.exists(path)):
+            raise FileNotFoundError(f"Specified config file does not exist: '{path}'.")
+
         _load_config_file(path, config, sources, CONFIG_SOURCE_CLI_FILE)
 
     # Check the command-line config options.
@@ -203,7 +206,16 @@ def _load_config_file(
         sources: typing.Dict[str, ConfigSource],
         source_label: str,
     ) -> None:
-    """ Loads config variables and the source from the given config JSON file. """
+    """
+    Loads config variables and the source from the given config JSON file.
+    If the given config JSON file deosn't exit loads nothing.
+    """
+
+    if (not edq.util.dirent.exists(config_path)):
+        return
+
+    if (os.path.isdir(config_path)):
+        raise IsADirectoryError(f"Failed to read config file, expected a file but got a directory at '{config_path}'.")
 
     config_path = os.path.abspath(config_path)
     for (key, value) in edq.util.json.load_path(config_path).items():
@@ -218,13 +230,14 @@ def _get_local_config_path(
     """
     Search for a config file in hierarchical order.
     Begins with the provided config file name,
-    optionally checks the legacy config file name if specified,
+    then legacy config file name (if it was set),
     then continues up the directory tree looking for the provided config file name.
     Returns the absolute path to the first config file found.
 
-    If no config file is found, returns None.
+    Returns None if no config file is found.
 
-    The cutoff parameter limits the search depth, preventing detection of config file in higher-level directories during testing.
+    The cutoff parameter limits the search depth,
+    preventing detection of config file in higher-level directories during testing.
     """
 
     config_filename = get_config_filename()
