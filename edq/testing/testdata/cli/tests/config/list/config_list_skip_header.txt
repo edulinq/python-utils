@@ -5,6 +5,7 @@
         "--config", "user=user@test.edulinq.org",
         "--skip-header",
     ],
+    "work_dir": "__TEMP_DIR__()"
 }
 ---
 user	user@test.edulinq.org
