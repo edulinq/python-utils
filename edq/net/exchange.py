@@ -12,6 +12,7 @@ import edq.util.dirent
 import edq.util.encoding
 import edq.util.hash
 import edq.util.json
+import edq.util.parse
 import edq.util.pyimport
 import edq.util.serial
 
@@ -154,7 +155,9 @@ class FileInfo(edq.util.serial.DictConverter):
 
         return edq.util.hash.sha256_hex(hash_content)
 
-    def to_dict(self, **kwargs: typing.Any) -> typing.Dict[str, typing.Any]:
+    def to_dict(self,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Dict[str, typing.Any]:
         data = vars(self).copy()
 
         # JSON does not support raw bytes, so we will need to base64 encode any binary content.
@@ -165,7 +168,10 @@ class FileInfo(edq.util.serial.DictConverter):
         return data
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any], **kwargs: typing.Any) -> typing.Any:
+    def from_dict(cls,
+            data: typing.Dict[str, typing.Any],
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Any:
         return FileInfo(**data)
 
 class HTTPExchange(edq.util.serial.DictConverter):
@@ -571,25 +577,35 @@ class HTTPExchange(edq.util.serial.DictConverter):
 
         return os.path.join(dirname, filename)
 
-    def to_dict(self, **kwargs: typing.Any) -> typing.Dict[str, typing.Any]:
+    def to_dict(self,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Dict[str, typing.Any]:
         return vars(self)
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any], **kwargs: typing.Any) -> typing.Any:
+    def from_dict(cls,
+            data: typing.Dict[str, typing.Any],
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Any:
         return HTTPExchange(**data)
 
     @classmethod
-    def from_path(cls, path: str,
-            set_source_path: bool = True,
-            **kwargs: typing.Any) -> 'HTTPExchange':
+    def from_path(cls,
+            path: str,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> 'HTTPExchange':
         """
         Load an exchange from a file.
         This will also handle setting the exchanges source path (if specified) and resolving the exchange's paths.
         """
 
-        exchange = super().from_path(path)
+        exchange = super().from_path(path, serialization_options)
 
-        if (set_source_path):
+        if (serialization_options is None):
+            serialization_options = {}
+
+        set_source_path = edq.util.parse.soft_boolean(serialization_options.get('set_source_path', True))
+        if (set_source_path is True):
             exchange.source_path = os.path.abspath(path)
 
         exchange.resolve_paths(os.path.abspath(os.path.dirname(path)))  # pylint: disable=no-member

@@ -7,7 +7,57 @@ import edq.core.errors
 
 import edq.util.json
 
-ConverterClass = typing.TypeVar('ConverterClass', bound = 'DictConverter')
+PODType = typing.Union[bool, float, int, str, typing.List['PODType'], typing.Dict[str, 'PODType'], None]  # pylint: disable=invalid-name
+""" A "Plain Old Data" type that can be easily represented (e.g. in JSON). """
+
+DictConverterClass = typing.TypeVar('DictConverterClass', bound = 'DictConverter')
+
+
+PODSerializerClass = typing.TypeVar('PODSerializerClass', bound = 'PODSerializer')
+PODDeserializerClass = typing.TypeVar('PODDeserializerClass', bound = 'PODDeserializer')
+PODConverterClass = typing.TypeVar('PODConverterClass', bound = 'PODConverter')
+
+class PODSerializer:
+    """
+    A class that can represent itself as a POD type.
+    Sibling to PODDeserializer.
+    """
+
+    def to_pod(self,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> PODType:
+        """
+        Get a POD representation of this object.
+
+        The default implementation just returns a string via repr() or str().
+        """
+
+        if (hasattr(self, '__repr__')):
+            return repr(self)
+
+        return str(self)
+
+class PODDeserializer:
+    """
+    A class that can construct itself from a POD type.
+    Sibling to PODSerializer.
+    """
+
+    @classmethod
+    def from_pod(cls: typing.Type[PODDeserializerClass],
+            data: PODType,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> PODDeserializerClass:
+        """
+        Create an instance of this class from a POD.
+
+        The default implementation just calls the class' constructor with the pod as the only argument.
+        """
+
+        return cls(data)  # type: ignore[call-arg]
+
+class PODConverter(PODSerializer, PODDeserializer):
+    """ A PODSerializer and PODDeserializer. """
 
 @dataclasses.dataclass
 class DictConverterOptions:
@@ -58,7 +108,7 @@ class DictConverterOptions:
 
         raise(edq.core.errors.SerializationError("Use of from_dict() has been disallowed for this class."))
 
-class DictConverter():
+class DictConverter:
     """
     A base class for class that can represent (serialize) and reconstruct (deserialize) themselves as/from a dict.
     The intention is that the dict can then be cleanly converted to/from JSON.
@@ -75,7 +125,9 @@ class DictConverter():
 
     _dictconverter_options: DictConverterOptions = DictConverterOptions()
 
-    def to_dict(self, **kwargs: typing.Any) -> typing.Dict[str, typing.Any]:
+    def to_dict(self,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Dict[str, typing.Any]:
         """
         Return a dict that can be used to represent this object.
         If the dict is passed to from_dict(), an identical object should be reconstructed.
@@ -91,16 +143,20 @@ class DictConverter():
             if (self._dictconverter_options.skip_field(key, value)):
                 continue
 
-            data[key] = self._to_pod(value)
+            data[key] = self._to_pod(value, serialization_options)
 
         return data
 
-    def _to_pod(self, raw_value: typing.Any) -> typing.Any:
+    def _to_pod(self,
+            raw_value: typing.Any,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Any:
         """
         Attempt to convert a single value to a simpler type for use in to_dict().
 
         Has special handling for:
          - DictConverter
+         - PODSerializer
          - enum.Enum
          - (list, tuple, set)
          - dict
@@ -110,13 +166,16 @@ class DictConverter():
             return None
 
         if (isinstance(raw_value, DictConverter)):
-            return raw_value.to_dict()
+            return raw_value.to_dict(serialization_options)
+
+        if (isinstance(raw_value, PODSerializer)):
+            return raw_value.to_pod(serialization_options)
 
         if (isinstance(raw_value, enum.Enum)):
             return raw_value.value
 
         if (isinstance(raw_value, (list, tuple, set))):
-            items = [self._to_pod(item) for item in raw_value]
+            items = [self._to_pod(item, serialization_options) for item in raw_value]
 
             # Sort sets for consistency.
             if (isinstance(raw_value, set)):
@@ -125,12 +184,15 @@ class DictConverter():
             return items
 
         if (isinstance(raw_value, dict)):
-            return {key: self._to_pod(value) for (key, value) in raw_value.items()}
+            return {key: self._to_pod(value, serialization_options) for (key, value) in raw_value.items()}
 
         return raw_value
 
     @classmethod
-    def prep_init_data(cls, data: typing.Dict[str, typing.Any], **kwargs: typing.Any) -> typing.Dict[str, typing.Any]:
+    def prep_init_data(cls,
+            data: typing.Dict[str, typing.Any],
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Dict[str, typing.Any]:
         """
         Prepare data to be passed into this class' constructor.
 
@@ -148,12 +210,16 @@ class DictConverter():
             if (cls._dictconverter_options.skip_field(key, value)):
                 continue
 
-            new_data[key] = cls._from_pod(constructor_types.get(key, None), value)
+            new_data[key] = cls._from_pod(constructor_types.get(key, None), value, serialization_options)
 
         return new_data
 
     @classmethod
-    def _from_pod(cls, type_hint: typing.Any, raw_value: typing.Any) -> typing.Any:
+    def _from_pod(cls,
+            type_hint: typing.Any,
+            raw_value: typing.Any,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Any:
         """ Attempt to convert a value to the hinted value. """
 
         if (type_hint is None):
@@ -171,7 +237,10 @@ class DictConverter():
         # Check each possible type and match the first one.
         for allowed_type in allowed_types:
             if (_check_issubclass(allowed_type, DictConverter) and isinstance(raw_value, dict)):
-                return allowed_type.from_dict(raw_value)
+                return allowed_type.from_dict(raw_value, serialization_options)
+
+            if (_check_issubclass(allowed_type, PODDeserializer)):
+                return allowed_type.from_pod(raw_value, serialization_options)
 
             if (_check_issubclass(allowed_type, enum.Enum) and (raw_value in allowed_type)):
                 return allowed_type(raw_value)
@@ -185,7 +254,7 @@ class DictConverter():
                 if (len(args) > 0):
                     item_type = args[0]
 
-                return collection_type([cls._from_pod(item_type, item) for item in raw_value])
+                return collection_type([cls._from_pod(item_type, item, serialization_options) for item in raw_value])
 
             # Dict
             if ((typing.get_origin(allowed_type) is dict) and isinstance(raw_value, dict)):
@@ -197,7 +266,11 @@ class DictConverter():
                     key_type = args[0]
                     value_type = args[1]
 
-                return {cls._from_pod(key_type, key): cls._from_pod(value_type, value) for (key, value) in raw_value.items()}
+                return {
+                    cls._from_pod(key_type, key, serialization_options): cls._from_pod(value_type, value, serialization_options)
+                    for (key, value)
+                    in raw_value.items()
+                }
 
         # No special conversion was made, try to force the first type.
 
@@ -211,7 +284,10 @@ class DictConverter():
         return raw_value
 
     @classmethod
-    def from_dict(cls: typing.Type[ConverterClass], data: typing.Dict[str, typing.Any], **kwargs: typing.Any) -> ConverterClass:
+    def from_dict(cls: typing.Type[DictConverterClass],
+            data: typing.Dict[str, typing.Any],
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> DictConverterClass:
         """
         Return an instance of this subclass created using the given dict.
         If the dict came from to_dict(), the returned object should be equivalent to the original.
@@ -229,13 +305,19 @@ class DictConverter():
         return cls(**new_data)
 
     @classmethod
-    def from_path(cls: typing.Type[ConverterClass], path: str, **kwargs: typing.Any) -> ConverterClass:
+    def from_path(cls: typing.Type[DictConverterClass],
+            path: str,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> DictConverterClass:
         """ Read the path (as JSON) and call from_dict(). """
 
-        kwargs['base_dir'] = os.path.dirname(os.path.abspath(path))
+        if (serialization_options is None):
+            serialization_options = {}
+
+        serialization_options['base_dir'] = os.path.dirname(os.path.abspath(path))
         data = edq.util.json.load_path(path)
 
-        return cls.from_dict(data, **kwargs)
+        return cls.from_dict(data, serialization_options)
 
     def __eq__(self, other: object) -> bool:
         """
