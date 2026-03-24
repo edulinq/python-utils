@@ -27,3 +27,6 @@ class RetryError(UtilsError):
                 return True
 
         return False
+
+class SerializationError(UtilsError):
+    """ An error that occurs during (de)serialization. """

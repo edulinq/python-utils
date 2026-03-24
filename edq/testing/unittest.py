@@ -1,10 +1,12 @@
 import datetime
+import difflib
 import typing
 import unittest
 
 import edq.util.dirent
 import edq.util.json
 import edq.util.reflection
+import edq.util.serial
 import edq.util.time
 
 FORMAT_STR: str = "\n--- Expected ---\n%s\n--- Actual ---\n%s\n---\n"
@@ -18,6 +20,10 @@ class BaseTest(unittest.TestCase):
     """ Don't limit the size of diffs. """
 
     testing_timezone: typing.Union[datetime.timezone, None] = edq.util.time.UTC
+    """ The timezone to use. """
+
+    use_diff_output: bool = True
+    """ Use diff-like comparisons. """
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -31,76 +37,80 @@ class BaseTest(unittest.TestCase):
 
         edq.util.time.set_testing_local_timezone(None)
 
-    def assertJSONEqual(self, a: typing.Any, b: typing.Any, message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
+    def assertJSONEqual(self, expected: typing.Any, actual: typing.Any, message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
         Like unittest.TestCase.assertEqual(),
-        but uses a default assertion message containing the full JSON representation of the arguments.
+        but uses expected default assertion message containing the full JSON representation of the arguments.
         """
 
-        a_json = edq.util.json.dumps(a, indent = 4)
-        b_json = edq.util.json.dumps(b, indent = 4)
+        expected_json = edq.util.json.dumps(expected, indent = 4)
+        actual_json = edq.util.json.dumps(actual, indent = 4)
 
         if (message is None):
-            message = FORMAT_STR % (a_json, b_json)
+            message = self._format_comparison_message(expected_json, actual_json)
 
-        super().assertEqual(a, b, msg = message)
+        super().assertEqual(expected, actual, msg = message)
 
-    def assertJSONDictEqual(self, a: typing.Any, b: typing.Any, message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
+    def assertJSONDictEqual(self, expected: typing.Any, actual: typing.Any, message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
         Like unittest.TestCase.assertDictEqual(),
         but will try to convert each comparison argument to a dict if it is not already,
         and uses a default assertion message containing the full JSON representation of the arguments.
         """
 
-        if (not isinstance(a, dict)):
-            if (isinstance(a, edq.util.json.DictConverter)):
-                a = a.to_dict()
+        if (not isinstance(expected, dict)):
+            if (isinstance(expected, edq.util.serial.DictConverter)):
+                expected = expected.to_dict()
             else:
-                a = vars(a)
+                expected = vars(expected)
 
-        if (not isinstance(b, dict)):
-            if (isinstance(b, edq.util.json.DictConverter)):
-                b = b.to_dict()
+        if (not isinstance(actual, dict)):
+            if (isinstance(actual, edq.util.serial.DictConverter)):
+                actual = actual.to_dict()
             else:
-                b = vars(b)
+                actual = vars(actual)
 
-        a_json = edq.util.json.dumps(a, indent = 4)
-        b_json = edq.util.json.dumps(b, indent = 4)
+        expected_json = edq.util.json.dumps(expected, indent = 4)
+        actual_json = edq.util.json.dumps(actual, indent = 4)
 
         if (message is None):
-            message = FORMAT_STR % (a_json, b_json)
+            message = self._format_comparison_message(expected_json, actual_json)
 
-        super().assertDictEqual(a, b, msg = message)
+        super().assertDictEqual(expected, actual, msg = message)
 
-    def assertJSONListEqual(self, a: typing.List[typing.Any], b: typing.List[typing.Any], message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
+    def assertJSONListEqual(self,  # pylint: disable=invalid-name
+            expected: typing.List[typing.Any],
+            actual: typing.List[typing.Any],
+            message: typing.Union[str, None] = None,
+            ) -> None:
         """
         Call assertDictEqual(), but supply a default message containing the full JSON representation of the arguments.
         """
 
-        a_json = edq.util.json.dumps(a, indent = 4)
-        b_json = edq.util.json.dumps(b, indent = 4)
+        expected_json = edq.util.json.dumps(expected, indent = 4)
+        actual_json = edq.util.json.dumps(actual, indent = 4)
 
         if (message is None):
-            message = FORMAT_STR % (a_json, b_json)
+            message = self._format_comparison_message(expected_json, actual_json)
 
-        super().assertListEqual(a, b, msg = message)
+        super().assertListEqual(expected, actual, msg = message)
 
-    def assertFileHashEqual(self, a: str, b: str) -> None:  # pylint: disable=invalid-name
+    def assertFileHashEqual(self, expected: str, actual: str) -> None:  # pylint: disable=invalid-name
         """
         Assert that the hash of two files matches.
         Will fail if either path does not exist.
         """
 
-        if (not edq.util.dirent.exists(a)):
-            self.fail(f"File does not exist: '{a}'.")
+        if (not edq.util.dirent.exists(expected)):
+            self.fail(f"File does not exist: '{expected}'.")
 
-        if (not edq.util.dirent.exists(b)):
-            self.fail(f"File does not exist: '{b}'.")
+        if (not edq.util.dirent.exists(actual)):
+            self.fail(f"File does not exist: '{actual}'.")
 
-        a_hash = edq.util.dirent.hash_file(a)
-        b_hash = edq.util.dirent.hash_file(b)
+        expected_hash = edq.util.dirent.hash_file(expected)
+        actual_hash = edq.util.dirent.hash_file(actual)
 
-        self.assertEqual(a_hash, b_hash, msg = f"Hash mismatch: '{a}' ({a_hash}) vs '{b}' ({b_hash}).")
+        self.assertEqual(expected_hash, actual_hash, msg = f"Hash mismatch: '{expected}' ({expected_hash}) vs '{actual}' ({actual_hash}).")
 
     def format_error_string(self, ex: typing.Union[BaseException, None]) -> str:
         """
@@ -120,3 +130,19 @@ class BaseTest(unittest.TestCase):
             ex = ex.__cause__
 
         return "; ".join(parts)
+
+    def _format_comparison_message(self, expected: str, actual: str) -> str:
+        """ Create a message string comparing the two given strings. """
+
+        if (not self.use_diff_output):
+            return FORMAT_STR % (expected, actual)
+
+        # Don't show the default diff if we are computing our own.
+        self.longMessage = False  # pylint: disable=invalid-name
+
+        expected_lines = expected.splitlines(keepends = True)
+        actual_lines = actual.splitlines(keepends = True)
+
+        lines = list(difflib.unified_diff(expected_lines, actual_lines, fromfile = 'expected', tofile = 'actual'))
+
+        return "\n" + "".join(lines)

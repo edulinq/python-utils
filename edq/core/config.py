@@ -6,6 +6,7 @@ import platformdirs
 
 import edq.util.dirent
 import edq.util.json
+import edq.util.serial
 
 CONFIG_SOURCE_CLI: str = "<cli argument>"
 CONFIG_SOURCE_CLI_FILE: str = "<cli config file>"
@@ -41,7 +42,7 @@ class ConfigSource:
     def __str__(self) -> str:
         return f"({self.label}, {self.path})"
 
-class TieredConfigInfo(edq.util.json.DictConverter):
+class TieredConfigInfo(edq.util.serial.DictConverter):
     """ A class for storing config information read from a hierarchy of files and sources. """
 
     def __init__(self,

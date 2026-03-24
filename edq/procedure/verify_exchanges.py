@@ -57,7 +57,7 @@ def _get_test_method(path: str, server: str,
         exchange = edq.net.exchange.HTTPExchange.from_path(path)
         response, body = edq.net.request.make_with_exchange(exchange, server, raise_for_status = False, **match_options)
 
-        match, hint = exchange.match_response(response, override_body = body, **match_options)
+        match, hint = exchange.match_response(response, override_body = body, **match_options)  # pylint: disable=no-member
         if (not match):
             raise AssertionError(f"Exchange does not match: '{hint}'.")
 

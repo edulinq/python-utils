@@ -13,6 +13,7 @@ import edq.util.encoding
 import edq.util.hash
 import edq.util.json
 import edq.util.pyimport
+import edq.util.serial
 
 DEFAULT_HTTP_EXCHANGE_EXTENSION: str= '.httpex.json'
 
@@ -94,7 +95,7 @@ This function will be called with the created exchange right after construction 
 (or writing).
 """
 
-class FileInfo(edq.util.json.DictConverter):
+class FileInfo(edq.util.serial.DictConverter):
     """ Store info about files used in HTTP exchanges. """
 
     def __init__(self,
@@ -153,7 +154,7 @@ class FileInfo(edq.util.json.DictConverter):
 
         return edq.util.hash.sha256_hex(hash_content)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self, **kwargs: typing.Any) -> typing.Dict[str, typing.Any]:
         data = vars(self).copy()
 
         # JSON does not support raw bytes, so we will need to base64 encode any binary content.
@@ -164,10 +165,10 @@ class FileInfo(edq.util.json.DictConverter):
         return data
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> typing.Any:
+    def from_dict(cls, data: typing.Dict[str, typing.Any], **kwargs: typing.Any) -> typing.Any:
         return FileInfo(**data)
 
-class HTTPExchange(edq.util.json.DictConverter):
+class HTTPExchange(edq.util.serial.DictConverter):
     """
     The request and response making up a full HTTP exchange.
     """
@@ -236,7 +237,7 @@ class HTTPExchange(edq.util.json.DictConverter):
         These paths must be POSIX-style paths,
         they will be converted to system-specific paths.
         Once this exchange is ready for use, these paths should be resolved (and probably absolute).
-        However, when serialized these paths should probably be relative.
+        However, when seriald these paths should probably be relative.
         To reconcile this, resolve_paths() should be called before using this exchange.
         """
 
@@ -295,7 +296,7 @@ class HTTPExchange(edq.util.json.DictConverter):
         self.source_path: typing.Union[str, None] = source_path
         """
         The path that this exchange was loaded from (if it was loaded from a file).
-        This value should never be serialized, but can be useful for testing.
+        This value should never be seriald, but can be useful for testing.
         """
 
         if (extra_options is None):
@@ -570,28 +571,28 @@ class HTTPExchange(edq.util.json.DictConverter):
 
         return os.path.join(dirname, filename)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self, **kwargs: typing.Any) -> typing.Dict[str, typing.Any]:
         return vars(self)
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> typing.Any:
+    def from_dict(cls, data: typing.Dict[str, typing.Any], **kwargs: typing.Any) -> typing.Any:
         return HTTPExchange(**data)
 
     @classmethod
     def from_path(cls, path: str,
             set_source_path: bool = True,
-            ) -> 'HTTPExchange':
+            **kwargs: typing.Any) -> 'HTTPExchange':
         """
         Load an exchange from a file.
         This will also handle setting the exchanges source path (if specified) and resolving the exchange's paths.
         """
 
-        exchange = typing.cast(HTTPExchange, edq.util.json.load_object_path(path, HTTPExchange))
+        exchange = super().from_path(path)
 
         if (set_source_path):
             exchange.source_path = os.path.abspath(path)
 
-        exchange.resolve_paths(os.path.abspath(os.path.dirname(path)))
+        exchange.resolve_paths(os.path.abspath(os.path.dirname(path)))  # pylint: disable=no-member
 
         return exchange
 
