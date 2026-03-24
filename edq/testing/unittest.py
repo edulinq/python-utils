@@ -134,15 +134,15 @@ class BaseTest(unittest.TestCase):
     def _format_comparison_message(self, expected: str, actual: str) -> str:
         """ Create a message string comparing the two given strings. """
 
-        if (not self.use_diff_output):
-            return FORMAT_STR % (expected, actual)
+        message = FORMAT_STR % (expected, actual)
 
-        # Don't show the default diff if we are computing our own.
-        self.longMessage = False  # pylint: disable=invalid-name
+        if (not self.use_diff_output):
+            return message
 
         expected_lines = expected.splitlines(keepends = True)
         actual_lines = actual.splitlines(keepends = True)
 
         lines = list(difflib.unified_diff(expected_lines, actual_lines, fromfile = 'expected', tofile = 'actual'))
+        message += "\n--- Diff ---\n" + ''.join(lines) + "\n------------"
 
-        return "\n" + "".join(lines)
+        return message
