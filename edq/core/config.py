@@ -23,7 +23,7 @@ DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 _config_filename: str = DEFAULT_CONFIG_FILENAME  # pylint: disable=invalid-name
 _legacy_config_filename: typing.Union[str, None] = None  # pylint: disable=invalid-name
 
-class ConfigSource:
+class ConfigSource(edq.util.serial.DictConverter):
     """ A class for storing config source information. """
 
     def __init__(self, label: str, path: typing.Union[str, None] = None) -> None:
