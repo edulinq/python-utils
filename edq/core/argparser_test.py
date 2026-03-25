@@ -1,3 +1,4 @@
+import argparse
 import functools
 import typing
 
@@ -113,7 +114,12 @@ class TestArgParser(edq.testing.unittest.BaseTest):
                 actual = vars(args)
                 self.assertJSONDictEqual(expected, actual)
 
-def _pre_callback_append(parser, extra_state, key = 'append', value = None) -> None:
+def _pre_callback_append(
+        parser: edq.core.argparser.Parser,
+        extra_state: typing.Dict[str, typing.Any],
+        key: str = 'append',
+        value: typing.Any = None,
+        ) -> None:
     """ Append the given value into the extra state. """
 
     if (key not in extra_state):
@@ -121,7 +127,13 @@ def _pre_callback_append(parser, extra_state, key = 'append', value = None) -> N
 
     extra_state[key].append(value)
 
-def _post_callback_append(parser, args, extra_state, key = 'append', value = None) -> None:
+def _post_callback_append(
+        parser: edq.core.argparser.Parser,
+        args: argparse.Namespace,
+        extra_state: typing.Dict[str, typing.Any],
+        key: str = 'append',
+        value: typing.Any = None,
+        ) -> None:
     """ Append the given value into the extra state. """
 
     if (key not in extra_state):

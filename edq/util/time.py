@@ -27,7 +27,7 @@ UNIXTIME_THRESHOLD_USECS: int = int(1e16)
 _testing_timezone: typing.Union[datetime.tzinfo, None] = None  # pylint: disable=invalid-name
 """ A timezone to use for testing. """
 
-def set_testing_local_timezone(timezone: typing.Union[datetime.tzinfo, None] = UTC):
+def set_testing_local_timezone(timezone: typing.Union[datetime.tzinfo, None] = UTC) -> None:
     """
     Force the local timezone to be a specific value (UTC by default).
     This will only affect this package (e.g., the stdlib will not be affected).

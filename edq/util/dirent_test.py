@@ -58,7 +58,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
 
         temp_dir = self._prep_temp_dir()
 
-        expected_paths = [
+        expected_paths: typing.List[typing.Union[typing.Tuple[str, str], typing.Tuple[str, str, bool]]] = [
             ('a.txt', DIRENT_TYPE_FILE),
             ('dir_1', DIRENT_TYPE_DIR),
             (os.path.join('dir_1', 'b.txt'), DIRENT_TYPE_FILE),
@@ -839,7 +839,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
             ('ZZZ', 'rename_ZZZ', 'Source of move does not exist'),
         ]
 
-        expected_paths = [
+        expected_paths: typing.List[typing.Union[typing.Tuple[str, str], typing.Tuple[str, str, bool]]] = [
             ('rename_a.txt', DIRENT_TYPE_FILE),
             ('rename_dir_1', DIRENT_TYPE_DIR),
             (os.path.join('rename_dir_1', 'b.txt'), DIRENT_TYPE_FILE),
@@ -1006,7 +1006,10 @@ class TestDirent(edq.testing.unittest.BaseTest):
     def _prep_temp_dir(self) -> str:
         return create_test_dir('edq_test_dirent_')
 
-    def _check_existing_paths(self, base_dir, raw_paths) -> None:
+    def _check_existing_paths(self,
+            base_dir: str,
+            raw_paths: typing.Sequence[typing.Union[str, typing.Tuple[str, str], typing.Tuple[str, str, bool]]],
+            ) -> None:
         """
         Ensure that specific paths exists, and fail the test if they do not.
         All paths should be relative to the base dir.
@@ -1061,7 +1064,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
                 else:
                     raise ValueError(f"Unknown dirent type '{dirent_type}' for path: '{relpath}'.")
 
-    def _check_nonexisting_paths(self, base_dir, raw_paths) -> None:
+    def _check_nonexisting_paths(self, base_dir: str, raw_paths: typing.List[str]) -> None:
         """
         Ensure that specific paths do not exists, and fail the test if they do exist.
         All paths should be relative to the base dir.
@@ -1074,7 +1077,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
             if (edq.util.dirent.exists(path)):
                 self.fail(f"Path exists when it should not: '{relpath}'.")
 
-    def _get_dirent_type(self, path) -> typing.Tuple[str, bool]:
+    def _get_dirent_type(self, path: str) -> typing.Tuple[str, bool]:
         is_link = os.path.islink(path)
         dirent_type = None
 

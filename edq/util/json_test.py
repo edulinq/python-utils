@@ -1,4 +1,5 @@
 import os
+import typing
 
 import edq.testing.unittest
 import edq.util.dirent
@@ -15,7 +16,12 @@ class TestJSON(edq.testing.unittest.BaseTest):
         """
 
         # [(string, dict, strict?, error_substring), ...]
-        test_cases = [
+        test_cases: typing.List[typing.Tuple[
+            str,
+            typing.Dict[str, typing.Any],
+            bool,
+            typing.Union[str, None],
+        ]] = [
             # Base
             (
                 '{"a": 1}',
@@ -80,7 +86,7 @@ class TestJSON(edq.testing.unittest.BaseTest):
                     if (error_substring is not None):
                         self.fail(f"Did not get expected error: '{error_substring}'.")
 
-    def _subtest_loads_dumps(self, text_content, dict_content, strict) -> None:
+    def _subtest_loads_dumps(self, text_content: str, dict_content: typing.Dict[str, typing.Any], strict: bool) -> None:
         actual_dict = edq.util.json.loads(text_content, strict = strict)
         actual_text = edq.util.json.dumps(dict_content)
         double_conversion_text = edq.util.json.dumps(actual_dict)
@@ -88,7 +94,7 @@ class TestJSON(edq.testing.unittest.BaseTest):
         self.assertDictEqual(dict_content, actual_dict)
         self.assertEqual(actual_text, double_conversion_text)
 
-    def _subtest_load_dump(self, text_content, dict_content, strict) -> None:
+    def _subtest_load_dump(self, text_content: str, dict_content: typing.Dict[str, typing.Any], strict: bool) -> None:
         temp_dir = edq.util.dirent.get_temp_dir(prefix = 'edq_test_json_')
 
         path_text = os.path.join(temp_dir, 'test-text.json')
@@ -108,7 +114,7 @@ class TestJSON(edq.testing.unittest.BaseTest):
         self.assertDictEqual(dict_content, text_load)
         self.assertDictEqual(dict_load, text_load)
 
-    def _subtest_load_gzip(self, text_content, dict_content, strict) -> None:
+    def _subtest_load_gzip(self, text_content: str, dict_content: typing.Dict[str, typing.Any], strict: bool) -> None:
         temp_dir = edq.util.dirent.get_temp_dir(prefix = 'edq_test_json_gzip_')
 
         path = os.path.join(temp_dir, 'test.json.gz')
@@ -119,7 +125,7 @@ class TestJSON(edq.testing.unittest.BaseTest):
 
         self.assertDictEqual(dict_content, load_data)
 
-    def _subtest_load_dump_path(self, text_content, dict_content, strict) -> None:
+    def _subtest_load_dump_path(self, text_content: str, dict_content: typing.Dict[str, typing.Any], strict: bool) -> None:
         temp_dir = edq.util.dirent.get_temp_dir(prefix = 'edq_test_json_path_')
 
         path_text = os.path.join(temp_dir, 'test-text.json')
@@ -134,7 +140,7 @@ class TestJSON(edq.testing.unittest.BaseTest):
         self.assertDictEqual(dict_content, text_load)
         self.assertDictEqual(dict_load, text_load)
 
-    def _subtest_load_dump_path_gzip(self, text_content, dict_content, strict) -> None:
+    def _subtest_load_dump_path_gzip(self, text_content: str, dict_content: typing.Dict[str, typing.Any], strict: bool) -> None:
         # Trigger error on parsing tests.
         edq.util.json.loads(text_content, strict = strict)
 

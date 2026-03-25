@@ -89,7 +89,7 @@ class CLIPackage(CLIDirent):
         if (self.pymodule.__doc__ is None):
             return ''
 
-        return self.pymodule.__doc__.strip()
+        return str(self.pymodule.__doc__).strip()
 
     @staticmethod
     def from_path(path: str, qualified_name: str = '.') -> typing.Union['CLIPackage', None]:

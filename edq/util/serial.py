@@ -54,7 +54,7 @@ class PODDeserializer:
         """
 
         if (isinstance(data, dict)):
-            return cls(**data)  # type: ignore[call-arg]
+            return cls(**data)
 
         return cls(data)  # type: ignore[call-arg]
 
@@ -267,7 +267,7 @@ def generic_to_pod(
         return raw_value.to_pod(serialization_options)
 
     if (isinstance(raw_value, enum.Enum)):
-        return raw_value.value
+        return generic_to_pod(raw_value.value, serialization_options)
 
     if (isinstance(raw_value, (list, tuple, set))):
         items = [generic_to_pod(item, serialization_options) for item in raw_value]
@@ -282,7 +282,6 @@ def generic_to_pod(
 
     if (isinstance(raw_value, dict)):
         return {key: generic_to_pod(value, serialization_options) for (key, value) in raw_value.items()}
-
 
     raise ValueError(f"Unable to convert value to simple (edq.util.serial.POD) type: '{raw_value}' (type: '{type(raw_value)}').")
 

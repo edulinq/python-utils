@@ -30,7 +30,7 @@ def load(
     """
 
     if (gzipped):
-        binary_file_obj = gzip.GzipFile(fileobj = file_obj)  # type: ignore[call-overload]
+        binary_file_obj = gzip.GzipFile(fileobj = file_obj)
         file_obj = io.TextIOWrapper(binary_file_obj, encoding = encoding)
 
     if (strict):
@@ -90,9 +90,9 @@ def json_serialization_handle(value: typing.Any) -> typing.Union[typing.Dict[str
     This is meant to be used as the `default` argument to `json` stdlib dumping functions.
     """
 
-    # If this looks like a edq.util.serial.DictConverter.
+    # If this looks like a edq.util.serial.DictSerializer.
     if (hasattr(value, 'to_dict')):
-        return value.to_dict()
+        return value.to_dict()  # type: ignore[no-any-return]
 
     if (isinstance(value, enum.Enum)):
         return str(value)
@@ -143,4 +143,4 @@ def dump_path(
         open_func = gzip.open  # type: ignore[assignment]
 
     with open_func(path, 'wt', encoding = encoding) as file:
-        dump(data, file, default = default, sort_keys = sort_keys, **kwargs)  # type: ignore[arg-type]
+        dump(data, file, default = default, sort_keys = sort_keys, **kwargs)
