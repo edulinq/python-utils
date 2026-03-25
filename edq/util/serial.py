@@ -312,8 +312,10 @@ def _from_pod(
         if (_check_issubclass(allowed_type, PODDeserializer)):
             return allowed_type.from_pod(raw_value, serialization_options)
 
-        if (_check_issubclass(allowed_type, enum.Enum) and (raw_value in allowed_type)):
-            return allowed_type(raw_value)
+        if (_check_issubclass(allowed_type, enum.Enum)):
+            enum_values = [member.value for member in allowed_type]
+            if (raw_value in enum_values):
+                return allowed_type(raw_value)
 
         # Sequence container types.
         if ((typing.get_origin(allowed_type) in (list, tuple, set)) and isinstance(raw_value, (list, tuple, set))):

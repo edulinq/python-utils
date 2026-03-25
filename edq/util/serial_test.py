@@ -4,7 +4,8 @@ import typing
 import edq.testing.unittest
 import edq.util.serial
 
-class _TestEnumStr(enum.StrEnum):
+# Ideally this would be enum.StrEnum, but that was introduced in Python 3.11.
+class _TestEnumStr(enum.Enum):
     """ A test enum that only has strings. """
 
     FIRST = 'a'
