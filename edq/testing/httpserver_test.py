@@ -1,4 +1,5 @@
 import os
+import typing
 
 import edq.net.exchange
 import edq.net.exchangeserver
@@ -15,11 +16,15 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
         edq.testing.httpserver.HTTPServerTest.setup_server(server)
         server.load_exchanges_dir(TEST_EXCHANGES_DIR)
 
-    def test_exchange_validation(self):
+    def test_exchange_validation(self) -> None:
         """ Test validation of exchanges. """
 
         # [(kwargs, expected, error substring), ...]
-        test_cases = [
+        test_cases: typing.List[typing.Tuple[
+            typing.Dict[str, typing.Any],
+            typing.Union[edq.net.exchange.HTTPExchange, None],
+            typing.Union[str, None],
+        ]] = [
             # Base
 
             (
@@ -183,17 +188,23 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
 
                 self.assertJSONDictEqual(expected, actual)
 
-    def test_exchange_matching_base(self):
+    def test_exchange_matching_base(self) -> None:
         """ Test matching exchanges against queries. """
 
         # {<file basename no ext>: exchange, ...}
         exchanges = {}
         for exchange in self.get_server().get_exchanges():
-            key = os.path.basename(exchange.source_path).replace(edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION, '')
+            key = os.path.basename(str(exchange.source_path)).replace(edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION, '')
             exchanges[key] = exchange
 
         # [(target, query, match?, hint substring), ...]
-        test_cases = [
+        test_cases: typing.List[typing.Tuple[
+            edq.net.exchange.HTTPExchange,
+            edq.net.exchange.HTTPExchange,
+            typing.Dict[str, typing.Any],
+            bool,
+            typing.Union[str, None],
+        ]] = [
             # Base
             (
                 exchanges['simple'],
@@ -409,7 +420,7 @@ class HTTPTestServerTest(edq.testing.httpserver.HTTPServerTest):
 
         for (i, test_case) in enumerate(test_cases):
             (target, query, match_options, expected_match, hint_substring) = test_case
-            base_name = os.path.basename(target.source_path).replace(edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION, '')
+            base_name = os.path.basename(str(target.source_path)).replace(edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION, '')
 
             with self.subTest(msg = f"Case {i} ('{base_name}'):"):
                 actual_match, hint = target.match(query, **match_options)

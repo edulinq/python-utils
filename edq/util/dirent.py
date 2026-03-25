@@ -239,7 +239,11 @@ def copy_contents(raw_source: str, raw_dest: str, no_clobber: bool = False) -> N
     else:
         raise ValueError(f"Source of contents copy is not a dir, fie, or link: '{raw_source}'.")
 
-def read_file(raw_path: str, strip: bool = True, encoding: str = DEFAULT_ENCODING) -> str:
+def read_file(
+        raw_path: str,
+        strip: bool = True,
+        encoding: str = DEFAULT_ENCODING,
+        ) -> str:
     """ Read the contents of a file. """
 
     path = os.path.abspath(raw_path)
@@ -256,10 +260,13 @@ def read_file(raw_path: str, strip: bool = True, encoding: str = DEFAULT_ENCODIN
     return contents
 
 def write_file(
-        raw_path: str, contents: typing.Union[str, None],
-        strip: bool = True, newline: bool = True,
+        raw_path: str,
+        contents: typing.Union[str, None],
+        strip: bool = True,
+        newline: bool = True,
         encoding: str = DEFAULT_ENCODING,
-        no_clobber: bool = False) -> None:
+        no_clobber: bool = False,
+        ) -> None:
     """
     Write the contents of a file.
     If clobbering, any existing dirent will be removed before write.

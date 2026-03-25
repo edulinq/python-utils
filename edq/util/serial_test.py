@@ -52,7 +52,7 @@ class _TestDictConverter(edq.util.serial.DictConverter):
 
             list_str: typing.Union[typing.List[str], None] = None,
             list_nested: typing.Union[typing.List['_TestDictConverter'], None] = None,
-            tuple_str: typing.Union[typing.Tuple[str], None] = None,
+            tuple_str: typing.Union[typing.Tuple[str, ...], None] = None,
             set_str: typing.Union[typing.Set[str], None] = None,
 
             dict_str: typing.Union[typing.Dict[str, str], None] = None,
@@ -74,7 +74,7 @@ class _TestDictConverter(edq.util.serial.DictConverter):
         self.list_str: typing.Union[typing.List[str], None] = list_str
         self.list_nested: typing.Union[typing.List['_TestDictConverter'], None] = list_nested
         # Skip a nested set/tuple because our testing type is mutable.
-        self.tuple_str: typing.Union[typing.Tuple[str], None] = tuple_str
+        self.tuple_str: typing.Union[typing.Tuple[str, ...], None] = tuple_str
         self.set_str: typing.Union[typing.Set[str], None] = set_str
 
         self.dict_str: typing.Union[typing.Dict[str, str], None] = dict_str
@@ -105,13 +105,17 @@ class _TestDictConverter(edq.util.serial.DictConverter):
 class TestSerialization(edq.testing.unittest.BaseTest):
     """ Test basic serialization. """
 
-    def test_dictconverter_base(self):
+    def test_dictconverter_base(self) -> None:
         """
         Test the base functionality for converting to and from a dict.
         """
 
         # [(value, expected dict, error_substring), ...]
-        test_cases = [
+        test_cases: typing.List[typing.Tuple[
+                edq.util.serial.DictConverter,
+                typing.Dict[str, typing.Any],
+                typing.Union[str, None],
+        ]] = [
             # Base
             (
                 _TestDictConverter(value_str = 'abc'),
@@ -307,7 +311,7 @@ class TestSerialization(edq.testing.unittest.BaseTest):
                 self.assertJSONDictEqual(expected_dict, actual_dict)
                 self.assertJSONEqual(value, new_object)
 
-    def test_generic_to_pod__base(self):
+    def test_generic_to_pod__base(self) -> None:
         """
         Test the base functionality of the generic to pod function.
         """

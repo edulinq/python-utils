@@ -24,10 +24,10 @@ UNIXTIME_THRESHOLD_MSECS: int = int(1e13)
 UNIXTIME_THRESHOLD_USECS: int = int(1e16)
 """ Epoch time guessing threshold for nanoseconds. """
 
-_testing_timezone: typing.Union[datetime.timezone, None] = None  # pylint: disable=invalid-name
+_testing_timezone: typing.Union[datetime.tzinfo, None] = None  # pylint: disable=invalid-name
 """ A timezone to use for testing. """
 
-def set_testing_local_timezone(timezone: typing.Union[datetime.timezone, None] = UTC):
+def set_testing_local_timezone(timezone: typing.Union[datetime.tzinfo, None] = UTC):
     """
     Force the local timezone to be a specific value (UTC by default).
     This will only affect this package (e.g., the stdlib will not be affected).
@@ -68,7 +68,7 @@ class Timestamp(int):
 
         return Duration(self - other)
 
-    def to_pytime(self, timezone: typing.Union[datetime.timezone, None] = None) -> datetime.datetime:
+    def to_pytime(self, timezone: typing.Union[datetime.tzinfo, None] = None) -> datetime.datetime:
         """ Convert this timestamp to a Python datetime in the given timezone (local by default). """
 
         if (timezone is None):
@@ -81,7 +81,7 @@ class Timestamp(int):
 
         return self.to_pytime(timezone = get_local_timezone())
 
-    def pretty(self, short: bool = False, timezone: typing.Union[datetime.timezone, None] = None) -> str:
+    def pretty(self, short: bool = False, timezone: typing.Union[datetime.tzinfo, None] = None) -> str:
         """
         Get a "pretty" string representation of this timestamp.
         There is no guarantee that this representation can be parsed back to its original form.
@@ -117,7 +117,7 @@ class Timestamp(int):
             embedded_pattern: str = DEFAULT_EMBEDDED_PATTERN,
             pretty: bool = False,
             short: bool = True,
-            timezone: typing.Union[datetime.timezone, None] = None,
+            timezone: typing.Union[datetime.tzinfo, None] = None,
             ) -> str:
         """
         Look for any timestamps embedded in the text and replace them.
@@ -213,14 +213,14 @@ class Timestamp(int):
 
         return Timestamp.from_pytime(value)
 
-def get_local_timezone() -> datetime.timezone:
+def get_local_timezone() -> datetime.tzinfo:
     """ Get the local (system) timezone or raise an exception. """
 
     if (_testing_timezone is not None):
         return _testing_timezone
 
     local_timezone = datetime.datetime.now().astimezone().tzinfo
-    if ((local_timezone is None) or (not isinstance(local_timezone, datetime.timezone))):
+    if ((local_timezone is None) or (not isinstance(local_timezone, datetime.tzinfo))):
         raise ValueError("Could not discover local timezone.")
 
     return local_timezone

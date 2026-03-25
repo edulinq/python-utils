@@ -1,12 +1,13 @@
 import os
 import sys
+import typing
 
 import edq.testing.unittest
 import edq.util.dirent
 
-DIRENT_TYPE_DIR = 'dir'
-DIRENT_TYPE_FILE = 'file'
-DIRENT_TYPE_BROKEN_SYMLINK = 'broken_symlink'
+DIRENT_TYPE_DIR: str = 'dir'
+DIRENT_TYPE_FILE: str = 'file'
+DIRENT_TYPE_BROKEN_SYMLINK: str = 'broken_symlink'
 
 def create_test_dir(temp_dir_prefix: str) -> str:
     """
@@ -52,7 +53,7 @@ def create_test_dir(temp_dir_prefix: str) -> str:
 class TestDirent(edq.testing.unittest.BaseTest):
     """ Test basic operations on dirents. """
 
-    def test_setup(self):
+    def test_setup(self) -> None:
         """ Test that the base temp directory is properly setup. """
 
         temp_dir = self._prep_temp_dir()
@@ -73,7 +74,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
 
         self._check_existing_paths(temp_dir, expected_paths)
 
-    def test_contains_path_base(self):
+    def test_contains_path_base(self) -> None:
         """ Test checking path containment. """
 
         temp_dir = self._prep_temp_dir()
@@ -112,12 +113,19 @@ class TestDirent(edq.testing.unittest.BaseTest):
                 actual = edq.util.dirent.contains_path(parent, child)
                 self.assertEqual(expected, actual)
 
-    def test_read_write_file_bytes_base(self):
+    def test_read_write_file_bytes_base(self) -> None:
         """ Test reading and writing a file as bytes. """
 
         # [(path, write kwargs, read kwargs, write contents, expected contents, error substring), ...]
         # All conent should be strings that will be encoded.
-        test_cases = [
+        test_cases: typing.List[typing.Tuple[
+                str,
+                typing.Dict[str, typing.Any],
+                typing.Dict[str, typing.Any],
+                typing.Union[str, None],
+                str,
+                typing.Union[str, None]
+        ]] = [
             # Base
             (
                 "test.txt",
@@ -208,13 +216,14 @@ class TestDirent(edq.testing.unittest.BaseTest):
                 temp_dir = self._prep_temp_dir()
                 path = os.path.join(temp_dir, path)
 
+                write_byte_contents: typing.Union[bytes, None] = None
                 if (write_contents is not None):
-                    write_contents = bytes(write_contents, edq.util.dirent.DEFAULT_ENCODING)
+                    write_byte_contents = bytes(write_contents, edq.util.dirent.DEFAULT_ENCODING)
 
-                expected_contents = bytes(expected_contents, edq.util.dirent.DEFAULT_ENCODING)
+                expected_byte_contents = bytes(expected_contents, edq.util.dirent.DEFAULT_ENCODING)
 
                 try:
-                    edq.util.dirent.write_file_bytes(path, write_contents, **write_options)
+                    edq.util.dirent.write_file_bytes(path, write_byte_contents, **write_options)
                     actual_contents = edq.util.dirent.read_file_bytes(path, **read_options)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
@@ -228,13 +237,20 @@ class TestDirent(edq.testing.unittest.BaseTest):
                 if (error_substring is not None):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
-                self.assertEqual(expected_contents, actual_contents)
+                self.assertEqual(expected_byte_contents, actual_contents)
 
-    def test_read_write_file_base(self):
+    def test_read_write_file_base(self) -> None:
         """ Test reading and writing a file. """
 
         # [(path, write kwargs, read kwargs, write contents, expected contents, error substring), ...]
-        test_cases = [
+        test_cases: typing.List[typing.Tuple[
+                str,
+                typing.Dict[str, typing.Any],
+                typing.Dict[str, typing.Any],
+                typing.Union[str, None],
+                str,
+                typing.Union[str, None],
+        ]] = [
             # Base
             (
                 "test.txt",
@@ -382,7 +398,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
 
                 self.assertEqual(expected_contents, actual_contents)
 
-    def test_copy_contents_base(self):
+    def test_copy_contents_base(self) -> None:
         """ Test copying the contents of a dirent. """
 
         # [(source, dest, no clobber?, error substring), ...]
@@ -420,7 +436,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
                 if (error_substring is not None):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
-    def test_copy_base(self):
+    def test_copy_base(self) -> None:
         """ Test copying dirents. """
 
         # [(source, dest, no_clobber?, error substring), ...]
@@ -525,7 +541,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
 
                 self._check_existing_paths(temp_dir, checks)
 
-    def test_copy_special_matching_subdir_name(self):
+    def test_copy_special_matching_subdir_name(self) -> None:
         """ Test copying a special case of copying a files into themselves with matching names. """
 
         base_dir = edq.util.dirent.get_temp_dir()
@@ -550,7 +566,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
             error_string = self.format_error_string(ex)
             self.assertIn('Destination of copy cannot contain the source', error_string, 'Error is not as expected.')
 
-    def test_same_base(self):
+    def test_same_base(self) -> None:
         """ Test checking for two paths pointing to the same dirent. """
 
         temp_dir = self._prep_temp_dir()
@@ -591,7 +607,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
                 actual = edq.util.dirent.same(a, b)
                 self.assertEqual(expected, actual)
 
-    def test_mkdir_base(self):
+    def test_mkdir_base(self) -> None:
         """ Test creating directories. """
 
         temp_dir = self._prep_temp_dir()
@@ -641,7 +657,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
 
                 self.assertTrue(edq.util.dirent.exists(path), 'Dir does not exist post mkdir.')
 
-    def test_get_temp_path_base(self):
+    def test_get_temp_path_base(self) -> None:
         """ Ensure that temp paths are not the same. """
 
         a = edq.util.dirent.get_temp_path()
@@ -649,13 +665,13 @@ class TestDirent(edq.testing.unittest.BaseTest):
 
         self.assertNotEqual(a, b)
 
-    def test_get_temp_dir_base(self):
+    def test_get_temp_dir_base(self) -> None:
         """ Ensure that the temp dir exists. """
 
         path = edq.util.dirent.get_temp_dir()
         self.assertTrue(edq.util.dirent.exists(path))
 
-    def test_exists_base(self):
+    def test_exists_base(self) -> None:
         """
         Test checking for existence.
 
@@ -698,7 +714,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
                 actual = edq.util.dirent.exists(path)
                 self.assertEqual(expected, actual)
 
-    def test_move_base(self):
+    def test_move_base(self) -> None:
         """
         Test moving dirents.
 
@@ -791,7 +807,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
                 if (not edq.util.dirent.same(os.path.join(temp_dir, source), os.path.join(temp_dir, expected_dest))):
                     self._check_nonexisting_paths(temp_dir, [source])
 
-    def test_move_rename(self):
+    def test_move_rename(self) -> None:
         """ Test renaming dirents (via move()). """
 
         temp_dir = self._prep_temp_dir()
@@ -872,7 +888,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
         self._check_nonexisting_paths(temp_dir, unexpected_paths)
         self._check_existing_paths(temp_dir, expected_paths)
 
-    def test_remove_base(self):
+    def test_remove_base(self) -> None:
         """ Test removing dirents. """
 
         temp_dir = self._prep_temp_dir()
@@ -918,7 +934,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
         self._check_nonexisting_paths(temp_dir, remove_relpaths)
         self._check_existing_paths(temp_dir, expected_paths)
 
-    def test_tree_base(self):
+    def test_tree_base(self) -> None:
         """
         Test getting a recursive tree for a directory.
         """
@@ -982,15 +998,15 @@ class TestDirent(edq.testing.unittest.BaseTest):
         # Normalize symlinks.
         expected['edq_test_dirent']['symlink_a.txt'] = 'abc123'
         expected['edq_test_dirent']['symlink_file_empty'] = 'abc123'
-        actual['edq_test_dirent']['symlink_a.txt'] = 'abc123'
-        actual['edq_test_dirent']['symlink_file_empty'] = 'abc123'
+        actual['edq_test_dirent']['symlink_a.txt'] = 'abc123'  # type: ignore[index]
+        actual['edq_test_dirent']['symlink_file_empty'] = 'abc123'  # type: ignore[index]
 
         self.assertJSONEqual(expected, actual)
 
-    def _prep_temp_dir(self):
+    def _prep_temp_dir(self) -> str:
         return create_test_dir('edq_test_dirent_')
 
-    def _check_existing_paths(self, base_dir, raw_paths):
+    def _check_existing_paths(self, base_dir, raw_paths) -> None:
         """
         Ensure that specific paths exists, and fail the test if they do not.
         All paths should be relative to the base dir.
@@ -1045,7 +1061,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
                 else:
                     raise ValueError(f"Unknown dirent type '{dirent_type}' for path: '{relpath}'.")
 
-    def _check_nonexisting_paths(self, base_dir, raw_paths):
+    def _check_nonexisting_paths(self, base_dir, raw_paths) -> None:
         """
         Ensure that specific paths do not exists, and fail the test if they do exist.
         All paths should be relative to the base dir.
@@ -1058,7 +1074,7 @@ class TestDirent(edq.testing.unittest.BaseTest):
             if (edq.util.dirent.exists(path)):
                 self.fail(f"Path exists when it should not: '{relpath}'.")
 
-    def _get_dirent_type(self, path):
+    def _get_dirent_type(self, path) -> typing.Tuple[str, bool]:
         is_link = os.path.islink(path)
         dirent_type = None
 

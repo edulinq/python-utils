@@ -6,7 +6,7 @@ import edq.util.gzip
 class TestGzip(edq.testing.unittest.BaseTest):
     """ Test gzipping functionality. """
 
-    def test_file_base(self):
+    def test_file_base(self) -> None:
         """ Test file-based operations. """
 
         text_contents = 'abc123'
@@ -23,7 +23,7 @@ class TestGzip(edq.testing.unittest.BaseTest):
 
         self.assertFileHashEqual(base_path, direct_path)
 
-    def test_file_base64(self):
+    def test_file_base64(self) -> None:
         """ Test file-based operations using base64. """
 
         text_contents = 'abc123'

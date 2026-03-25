@@ -16,7 +16,7 @@ import json5
 import edq.util.dirent
 
 def load(
-        file_obj: typing.TextIO,
+        file_obj: typing.IO,
         strict: bool = False,
         gzipped: bool = False,
         encoding: str = edq.util.dirent.DEFAULT_ENCODING,

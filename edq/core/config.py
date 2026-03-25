@@ -79,7 +79,7 @@ def set_config_filename(filename: str) -> None:
     global _config_filename  # pylint: disable=global-statement
     _config_filename = filename
 
-def set_legacy_config_filename(legacy_filename: str) -> None:
+def set_legacy_config_filename(legacy_filename: typing.Union[str, None]) -> None:
     """ Sets the legacy config filename. """
 
     global _legacy_config_filename  # pylint: disable=global-statement

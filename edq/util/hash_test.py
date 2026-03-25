@@ -4,7 +4,7 @@ import edq.util.hash
 class TestHash(edq.testing.unittest.BaseTest):
     """ Test hash-based operations. """
 
-    def test_sha256_hex_base(self):
+    def test_sha256_hex_base(self) -> None:
         """ Test the base sha256 hash. """
 
         # [(input, expected), ...]
@@ -21,7 +21,7 @@ class TestHash(edq.testing.unittest.BaseTest):
                 actual = edq.util.hash.sha256_hex(text)
                 self.assertEqual(expected, actual)
 
-    def test_clip_text_base(self):
+    def test_clip_text_base(self) -> None:
         """ Test the base functionality of clip_text(). """
 
         # [(text, max length, kwargs, expected), ...]

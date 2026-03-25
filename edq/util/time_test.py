@@ -11,7 +11,7 @@ TIMEZONE_CEST: datetime.timezone = datetime.timezone(datetime.timedelta(hours = 
 class TestTime(edq.testing.unittest.BaseTest):
     """ Test time-based operations. """
 
-    def test_timestamp_now(self):
+    def test_timestamp_now(self) -> None:
         """ Test getting a timestamp for the current moment. """
 
         start = edq.util.time.Timestamp.now()
@@ -23,7 +23,7 @@ class TestTime(edq.testing.unittest.BaseTest):
         self.assertLessEqual(start, middle)
         self.assertLessEqual(middle, end)
 
-    def test_timestamp_pytime_conversion(self):
+    def test_timestamp_pytime_conversion(self) -> None:
         """ Test converting between timestamps and Python datetimes. """
 
         # [(timestamp, python time), ...]
@@ -58,7 +58,7 @@ class TestTime(edq.testing.unittest.BaseTest):
                     convert_pytime_pst = timestamp.to_pytime(timezone).isoformat(timespec = 'milliseconds')
                     self.assertEqual(pytime_pst, convert_pytime_pst, f"pytime {timezone}")
 
-    def test_timestamp_pretty(self):
+    def test_timestamp_pretty(self) -> None:
         """ Test the "pretty" representations of timestamps. """
 
         # [(timestamp, timezone, pretty short, pretty long), ...]
@@ -80,7 +80,7 @@ class TestTime(edq.testing.unittest.BaseTest):
                 self.assertEqual(expected_pretty_short, actual_pretty_short, 'short')
                 self.assertEqual(expected_pretty_long, actual_pretty_long, 'long')
 
-    def test_timestamp_sub(self):
+    def test_timestamp_sub(self) -> None:
         """ Test subtracting timestamps. """
 
         # [(a, b, expected), ...]
@@ -106,7 +106,7 @@ class TestTime(edq.testing.unittest.BaseTest):
                 actual = a - b
                 self.assertEqual(expected, actual)
 
-    def test_timestamp_embedded(self):
+    def test_timestamp_embedded(self) -> None:
         """
         Test pulling timestamps out of messages.
         """
@@ -167,7 +167,7 @@ class TestTime(edq.testing.unittest.BaseTest):
                 actual = edq.util.time.Timestamp.convert_embedded(text, pretty = True, timezone = timezone)
                 self.assertEqual(expected, actual)
 
-    def test_timestamp_guess(self):
+    def test_timestamp_guess(self) -> None:
         """ Test guessing timestamps from values. """
 
         # [(value, expected), ...]

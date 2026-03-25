@@ -9,7 +9,7 @@ PACKAGE_ROOT_DIR = os.path.join(THIS_DIR, '..')
 class TestPyImport(edq.testing.unittest.BaseTest):
     """ Test Python importing operations. """
 
-    def test_import_path_base(self):
+    def test_import_path_base(self) -> None:
         """ Test importing a module from a path. """
 
         # [(relative path, error substring), ...]
@@ -45,7 +45,7 @@ class TestPyImport(edq.testing.unittest.BaseTest):
 
                 self.assertIsNotNone(module)
 
-    def test_import_name_base(self):
+    def test_import_name_base(self) -> None:
         """ Test importing a module from a name. """
 
         # [(name, error substring), ...]
@@ -82,7 +82,7 @@ class TestPyImport(edq.testing.unittest.BaseTest):
 
                 self.assertIsNotNone(module)
 
-    def test_fetch_base(self):
+    def test_fetch_base(self) -> None:
         """ Test fetching an attribute from a module. """
 
         # [(name, error substring), ...]

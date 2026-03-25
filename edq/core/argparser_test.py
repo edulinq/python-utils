@@ -1,4 +1,5 @@
 import functools
+import typing
 
 import edq.core.argparser
 import edq.testing.unittest
@@ -6,11 +7,16 @@ import edq.testing.unittest
 class TestArgParser(edq.testing.unittest.BaseTest):
     """ Test argument parsing. """
 
-    def test_callbacks_base(self):
+    def test_callbacks_base(self) -> None:
         """ Test the argument parsing callbacks. """
 
         # [(parse text, [(key, pre, post), ...], skip keys, expected (as dict)), ...]
-        test_cases = [
+        test_cases: typing.List[typing.Tuple[
+            str,
+            typing.List[typing.Tuple[str, typing.Union[typing.Callable, None], typing.Union[typing.Callable, None]]],
+            typing.List[str],
+            typing.Dict[str, typing.Any],
+        ]] = [
             # Empty
             (
                 "",

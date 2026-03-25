@@ -1,4 +1,5 @@
 import os
+import typing
 
 import edq.testing.unittest
 import edq.core.config
@@ -108,7 +109,7 @@ def create_test_dir(temp_dir_prefix: str) -> str:
 class TestConfig(edq.testing.unittest.BaseTest):
     """ Test basic operations on configs. """
 
-    def test_get_tiered_config_base(self):
+    def test_get_tiered_config_base(self) -> None:
         """
         Test that configuration files are loaded correctly from the file system with the expected tier.
         """
@@ -116,7 +117,15 @@ class TestConfig(edq.testing.unittest.BaseTest):
         temp_dir = create_test_dir(temp_dir_prefix = "edq-test-config-get-tiered-config-")
 
         # [(work directory, config filenames, extra arguments, expected config, expected sources, expected config options, error substring), ...]
-        test_cases = [
+        test_cases: typing.List[typing.Tuple[
+            str,
+            typing.Dict[str, typing.Any],
+            typing.Dict[str, typing.Any],
+            typing.Dict[str, typing.Any],
+            typing.Dict[str, typing.Any],
+            typing.Dict[str, typing.Any],
+            typing.Union[str, None],
+        ]] = [
             # No Config
             (
                 "empty-dir",
@@ -1224,13 +1233,17 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
                 self.assertJSONDictEqual(actual_config_info, expected_config_info)
 
-    def test_write_config_base(self):
+    def test_write_config_base(self) -> None:
         """
         Test that the given config is written correctly and paths are created correctly.
         """
 
         # [(write config arguments, expected result, error substring), ...]
-        test_cases = [
+        test_cases: typing.List[typing.Tuple[
+            typing.Dict[str, typing.Any],
+            typing.Dict[str, typing.Any],
+            typing.Union[str, None],
+        ]] = [
             # Non-exisiting Path
             (
                 {

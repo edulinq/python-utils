@@ -11,7 +11,7 @@ class TestCode(edq.testing.unittest.BaseTest):
     Test the utilities for importing code.
     """
 
-    def test_extract_base(self):
+    def test_extract_base(self) -> None:
         """ Test extracting code. """
 
         for ext in ['py', 'ipynb']:
@@ -19,7 +19,7 @@ class TestCode(edq.testing.unittest.BaseTest):
             source_code = edq.util.code.extract_code(path)
             self.assertEqual(source_code, "SOME_CONSTANT = 1")
 
-    def test_sanitize_import_base(self):
+    def test_sanitize_import_base(self) -> None:
         """ Test sanitizing code. """
 
         for ext in ['py', 'ipynb']:
