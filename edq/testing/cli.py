@@ -126,23 +126,27 @@ class CLITestInfo:
             setup_func = edq.util.pyimport.fetch(setup_func)
 
         self.setup_func: typing.Any = setup_func
+        """ The function to run before the test to setup. """
 
         if (teardown_func is not None):
             teardown_func = edq.util.pyimport.fetch(teardown_func)
 
         self.teardown_func: typing.Any = teardown_func
+        """ The function to run after the test to cleanup. """
 
         if (setup_args is None):
             setup_args  = {}
 
         setup_args["test_info"] = self
         self.setup_args: typing.Dict[str, typing.Any] = setup_args
+        """ Arguments for the setup function. """
 
         if (teardown_args is None):
             teardown_args = {}
 
         teardown_args["test_info"] = self
         self.teardown_args: typing.Dict[str, typing.Any] = teardown_args
+        """ Arguments for the teardown function. """
 
         if (cli is None):
             raise ValueError("Missing CLI module.")

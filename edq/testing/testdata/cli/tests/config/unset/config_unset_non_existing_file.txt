@@ -1,0 +1,9 @@
+{
+    "cli": "edq.cli.config.unset",
+    "arguments": [
+        "user",
+        "--file", "__TEMP_DIR__(non-existing-config.json)"
+    ],
+    "work_dir": "__TEMP_DIR__()"
+}
+---
