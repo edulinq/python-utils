@@ -19,8 +19,14 @@ import edq.util.pyimport
 
 _logger = logging.getLogger(__name__)
 
-DEFAULT_REQUEST_TIMEOUT_SECS: float = 10.0
-""" Default timeout for an HTTP request. """
+DEFAULT_REQUEST_TIMEOUT_SECS: typing.Union[float, typing.Tuple[float, float]] = (30.0, 60.0 * 30)
+"""
+Default timeout for an HTTP request.
+Can be a single float for both the connection and read timeouts.
+Or a tuple for the connection and read timeouts, respectively.
+
+See: https://docs.python-requests.org/en/latest/user/advanced/#timeouts
+"""
 
 RETRY_BACKOFF_SECS: float = 0.5
 
@@ -64,7 +70,7 @@ def make_request(method: str, url: str,
         data: typing.Union[typing.Dict[str, typing.Any], None] = None,
         files: typing.Union[typing.List[typing.Any], None] = None,
         raise_for_status: bool = True,
-        timeout_secs: float = DEFAULT_REQUEST_TIMEOUT_SECS,
+        timeout_secs: typing.Union[float, typing.Tuple[float, float]] = DEFAULT_REQUEST_TIMEOUT_SECS,
         cache_dir: typing.Union[str, None] = None,
         ignore_cache: bool = False,
         output_dir: typing.Union[str, None] = None,
