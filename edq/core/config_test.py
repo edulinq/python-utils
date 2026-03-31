@@ -109,8 +109,10 @@ def creat_cli_test_dir(**kwargs):
     """
     Create a temp dir and populate it with dirents for cli testing.
     .
-    simple
-    └── edq-config.json
+    ├── multiple-options
+    │   └── edq-config.json
+    └── simple
+        └── edq-config.json
     """
 
     test_info = kwargs['test_info']
