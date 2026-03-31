@@ -119,6 +119,13 @@ def creat_cli_test_dir(**kwargs):
     edq.util.dirent.mkdir(simple_config_dir_path)
     edq.util.json.dump_path({"user": "user@test.edulinq.org"}, os.path.join(simple_config_dir_path, edq.core.config.DEFAULT_CONFIG_FILENAME))
 
+    multiple_option_config_dir_path = os.path.join(test_info.temp_dir, "multiple-options")
+    edq.util.dirent.mkdir(multiple_option_config_dir_path)
+    edq.util.json.dump_path(
+        {"user": "user@test.edulinq.org", "pass": "password1234"},
+        os.path.join(multiple_option_config_dir_path, edq.core.config.DEFAULT_CONFIG_FILENAME)
+    )
+
 class TestConfig(edq.testing.unittest.BaseTest):
     """ Test basic operations on configs. """
 

@@ -1,0 +1,11 @@
+{
+    "cli": "edq.cli.config.unset",
+    "arguments": [
+        "user",
+        "pass"
+    ],
+    "setup_func": "edq.core.config_test.creat_cli_test_dir",
+    "work_dir": "__TEMP_DIR__(multiple-options/)"
+}
+---
+Unset config options from: __TEMP_DIR__(multiple-options/edq-config.json)
