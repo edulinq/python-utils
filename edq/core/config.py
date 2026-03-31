@@ -99,7 +99,41 @@ def get_global_config_path() -> str:
 
     return platformdirs.user_config_dir(get_config_filename())
 
-def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
+def resolve_config_location(
+        config_info: TieredConfigInfo,
+        is_local: bool,
+        is_global: bool,
+        config_file_path: typing.Union[str, None]
+    ) -> typing.Union[str, None]:
+    """
+    Resolve the config location from given scope information.
+    Returns None if a unknown config scope is given.
+    """
+
+    # Default to the local configuration if no configuration type is specified.
+    if (not (is_local or is_global or (config_file_path is not None))):
+        is_local = True
+
+    out_path = ""
+    if (is_local):
+        local_config_path = config_info.local_config_path
+
+        # If no local config file was found on the path to root,
+        # set local config path to the default config filename in the current directory.
+        if (local_config_path is None):
+            local_config_path = config_info.config_filename
+
+        out_path = local_config_path
+    elif (is_global):
+        out_path = config_info.global_config_path
+    elif (config_file_path is not None):
+        out_path = config_file_path
+    else:
+        return None
+
+    return out_path
+
+def update_options_in_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
     """
     Write configs to the specified path.
     Create the path if it does not exist.
@@ -113,6 +147,21 @@ def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> Non
     config.update(config_to_write)
 
     edq.util.dirent.mkdir(os.path.dirname(path))
+    edq.util.json.dump_path(config, path, indent = 4)
+
+def remove_options_in_config_file(path: str, config_to_remove: typing.List[str]) -> None:
+    """
+    Remove configs from the specified path.
+    Returns immediately if the file does not exist.
+    """
+
+    if (not (edq.util.dirent.exists(path))):
+        return
+
+    config = edq.util.json.load_path(path)
+    for config_option in config_to_remove:
+        _ = config.pop(config_option, None)
+
     edq.util.json.dump_path(config, path, indent = 4)
 
 def get_tiered_config(

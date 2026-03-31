@@ -60,6 +60,10 @@ class CLITestInfo:
             data_dir: str,
             temp_dir: str,
             work_dir: typing.Union[str, None] = None,
+            setup_func: typing.Any = None,
+            setup_args: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            teardown_func: typing.Any  = None,
+            teardown_args: typing.Union[typing.Dict[str, typing.Any], None] = None,
             cli: typing.Union[str, None] = None,
             arguments: typing.Union[typing.List[str], None] = None,
             error: bool = False,
@@ -117,6 +121,32 @@ class CLITestInfo:
 
         self.work_dir: str = work_dir
         """ The directory the test runs from. """
+
+        if (setup_func is not None):
+            setup_func = edq.util.pyimport.fetch(setup_func)
+        else:
+            setup_func = None
+
+        self.setup_func: typing.Union[typing.Callable, None] = setup_func
+
+        if (teardown_func is not None):
+            teardown_func = edq.util.pyimport.fetch(teardown_func)
+        else:
+            teardown_func = None
+
+        self.teardown_func: typing.Union[typing.Callable, None] = teardown_func
+
+        if (setup_args is None):
+            setup_args  = {}
+
+        setup_args["test_info"] = self
+        self.setup_args: typing.Dict[str, str] = setup_args
+
+        if (teardown_args is None):
+            teardown_args = {}
+
+        teardown_args["test_info"] = self
+        self.teardown_args: typing.Dict[str, str] = teardown_args
 
         if (cli is None):
             raise ValueError("Missing CLI module.")
@@ -344,6 +374,9 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
         if (test_info.should_skip()):
             self.skipTest(test_info.skip_message())
 
+        if (test_info.setup_func is not None):
+            test_info.setup_func(**test_info.setup_args)
+
         old_args = sys.argv
         sys.argv = [test_info.module.__file__] + test_info.arguments
 
@@ -375,6 +408,9 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
         finally:
             os.chdir(previous_work_directory)
             sys.argv = old_args
+
+            if (test_info.teardown_func is not None):
+                test_info.teardown_func(**test_info.teardown_args)
 
         if (not test_info.split_stdout_stderr):
             if ((len(stdout_text) > 0) and (len(stderr_text) > 0)):

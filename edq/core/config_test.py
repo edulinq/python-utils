@@ -105,6 +105,20 @@ def create_test_dir(temp_dir_prefix: str) -> str:
 
     return temp_dir
 
+def creat_cli_test_dir(**kwargs):
+    """
+    Create a temp dir and populate it with dirents for cli testing.
+    .
+    simple
+    └── edq-config.json
+    """
+
+    test_info = kwargs['test_info']
+
+    simple_config_dir_path = os.path.join(test_info.temp_dir, "simple")
+    edq.util.dirent.mkdir(simple_config_dir_path)
+    edq.util.json.dump_path({"user": "user@test.edulinq.org"}, os.path.join(simple_config_dir_path, edq.core.config.DEFAULT_CONFIG_FILENAME))
+
 class TestConfig(edq.testing.unittest.BaseTest):
     """ Test basic operations on configs. """
 
@@ -1224,9 +1238,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
                 self.assertJSONDictEqual(actual_config_info, expected_config_info)
 
-    def test_write_config_base(self):
+    def test_update_config_base(self):
         """
-        Test that the given config is written correctly and paths are created correctly.
+        Test that the given config is updated correctly and paths are created correctly.
         """
 
         # [(write config arguments, expected result, error substring), ...]
@@ -1298,7 +1312,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
             kwargs, expected_result, error_substring = test_case
 
             with self.subTest(msg = f"Case {i}"):
-                temp_dir = create_test_dir(temp_dir_prefix = "edq-test-write-config-")
+                temp_dir = create_test_dir(temp_dir_prefix = "edq-test-update-config-")
 
                 kwargs['path'] = os.path.join(temp_dir, kwargs['path'])
 
@@ -1306,7 +1320,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 os.chdir(temp_dir)
 
                 try:
-                    edq.core.config.update_config_file(**kwargs)
+                    edq.core.config.update_options_in_config_file(**kwargs)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
 
@@ -1322,13 +1336,128 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 if (error_substring is not None):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
-                write_file_path = expected_result["path"]
-                write_file_path = os.path.join(temp_dir, write_file_path)
+                path = os.path.join(temp_dir, expected_result["path"])
 
-                if (not edq.util.dirent.exists(write_file_path)):
-                    self.fail(f"Expected file does not exist at path: {write_file_path}")
+                if (not edq.util.dirent.exists(path)):
+                    self.fail(f"Expected file does not exist at path: {path}")
 
-                data_actual = edq.util.json.load_path(write_file_path)
+                data_actual = edq.util.json.load_path(path)
                 data_expected = expected_result['data']
 
                 self.assertJSONDictEqual(data_actual, data_expected)
+
+    def test_remove_config_base(self):
+        """
+        Test that the given config option(s) are removed correctly.
+        """
+
+        # [(write config arguments, expected result, error substring), ...]
+        test_cases = [
+            # Non-exisiting Path
+            (
+                {
+                    'path': os.path.join('non-exisiting-path', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_remove': ['user'],
+                },
+                {
+                    'path': None,
+                    'data': None
+                },
+                None,
+            ),
+
+            # Directory Path
+            (
+                {
+                    'path': os.path.join("dir-config", edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_remove': ['user'],
+                },
+                {},
+                "Cannot open JSON file, expected a file but got a directory",
+            ),
+
+            # Empty Config
+            (
+                {
+                    'path': os.path.join('empty', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_remove': ['user']
+                },
+                {
+                    'path': os.path.join('empty', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {}
+                },
+                None,
+            ),
+
+            # Non-empty Config (Remove Single Option)
+            (
+                {
+                    'path': os.path.join('multiple-options', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_remove': ['pass']
+                },
+                {
+                    'path': os.path.join('multiple-options', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {'user': 'user@test.edulinq.org'},
+                },
+                None,
+            ),
+
+            # Non-empty Config (Remove Multiple Options)
+            (
+                {
+                    'path': os.path.join('multiple-options', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_remove': ['pass', 'user']
+                },
+                {
+                    'path': os.path.join('multiple-options', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {},
+                },
+                None,
+            ),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            kwargs, expected_result, error_substring = test_case
+
+            with self.subTest(msg = f"Case {i}"):
+                temp_dir = create_test_dir(temp_dir_prefix = "edq-test-remove-config-")
+
+                kwargs['path'] = os.path.join(temp_dir, kwargs['path'])
+
+                previous_work_directory = os.getcwd()
+                os.chdir(temp_dir)
+
+                try:
+                    edq.core.config.remove_options_in_config_file(**kwargs)
+                except Exception as ex:
+                    error_string = self.format_error_string(ex)
+
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{error_string}'.")
+
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
+                    continue
+                finally:
+                    os.chdir(previous_work_directory)
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
+                path = expected_result["path"]
+                if(path is None):
+                    data_actual = None
+                else:
+                    if (edq.util.dirent.exists(path)):
+                        self.fail(f"Expected file does not exist at path: {path}")
+
+                    path = os.path.join(temp_dir, path)
+                    data_actual = edq.util.json.load_path(path)
+
+                data_expected = expected_result['data']
+
+                if (data_expected is None):
+                    self.assertIsNone(data_actual)
+                else:
+                    self.assertIsNotNone(data_actual)
+                    self.assertJSONDictEqual(data_actual, data_expected)

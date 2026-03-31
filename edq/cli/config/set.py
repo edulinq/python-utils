@@ -13,35 +13,22 @@ import edq.core.config
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
-    config_info = args._config_info
-
     config_to_set: typing.Dict[str, str] = {}
     for config_option in args.config_to_set:
         (key, value) = edq.core.config.parse_string_config_option(config_option)
         config_to_set[key] = value
 
-    # Default to the local configuration if no configuration type is specified.
-    if (not (args.write_local or args.write_global or (args.write_file_path is not None))):
-        args.write_local = True
+    out_path = edq.core.config.resolve_config_location(
+        args._config_info,
+        args.write_local,
+        args.write_global,
+        args.write_file_path
+    )
 
-    out_path = None
-    if (args.write_local):
-        local_config_path = config_info.local_config_path
-
-        # If no local config file was found on the path to root,
-        # set local config path to the default config filename in the current directory.
-        if (local_config_path is None):
-            local_config_path = config_info.config_filename
-
-        out_path = local_config_path
-    elif (args.write_global):
-        out_path = config_info.global_config_path
-    elif (args.write_file_path is not None):
-        out_path = args.write_file_path
-    else:
+    if (out_path is None):
         raise ValueError("Failed to write to a unknown config location (e.g., not local or global).")
 
-    edq.core.config.update_config_file(out_path, config_to_set)
+    edq.core.config.update_options_in_config_file(out_path, config_to_set)
     print(f"Wrote config options to: {os.path.abspath(out_path)}")
 
     return 0
