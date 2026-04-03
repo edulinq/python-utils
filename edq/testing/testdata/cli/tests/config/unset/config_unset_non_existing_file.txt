@@ -7,3 +7,4 @@
     "work_dir": "__TEMP_DIR__()"
 }
 ---
+Config file does not exist: __TEMP_DIR__(non-existing-config.json)

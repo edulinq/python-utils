@@ -25,9 +25,6 @@ def run_cli(args: argparse.Namespace) -> int:
         args.write_file_path
     )
 
-    if (out_path is None):
-        raise ValueError("Failed to write to a unknown config location (e.g., not local or global).")
-
     edq.core.config.update_options_in_config_file(out_path, config_to_set)
     print(f"Wrote config options to: {os.path.abspath(out_path)}")
 

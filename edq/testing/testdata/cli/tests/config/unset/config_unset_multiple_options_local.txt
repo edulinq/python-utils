@@ -4,7 +4,7 @@
         "user",
         "pass"
     ],
-    "setup_func": "edq.core.config_test.creat_cli_test_dir",
+    "setup_func": "edq.core.config_test.create_cli_test_dir",
     "work_dir": "__TEMP_DIR__(multiple-options/)"
 }
 ---

@@ -19,10 +19,8 @@ def run_cli(args: argparse.Namespace) -> int:
         args.unset_from_file_path
     )
 
-    if (out_path is None):
-        raise ValueError("Failed to unset from a unknown config location (e.g., not local or global).")
-
     if (not (edq.util.dirent.exists(out_path))):
+        print(f"Config file does not exist: {os.path.abspath(out_path)}")
         return 0
 
     edq.core.config.remove_options_in_config_file(out_path, args.config_to_unset)

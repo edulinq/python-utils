@@ -104,17 +104,16 @@ def resolve_config_location(
         is_local: bool,
         is_global: bool,
         config_file_path: typing.Union[str, None]
-    ) -> typing.Union[str, None]:
+    ) -> str:
     """
     Resolve the config location from given scope information.
-    Returns None if a unknown config scope is given.
+    Raises a exception if an unknown config scope is given.
     """
 
     # Default to the local configuration if no configuration type is specified.
-    if (not (is_local or is_global or (config_file_path is not None))):
+    if ((not is_local) and (not is_global) and (config_file_path is None)):
         is_local = True
 
-    out_path = ""
     if (is_local):
         local_config_path = config_info.local_config_path
 
@@ -123,15 +122,16 @@ def resolve_config_location(
         if (local_config_path is None):
             local_config_path = config_info.config_filename
 
-        out_path = local_config_path
-    elif (is_global):
-        out_path = config_info.global_config_path
-    elif (config_file_path is not None):
-        out_path = config_file_path
-    else:
-        return None
+        return local_config_path
 
-    return out_path
+    if (is_global):
+        return config_info.global_config_path
+
+    if (config_file_path is not None):
+        return config_file_path
+
+    raise ValueError("Unknown config location (e.g., not local or global).")
+
 
 def update_options_in_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
     """
@@ -160,7 +160,7 @@ def remove_options_in_config_file(path: str, config_to_remove: typing.List[str])
 
     config = edq.util.json.load_path(path)
     for config_option in config_to_remove:
-        _ = config.pop(config_option, None)
+        config.pop(config_option, None)
 
     edq.util.json.dump_path(config, path, indent = 4)
 

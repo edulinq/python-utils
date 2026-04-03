@@ -105,17 +105,15 @@ def create_test_dir(temp_dir_prefix: str) -> str:
 
     return temp_dir
 
-def creat_cli_test_dir(**kwargs):
+def create_cli_test_dir(test_info, **kwargs):
     """
-    Create a temp dir and populate it with dirents for cli testing.
+    Create a temp dir and populate it with dirents for CLI testing.
     .
     ├── multiple-options
     │   └── edq-config.json
     └── simple
         └── edq-config.json
     """
-
-    test_info = kwargs['test_info']
 
     simple_config_dir_path = os.path.join(test_info.temp_dir, "simple")
     edq.util.dirent.mkdir(simple_config_dir_path)
@@ -1355,7 +1353,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
                 self.assertJSONDictEqual(data_actual, data_expected)
 
-    def test_remove_config_base(self):
+    def test_remove_config_option_base(self):
         """
         Test that the given config option(s) are removed correctly.
         """
@@ -1371,6 +1369,18 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {
                     'path': None,
                     'data': None
+                },
+                None,
+            ),
+            # Remove No Options
+            (
+                {
+                    'path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'config_to_remove': [],
+                },
+                {
+                    'path': os.path.join('simple', edq.core.config.DEFAULT_CONFIG_FILENAME),
+                    'data': {'user': 'user@test.edulinq.org'}
                 },
                 None,
             ),
@@ -1454,12 +1464,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
                 path = expected_result["path"]
-                if(path is None):
+                if (path is None):
                     data_actual = None
                 else:
-                    if (edq.util.dirent.exists(path)):
-                        self.fail(f"Expected file does not exist at path: {path}")
-
                     path = os.path.join(temp_dir, path)
                     data_actual = edq.util.json.load_path(path)
 
