@@ -1,5 +1,7 @@
 """
 Update configuration options.
+If the file at the specified config location doesn't exist,
+it will be created.
 """
 
 import argparse
@@ -20,9 +22,9 @@ def run_cli(args: argparse.Namespace) -> int:
 
     out_path = edq.core.config.resolve_config_location(
         args._config_info,
-        args.write_local,
-        args.write_global,
-        args.write_file_path
+        args.scope_local,
+        args.scope_global,
+        args.scope_file
     )
 
     edq.core.config.update_options_in_config_file(out_path, config_to_set)
@@ -52,25 +54,7 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
             +  " Expected config format is <key>=<value>."),
     )
 
-    group = parser.add_argument_group("config location options").add_mutually_exclusive_group()
-
-    group.add_argument('--local',
-        action = 'store_true', dest = 'write_local',
-        help = ("Write config option(s) to the local config file if one exists."
-            + " If no local config file is found, a new one will be created in the current directory."),
-    )
-
-    group.add_argument('--global',
-        action = 'store_true', dest = 'write_global',
-        help =  ("Write config option(s) to the global config file if one exists."
-            +  f" If no global config file is found, a new one will be created at {edq.core.config.get_global_config_path()}"),
-    )
-
-    group.add_argument('--file', metavar = "<FILE>",
-        action = 'store', type = str, default = None, dest = 'write_file_path',
-        help = ("Write config option(s) to the specified config file if it exists."
-            +  " If the given file doesn't exist, it will be created.")
-    )
+    edq.core.config.add_config_location_argument_group(parser)
 
 if (__name__ == '__main__'):
     sys.exit(main())

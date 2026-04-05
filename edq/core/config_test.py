@@ -105,7 +105,7 @@ def create_test_dir(temp_dir_prefix: str) -> str:
 
     return temp_dir
 
-def create_cli_test_dir(test_info, **kwargs):
+def create_cli_test_dir(test, test_info):
     """
     Create a temp dir and populate it with dirents for CLI testing.
     .
@@ -126,10 +126,21 @@ def create_cli_test_dir(test_info, **kwargs):
         os.path.join(multiple_option_config_dir_path, edq.core.config.DEFAULT_CONFIG_FILENAME)
     )
 
+def verify_cli_test(test, test_info) -> None:
+    """ Verify the contents of the config files created by the CLI tests. """
+
+    path = os.path.join(test_info.work_dir, *test_info.extra_options["path"])
+
+    data_actual = edq.util.json.load_path(path)
+    data_expected = test_info.extra_options["data"]
+
+    test.assertJSONDictEqual(data_actual, data_expected)
+
+
 class TestConfig(edq.testing.unittest.BaseTest):
     """ Test basic operations on configs. """
 
-    def test_get_tiered_config_base(self):
+    def test_get_tiered_config_base(self) -> None:
         """
         Test that configuration files are loaded correctly from the file system with the expected tier.
         """
@@ -1245,7 +1256,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
                 self.assertJSONDictEqual(actual_config_info, expected_config_info)
 
-    def test_update_config_base(self):
+    def test_update_config_base(self) -> None:
         """
         Test that the given config is updated correctly and paths are created correctly.
         """
@@ -1353,7 +1364,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
 
                 self.assertJSONDictEqual(data_actual, data_expected)
 
-    def test_remove_config_option_base(self):
+    def test_remove_config_option_base(self) -> None:
         """
         Test that the given config option(s) are removed correctly.
         """
@@ -1366,11 +1377,8 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     'path': os.path.join('non-exisiting-path', edq.core.config.DEFAULT_CONFIG_FILENAME),
                     'config_to_remove': ['user'],
                 },
-                {
-                    'path': None,
-                    'data': None
-                },
-                None,
+                {},
+                "FileNotFoundError",
             ),
             # Remove No Options
             (
@@ -1463,17 +1471,9 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 if (error_substring is not None):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
-                path = expected_result["path"]
-                if (path is None):
-                    data_actual = None
-                else:
-                    path = os.path.join(temp_dir, path)
-                    data_actual = edq.util.json.load_path(path)
+                path = os.path.join(temp_dir, expected_result["path"])
 
+                data_actual = edq.util.json.load_path(path)
                 data_expected = expected_result['data']
 
-                if (data_expected is None):
-                    self.assertIsNone(data_actual)
-                else:
-                    self.assertIsNotNone(data_actual)
-                    self.assertJSONDictEqual(data_actual, data_expected)
+                self.assertJSONDictEqual(data_actual, data_expected)
