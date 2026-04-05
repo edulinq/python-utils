@@ -1379,6 +1379,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 {},
                 "FileNotFoundError",
             ),
+
             # Remove No Options
             (
                 {
