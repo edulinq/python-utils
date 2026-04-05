@@ -60,6 +60,8 @@ class CLITestInfo:
             data_dir: str,
             temp_dir: str,
             work_dir: typing.Union[str, None] = None,
+            setup_func: typing.Any = None,
+            teardown_func: typing.Any  = None,
             cli: typing.Union[str, None] = None,
             arguments: typing.Union[typing.List[str], None] = None,
             error: bool = False,
@@ -117,6 +119,18 @@ class CLITestInfo:
 
         self.work_dir: str = work_dir
         """ The directory the test runs from. """
+
+        if (setup_func is not None):
+            setup_func = edq.util.pyimport.fetch(setup_func)
+
+        self.setup_func: typing.Any = setup_func
+        """ The function to run before the test to setup. """
+
+        if (teardown_func is not None):
+            teardown_func = edq.util.pyimport.fetch(teardown_func)
+
+        self.teardown_func: typing.Any = teardown_func
+        """ The function to run after the test to cleanup. """
 
         if (cli is None):
             raise ValueError("Missing CLI module.")
@@ -306,7 +320,7 @@ def replace_path_pattern(text: str, key: str, target_dir: str, normalize_path: b
 def compute_ancestor_basename(path: str, cli_tests_dir: str) -> str:
     """
     Get the test's name based off of its filename and location.
-    A useful fuction to use in get_test_basename().
+    A useful function to use in get_test_basename().
     """
 
     path = os.path.abspath(path)
@@ -344,6 +358,9 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
         if (test_info.should_skip()):
             self.skipTest(test_info.skip_message())
 
+        if (test_info.setup_func is not None):
+            test_info.setup_func(self, test_info)
+
         old_args = sys.argv
         sys.argv = [test_info.module.__file__] + test_info.arguments
 
@@ -375,6 +392,9 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
         finally:
             os.chdir(previous_work_directory)
             sys.argv = old_args
+
+            if (test_info.teardown_func is not None):
+                test_info.teardown_func(self, test_info)
 
         if (not test_info.split_stdout_stderr):
             if ((len(stdout_text) > 0) and (len(stderr_text) > 0)):

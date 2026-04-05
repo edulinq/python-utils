@@ -99,7 +99,39 @@ def get_global_config_path() -> str:
 
     return platformdirs.user_config_dir(get_config_filename())
 
-def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
+def resolve_config_location(
+        config_info: TieredConfigInfo,
+        is_local: bool,
+        is_global: bool,
+        config_file_path: typing.Union[str, None]
+    ) -> str:
+    """
+    Resolve the config location from given scope information.
+    Raises a exception if an unknown config scope is given.
+    """
+
+    # Default to the local configuration if no configuration type is specified.
+    if ((not is_local) and (not is_global) and (config_file_path is None)):
+        is_local = True
+
+    if (config_file_path is not None):
+        return config_file_path
+
+    if (is_global):
+        return config_info.global_config_path
+
+    if (is_local):
+        local_config_path = config_info.local_config_path
+
+        # Fall back to the default config file name if no local config exists.
+        if (local_config_path is None):
+            local_config_path = config_info.config_filename
+
+        return local_config_path
+
+    raise ValueError("Unknown config location (e.g., not local or global).")
+
+def update_options_in_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
     """
     Write configs to the specified path.
     Create the path if it does not exist.
@@ -113,6 +145,18 @@ def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> Non
     config.update(config_to_write)
 
     edq.util.dirent.mkdir(os.path.dirname(path))
+    edq.util.json.dump_path(config, path, indent = 4)
+
+def remove_options_in_config_file(path: str, config_to_remove: typing.List[str]) -> None:
+    """
+    Remove configs from the specified path.
+    Raises an exception if the given path doesn't exist.
+    """
+
+    config = edq.util.json.load_path(path)
+    for config_option in config_to_remove:
+        config.pop(config_option, None)
+
     edq.util.json.dump_path(config, path, indent = 4)
 
 def get_tiered_config(
@@ -207,7 +251,7 @@ def _load_config_file(
     ) -> None:
     """
     Loads config variables and the source from the given config JSON file.
-    If the given config JSON file deosn't exit loads nothing.
+    If the given config JSON file doesn't exit loads nothing.
     """
 
     if (not edq.util.dirent.exists(config_path)):
@@ -327,6 +371,26 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
             + ' The system-provided default value will be used for that option if one exists.'
             + ' This flag can be specified multiple times.'
             + ' Ignored options are processed last.')
+    )
+
+def add_config_location_argument_group(parser: argparse.ArgumentParser) -> None:
+    """ Add the configuration location argument group to the parser. """
+
+    group = parser.add_argument_group("config location options").add_mutually_exclusive_group()
+
+    group.add_argument('--local',
+        action = 'store_true', dest = 'scope_local',
+        help = ("Update config option(s) in local config file.")
+    )
+
+    group.add_argument('--global',
+        action = 'store_true', dest = 'scope_global',
+        help =  ("Update config option(s) in global config file."),
+    )
+
+    group.add_argument('--file', metavar = "<FILE>",
+        action = 'store', type = str, default = None, dest = 'scope_file',
+        help = ("Update config option(s) in specified config file.")
     )
 
 def load_config_into_args(

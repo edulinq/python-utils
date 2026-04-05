@@ -1,0 +1,13 @@
+{
+    "cli": "edq.cli.config.unset",
+    "arguments": [
+        "user",
+        "--global",
+        "--local",
+    ],
+    "error": true
+}
+---
+builtins.SystemExit: 2
++++
+argparse.ArgumentError: argument --local: not allowed with argument --global
