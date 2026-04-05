@@ -1,7 +1,9 @@
 import os
 
-import edq.testing.unittest
 import edq.core.config
+import edq.testing.cli
+import edq.testing.cli_test
+import edq.testing.unittest
 import edq.util.dirent
 import edq.util.json
 
@@ -105,7 +107,10 @@ def create_test_dir(temp_dir_prefix: str) -> str:
 
     return temp_dir
 
-def create_cli_test_dir(test, test_info):
+def create_cli_test_dir(
+    test: edq.testing.cli_test.CLITest,
+    test_info: edq.testing.cli.CLITestInfo
+    ) -> None:
     """
     Create a temp dir and populate it with dirents for CLI testing.
     .
@@ -126,10 +131,13 @@ def create_cli_test_dir(test, test_info):
         os.path.join(multiple_option_config_dir_path, edq.core.config.DEFAULT_CONFIG_FILENAME)
     )
 
-def verify_cli_test_config_content(test, test_info) -> None:
+def verify_cli_test_config_content(
+    test: edq.testing.cli_test.CLITest,
+    test_info: edq.testing.cli.CLITestInfo
+    ) -> None:
     """ Verify the contents of the config files created by the CLI tests. """
 
-    path = os.path.join(test_info.work_dir, test_info.extra_options["path"])
+    path = os.path.join(test_info.work_dir, *test_info.extra_options["path"].split('/'))
 
     data_actual = edq.util.json.load_path(path)
     data_expected = test_info.extra_options["data"]

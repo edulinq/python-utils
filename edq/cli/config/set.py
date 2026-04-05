@@ -1,8 +1,7 @@
 """
 Update configuration options.
 
-If the file at the specified config location doesn't exist,
-it will be created.
+The file at the specified config location will be created if it doesn't exist.
 """
 
 import argparse

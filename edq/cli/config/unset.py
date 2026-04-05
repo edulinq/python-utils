@@ -1,8 +1,7 @@
 """
 Unset configuration options.
 
-If the file at the specified config location doesn't exist,
-does nothing.
+Does nothing if the file at the specified config location doesn't exist.
 """
 
 import argparse

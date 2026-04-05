@@ -104,11 +104,11 @@ def resolve_config_location(
         is_local: bool,
         is_global: bool,
         config_file_path: typing.Union[str, None]
-    ) -> str:
+        ) -> str:
     """
     Resolve the config location from the given scope information.
     Defualts to local config location if unspecified.
-    Raises a exception if an unknown config scope is given.
+    Raises an exception if an unknown config scope is given.
     """
 
     # Default to the local configuration if no configuration type is specified.
@@ -163,7 +163,7 @@ def remove_options_in_config_file(path: str, config_to_remove: typing.List[str])
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
-    ) -> TieredConfigInfo:
+        ) -> TieredConfigInfo:
     """
     Load all configuration options from files and command-line arguments.
     """
@@ -217,9 +217,7 @@ def get_tiered_config(
 
     return TieredConfigInfo(get_config_filename(), local_config_path, global_config_path, config, sources)
 
-def parse_string_config_option(
-        config_option: str,
-    ) -> typing.Tuple[str, str]:
+def parse_string_config_option(config_option: str) -> typing.Tuple[str, str]:
     """
     Parse and validate a configuration option string in the format of '<key>=<value>'.
     Returns the resulting config option as a key-value pair.
@@ -249,7 +247,7 @@ def _load_config_file(
         config: typing.Dict[str, typing.Any],
         sources: typing.Dict[str, ConfigSource],
         source_label: str,
-    ) -> None:
+        ) -> None:
     """
     Loads config variables and the source from the given config JSON file.
     If the given config JSON file doesn't exit loads nothing.
@@ -270,7 +268,7 @@ def _load_config_file(
 
 def _get_local_config_path(
         local_config_root_cutoff: typing.Union[str, None] = None,
-    ) -> typing.Union[str, None]:
+        ) -> typing.Union[str, None]:
     """
     Search for a config file in hierarchical order.
     Begins with the provided config file name,
@@ -306,7 +304,7 @@ def _get_local_config_path(
 def _get_ancestor_config_file_path(
         current_directory: str,
         local_config_root_cutoff: typing.Union[str, None] = None,
-    ) -> typing.Union[str, None]:
+        ) -> typing.Union[str, None]:
     """
     Search through the parent directories (until root or a given cutoff directory(inclusive)) for a config file.
     Stops at the first occurrence of the specified config file along the path to root.
@@ -335,9 +333,11 @@ def _get_ancestor_config_file_path(
 
     return None
 
-def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, typing.Any],
+def set_cli_args(
+        parser: argparse.ArgumentParser,
+        extra_state: typing.Dict[str, typing.Any],
         **kwargs: typing.Any,
-    ) -> None:
+        ) -> None:
     """
     Set common CLI arguments for configuration.
     """
@@ -381,17 +381,17 @@ def add_config_location_argument_group(parser: argparse.ArgumentParser) -> None:
 
     group.add_argument('--local',
         action = 'store_true', dest = 'scope_local',
-        help = ("Modify config option(s) in a local config file.")
+        help = ("Target config option(s) in a local config file.")
     )
 
     group.add_argument('--global',
         action = 'store_true', dest = 'scope_global',
-        help =  ("Modify config option(s) in a global config file."),
+        help =  ("Target config option(s) in the global config file."),
     )
 
     group.add_argument('--file', metavar = "<FILE>",
         action = 'store', type = str, default = None, dest = 'scope_file',
-        help = ("Modify config option(s) in a specified config file.")
+        help = ("Target config option(s) in a specified config file.")
     )
 
 def load_config_into_args(
@@ -399,8 +399,8 @@ def load_config_into_args(
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any],
         cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
-        **kwargs: typing.Any,
-    ) -> None:
+        **kwargs: typing.Any
+        ) -> None:
     """
     Take in args from a parser that was passed to set_cli_args(),
     and get the tired configuration with the appropriate parameters, and attache it to args.
