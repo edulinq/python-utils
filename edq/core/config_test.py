@@ -126,16 +126,15 @@ def create_cli_test_dir(test, test_info):
         os.path.join(multiple_option_config_dir_path, edq.core.config.DEFAULT_CONFIG_FILENAME)
     )
 
-def verify_cli_test(test, test_info) -> None:
+def verify_cli_test_config_content(test, test_info) -> None:
     """ Verify the contents of the config files created by the CLI tests. """
 
-    path = os.path.join(test_info.work_dir, *test_info.extra_options["path"])
+    path = os.path.join(test_info.work_dir, test_info.extra_options["path"])
 
     data_actual = edq.util.json.load_path(path)
     data_expected = test_info.extra_options["data"]
 
     test.assertJSONDictEqual(data_actual, data_expected)
-
 
 class TestConfig(edq.testing.unittest.BaseTest):
     """ Test basic operations on configs. """

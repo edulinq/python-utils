@@ -106,7 +106,8 @@ def resolve_config_location(
         config_file_path: typing.Union[str, None]
     ) -> str:
     """
-    Resolve the config location from given scope information.
+    Resolve the config location from the given scope information.
+    Defualts to local config location if unspecified.
     Raises a exception if an unknown config scope is given.
     """
 
@@ -380,17 +381,17 @@ def add_config_location_argument_group(parser: argparse.ArgumentParser) -> None:
 
     group.add_argument('--local',
         action = 'store_true', dest = 'scope_local',
-        help = ("Update config option(s) in local config file.")
+        help = ("Modify config option(s) in a local config file.")
     )
 
     group.add_argument('--global',
         action = 'store_true', dest = 'scope_global',
-        help =  ("Update config option(s) in global config file."),
+        help =  ("Modify config option(s) in a global config file."),
     )
 
     group.add_argument('--file', metavar = "<FILE>",
         action = 'store', type = str, default = None, dest = 'scope_file',
-        help = ("Update config option(s) in specified config file.")
+        help = ("Modify config option(s) in a specified config file.")
     )
 
 def load_config_into_args(

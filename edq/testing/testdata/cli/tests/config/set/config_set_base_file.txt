@@ -6,9 +6,9 @@
     ],
     "work_dir": "__TEMP_DIR__()",
     "setup_func": "edq.core.config_test.create_cli_test_dir",
-    "teardown_func": "edq.core.config_test.verify_cli_test",
+    "teardown_func": "edq.core.config_test.verify_cli_test_config_content",
     "extra_options":{
-        "path": ["simple", "edq-config.json"],
+        "path": "simple/edq-config.json",
         "data": {
             'pass': 'password1234',
             'user': 'user@test.edulinq.org'

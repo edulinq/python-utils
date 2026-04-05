@@ -1,7 +1,8 @@
 """
 Unset configuration options.
+
 If the file at the specified config location doesn't exist,
-will exit with a clean exit status.
+does nothing.
 """
 
 import argparse
@@ -48,7 +49,7 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument('config_to_unset', metavar = "KEY",
         action = 'store', nargs = '+', type = str,
-        help = ("Configuration key to be unset."),
+        help = ("Configuration key to unset."),
     )
 
     edq.core.config.add_config_location_argument_group(parser)

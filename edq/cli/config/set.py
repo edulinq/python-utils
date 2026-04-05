@@ -1,5 +1,6 @@
 """
 Update configuration options.
+
 If the file at the specified config location doesn't exist,
 it will be created.
 """
