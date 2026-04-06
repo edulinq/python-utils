@@ -5,7 +5,7 @@
         "--global",
         "--local",
     ],
-    "error": true
+    "error": true,
 }
 ---
 builtins.SystemExit: 2

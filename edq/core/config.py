@@ -103,11 +103,11 @@ def resolve_config_location(
         config_info: TieredConfigInfo,
         is_local: bool,
         is_global: bool,
-        config_file_path: typing.Union[str, None]
+        config_file_path: typing.Union[str, None],
         ) -> str:
     """
     Resolve the config location from the given scope information.
-    Defualts to local config location if unspecified.
+    Defaults to local config location if unspecified.
     Raises an exception if an unknown config scope is given.
     """
 
@@ -399,7 +399,7 @@ def load_config_into_args(
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any],
         cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
-        **kwargs: typing.Any
+        **kwargs: typing.Any,
         ) -> None:
     """
     Take in args from a parser that was passed to set_cli_args(),

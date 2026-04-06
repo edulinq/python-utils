@@ -18,15 +18,15 @@ def run_cli(args: argparse.Namespace) -> int:
         args._config_info,
         args.scope_local,
         args.scope_global,
-        args.scope_file
+        args.scope_file,
     )
 
     if (not (edq.util.dirent.exists(out_path))):
-        print(f"Config file does not exist: {os.path.abspath(out_path)}")
+        print(f"Config file does not exist: '{os.path.abspath(out_path)}'.")
         return 0
 
     edq.core.config.remove_options_in_config_file(out_path, args.config_to_unset)
-    print(f"Unset config options from: {os.path.abspath(out_path)}")
+    print(f"Unset config options from: '{os.path.abspath(out_path)}'.")
 
     return 0
 

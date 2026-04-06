@@ -24,11 +24,11 @@ def run_cli(args: argparse.Namespace) -> int:
         args._config_info,
         args.scope_local,
         args.scope_global,
-        args.scope_file
+        args.scope_file,
     )
 
     edq.core.config.update_options_in_config_file(out_path, config_to_set)
-    print(f"Wrote config options to: {os.path.abspath(out_path)}")
+    print(f"Wrote config options to: '{os.path.abspath(out_path)}'.")
 
     return 0
 

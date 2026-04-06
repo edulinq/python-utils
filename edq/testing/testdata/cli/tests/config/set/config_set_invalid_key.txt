@@ -3,7 +3,7 @@
     "arguments": [
         "=user@test.edulinq.org",
     ],
-    "error": true
+    "error": true,
 }
 ---
 builtins.ValueError: Found an empty configuration option key associated with the value 'user@test.edulinq.org'.

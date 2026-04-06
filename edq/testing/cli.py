@@ -60,8 +60,8 @@ class CLITestInfo:
             data_dir: str,
             temp_dir: str,
             work_dir: typing.Union[str, None] = None,
-            setup_func: typing.Any = None,
-            teardown_func: typing.Any  = None,
+            setup_func: typing.Union[typing.Any, None] = None,
+            teardown_func: typing.Union[typing.Any, None] = None,
             cli: typing.Union[str, None] = None,
             arguments: typing.Union[typing.List[str], None] = None,
             error: bool = False,
@@ -73,7 +73,8 @@ class CLITestInfo:
             split_stdout_stderr: bool = False,
             strip_error_output: bool = True,
             extra_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            **kwargs: typing.Any) -> None:
+            **kwargs: typing.Any,
+            ) -> None:
         self.skip_reasons: typing.List[str] = []
         """
         Reasons that this test will be skipped.
@@ -123,13 +124,13 @@ class CLITestInfo:
         if (setup_func is not None):
             setup_func = edq.util.pyimport.fetch(setup_func)
 
-        self.setup_func: typing.Any = setup_func
+        self.setup_func: typing.Union[typing.Any, None] = setup_func
         """ The function to run before the test to setup. """
 
         if (teardown_func is not None):
             teardown_func = edq.util.pyimport.fetch(teardown_func)
 
-        self.teardown_func: typing.Any = teardown_func
+        self.teardown_func: typing.Union[typing.Any, None] = teardown_func
         """ The function to run after the test to cleanup. """
 
         if (cli is None):
@@ -348,7 +349,8 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
 
     def __method(self: edq.testing.unittest.BaseTest,
             reraise_exception_types: typing.Union[typing.Tuple[typing.Type], None] = None,
-            **kwargs: typing.Any) -> None:
+            **kwargs: typing.Any,
+            ) -> None:
         test_info = CLITestInfo.load_path(path, test_name, getattr(self, BASE_TEMP_DIR_ATTR), data_dir)
 
         # Allow the test class a chance to modify the test info before the test runs.

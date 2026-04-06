@@ -2,9 +2,9 @@
     "cli": "edq.cli.config.unset",
     "arguments": [
         "user",
-        "--file", "__TEMP_DIR__(non-existing-config.json)"
+        "--file", "__TEMP_DIR__(non-existing-config.json)",
     ],
-    "work_dir": "__TEMP_DIR__()"
+    "work_dir": "__TEMP_DIR__()",
 }
 ---
-Config file does not exist: __TEMP_DIR__(non-existing-config.json)
+Config file does not exist: '__TEMP_DIR__(non-existing-config.json)'.
