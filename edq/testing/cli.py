@@ -63,7 +63,7 @@ class SetupTeardownFunction(typing.Protocol):
             ) -> typing.Callable:
 
         """
-        Setup or teardown function to run after a CLI test to setup/teardown.
+        Setup or teardown function to run before/after a CLI test.
         """
 
 class CLITestInfo:
