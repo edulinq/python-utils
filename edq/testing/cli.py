@@ -58,10 +58,9 @@ class SetupTeardownFunction(typing.Protocol):
     """
 
     def __call__(self,
-            test: 'edq.testing.cli_test.CLITest',  # type: ignore[name-defined]
+            test: edq.testing.unittest.BaseTest,
             test_info: 'CLITestInfo',
             ) -> typing.Callable:
-
         """
         Setup or teardown function to run before/after a CLI test.
         """
@@ -362,7 +361,7 @@ def compute_ancestor_basename(path: str, cli_tests_dir: str) -> str:
 def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callable:
     """ Get a test method that represents the test case at the given path. """
 
-    def __method(self: 'edq.testing.cli_test.CLITest',  # type: ignore[name-defined]
+    def __method(self: edq.testing.unittest.BaseTest,
             reraise_exception_types: typing.Union[typing.Tuple[typing.Type], None] = None,
             **kwargs: typing.Any,
             ) -> None:
