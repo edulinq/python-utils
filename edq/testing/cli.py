@@ -51,6 +51,21 @@ DEFAULT_ASSERTION_FUNC_NAME: str = 'edq.testing.asserts.content_equals_normalize
 
 BASE_TEMP_DIR_ATTR: str = '_edq_cli_base_test_dir'
 
+@typing.runtime_checkable
+class SetupTeardownFunction(typing.Protocol):
+    """
+    A function used to perform setup or teardown around a CLI test.
+    """
+
+    def __call__(self,
+            test: 'edq.testing.cli_test.CLITest',  # type: ignore[name-defined]
+            test_info: 'CLITestInfo',
+            ) -> typing.Callable:
+
+        """
+        Setup or teardown function to run after a CLI test to setup/teardown.
+        """
+
 class CLITestInfo:
     """ The required information to run a CLI test. """
 
@@ -60,8 +75,8 @@ class CLITestInfo:
             data_dir: str,
             temp_dir: str,
             work_dir: typing.Union[str, None] = None,
-            setup_func: typing.Union[typing.Any, None] = None,
-            teardown_func: typing.Union[typing.Any, None] = None,
+            setup_func: typing.Union[str, None] = None,
+            teardown_func: typing.Union[str, None] = None,
             cli: typing.Union[str, None] = None,
             arguments: typing.Union[typing.List[str], None] = None,
             error: bool = False,
@@ -121,17 +136,17 @@ class CLITestInfo:
         self.work_dir: str = work_dir
         """ The directory the test runs from. """
 
-        if (setup_func is not None):
-            setup_func = edq.util.pyimport.fetch(setup_func)
-
-        self.setup_func: typing.Union[typing.Any, None] = setup_func
+        self.setup_func: typing.Union[SetupTeardownFunction, None] = None
         """ The function to run before the test to setup. """
 
-        if (teardown_func is not None):
-            teardown_func = edq.util.pyimport.fetch(teardown_func)
+        if (setup_func is not None):
+            self.setup_func = edq.util.pyimport.fetch(setup_func)
 
-        self.teardown_func: typing.Union[typing.Any, None] = teardown_func
+        self.teardown_func: typing.Union[SetupTeardownFunction, None] = None
         """ The function to run after the test to cleanup. """
+
+        if (teardown_func is not None):
+            self.teardown_func = edq.util.pyimport.fetch(teardown_func)
 
         if (cli is None):
             raise ValueError("Missing CLI module.")
@@ -347,7 +362,7 @@ def compute_ancestor_basename(path: str, cli_tests_dir: str) -> str:
 def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callable:
     """ Get a test method that represents the test case at the given path. """
 
-    def __method(self: edq.testing.unittest.BaseTest,
+    def __method(self: 'edq.testing.cli_test.CLITest',  # type: ignore[name-defined]
             reraise_exception_types: typing.Union[typing.Tuple[typing.Type], None] = None,
             **kwargs: typing.Any,
             ) -> None:
