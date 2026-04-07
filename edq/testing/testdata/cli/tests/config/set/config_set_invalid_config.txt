@@ -4,7 +4,7 @@
     "arguments": [
         "useruser@test.edulinq.org",
     ],
-    "error": true
+    "error": true,
 }
 ---
 builtins.ValueError: Invalid configuration option string 'useruser@test.edulinq.org'. Configuration options must be provided in the format '<key>=<value>'.

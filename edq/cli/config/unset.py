@@ -1,24 +1,18 @@
 """
-Update configuration options.
+Unset configuration options.
 
-The file at the specified config location will be created if it doesn't exist.
+Does nothing if the file at the specified config location doesn't exist.
 """
 
 import argparse
 import os
 import sys
-import typing
 
 import edq.core.argparser
 import edq.core.config
 
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
-
-    config_to_set: typing.Dict[str, str] = {}
-    for config_option in args.config_to_set:
-        (key, value) = edq.core.config.parse_string_config_option(config_option)
-        config_to_set[key] = value
 
     out_path = edq.core.config.resolve_config_location(
         args._config_info,
@@ -27,8 +21,12 @@ def run_cli(args: argparse.Namespace) -> int:
         args.scope_file,
     )
 
-    edq.core.config.update_options_in_config_file(out_path, config_to_set)
-    print(f"Wrote config options to: '{os.path.abspath(out_path)}'.")
+    if (not (edq.util.dirent.exists(out_path))):
+        print(f"Config file does not exist: '{os.path.abspath(out_path)}'.")
+        return 0
+
+    edq.core.config.remove_options_in_config_file(out_path, args.config_to_unset)
+    print(f"Unset config options from: '{os.path.abspath(out_path)}'.")
 
     return 0
 
@@ -48,10 +46,9 @@ def _get_parser() -> argparse.ArgumentParser:
 def modify_parser(parser: argparse.ArgumentParser) -> None:
     """ Add this CLI's flags to the given parser. """
 
-    parser.add_argument('config_to_set', metavar = "<KEY>=<VALUE>",
+    parser.add_argument('config_to_unset', metavar = "KEY",
         action = 'store', nargs = '+', type = str,
-        help = ("Configuration option to be set."
-            +  " Expected config format is <key>=<value>."),
+        help = ("Configuration key to unset."),
     )
 
     edq.core.config.add_config_location_argument_group(parser)
