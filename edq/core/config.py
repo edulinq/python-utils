@@ -100,7 +100,40 @@ def get_global_config_path() -> str:
 
     return platformdirs.user_config_dir(get_config_filename())
 
-def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
+def resolve_config_location(
+        config_info: TieredConfigInfo,
+        is_local: bool,
+        is_global: bool,
+        config_file_path: typing.Union[str, None],
+        ) -> str:
+    """
+    Resolve the config location from the given scope information.
+    Defaults to local config location if unspecified.
+    Raises an exception if an unknown config scope is given.
+    """
+
+    # Default to the local configuration if no configuration type is specified.
+    if ((not is_local) and (not is_global) and (config_file_path is None)):
+        is_local = True
+
+    if (config_file_path is not None):
+        return config_file_path
+
+    if (is_global):
+        return config_info.global_config_path
+
+    if (is_local):
+        local_config_path = config_info.local_config_path
+
+        # Fall back to the default config file name if no local config exists.
+        if (local_config_path is None):
+            local_config_path = config_info.config_filename
+
+        return local_config_path
+
+    raise ValueError("Unknown config location (e.g., not local or global).")
+
+def update_options_in_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
     """
     Write configs to the specified path.
     Create the path if it does not exist.
@@ -116,10 +149,22 @@ def update_config_file(path: str, config_to_write: typing.Dict[str, str]) -> Non
     edq.util.dirent.mkdir(os.path.dirname(path))
     edq.util.json.dump_path(config, path, indent = 4)
 
+def remove_options_in_config_file(path: str, config_to_remove: typing.List[str]) -> None:
+    """
+    Remove configs from the specified path.
+    Raises an exception if the given path doesn't exist.
+    """
+
+    config = edq.util.json.load_path(path)
+    for config_option in config_to_remove:
+        config.pop(config_option, None)
+
+    edq.util.json.dump_path(config, path, indent = 4)
+
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
-    ) -> TieredConfigInfo:
+        ) -> TieredConfigInfo:
     """
     Load all configuration options from files and command-line arguments.
     """
@@ -173,9 +218,7 @@ def get_tiered_config(
 
     return TieredConfigInfo(get_config_filename(), local_config_path, global_config_path, config, sources)
 
-def parse_string_config_option(
-        config_option: str,
-    ) -> typing.Tuple[str, str]:
+def parse_string_config_option(config_option: str) -> typing.Tuple[str, str]:
     """
     Parse and validate a configuration option string in the format of '<key>=<value>'.
     Returns the resulting config option as a key-value pair.
@@ -205,10 +248,10 @@ def _load_config_file(
         config: typing.Dict[str, typing.Any],
         sources: typing.Dict[str, ConfigSource],
         source_label: str,
-    ) -> None:
+        ) -> None:
     """
     Loads config variables and the source from the given config JSON file.
-    If the given config JSON file deosn't exit loads nothing.
+    If the given config JSON file doesn't exit loads nothing.
     """
 
     if (not edq.util.dirent.exists(config_path)):
@@ -226,7 +269,7 @@ def _load_config_file(
 
 def _get_local_config_path(
         local_config_root_cutoff: typing.Union[str, None] = None,
-    ) -> typing.Union[str, None]:
+        ) -> typing.Union[str, None]:
     """
     Search for a config file in hierarchical order.
     Begins with the provided config file name,
@@ -262,7 +305,7 @@ def _get_local_config_path(
 def _get_ancestor_config_file_path(
         current_directory: str,
         local_config_root_cutoff: typing.Union[str, None] = None,
-    ) -> typing.Union[str, None]:
+        ) -> typing.Union[str, None]:
     """
     Search through the parent directories (until root or a given cutoff directory(inclusive)) for a config file.
     Stops at the first occurrence of the specified config file along the path to root.
@@ -291,9 +334,11 @@ def _get_ancestor_config_file_path(
 
     return None
 
-def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, typing.Any],
+def set_cli_args(
+        parser: argparse.ArgumentParser,
+        extra_state: typing.Dict[str, typing.Any],
         **kwargs: typing.Any,
-    ) -> None:
+        ) -> None:
     """
     Set common CLI arguments for configuration.
     """
@@ -330,13 +375,33 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
             + ' Ignored options are processed last.')
     )
 
+def add_config_location_argument_group(parser: argparse.ArgumentParser) -> None:
+    """ Add the configuration location argument group to the parser. """
+
+    group = parser.add_argument_group("config location options").add_mutually_exclusive_group()
+
+    group.add_argument('--local',
+        action = 'store_true', dest = 'scope_local',
+        help = ("Target config option(s) in a local config file.")
+    )
+
+    group.add_argument('--global',
+        action = 'store_true', dest = 'scope_global',
+        help =  ("Target config option(s) in the global config file."),
+    )
+
+    group.add_argument('--file', metavar = "<FILE>",
+        action = 'store', type = str, default = None, dest = 'scope_file',
+        help = ("Target config option(s) in a specified config file.")
+    )
+
 def load_config_into_args(
         parser: argparse.ArgumentParser,
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any],
         cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
         **kwargs: typing.Any,
-    ) -> None:
+        ) -> None:
     """
     Take in args from a parser that was passed to set_cli_args(),
     and get the tired configuration with the appropriate parameters, and attache it to args.
