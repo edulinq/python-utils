@@ -4,10 +4,11 @@ import typing
 
 import edq.core.errors
 
+import edq.util.enum
 import edq.util.json
 
 PODType = typing.Union[bool, float, int, str, typing.List['PODType'], typing.Dict[str, 'PODType'], None]  # pylint: disable=invalid-name
-""" A "Plain Old Data" type that can be easily represented (e.g. in JSON). """
+""" A "Plain Old Data" type that can be easily represented (e.g., in JSON). """
 
 DictSerializerClass = typing.TypeVar('DictSerializerClass', bound = 'DictSerializer')
 DictDeserializerClass = typing.TypeVar('DictDeserializerClass', bound = 'DictDeserializer')
@@ -17,55 +18,11 @@ PODSerializerClass = typing.TypeVar('PODSerializerClass', bound = 'PODSerializer
 PODDeserializerClass = typing.TypeVar('PODDeserializerClass', bound = 'PODDeserializer')
 PODConverterClass = typing.TypeVar('PODConverterClass', bound = 'PODConverter')
 
-class PODSerializer:
+class SerializationBase:
     """
-    A class that can represent itself as a POD type.
-    Sibling to PODDeserializer.
-    """
+    A base class for the serialization classes.
 
-    def to_pod(self,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            ) -> PODType:
-        """
-        Get a POD representation of this object.
-
-        The default implementation will convert to a dict (similar to a DictSerializer).
-        """
-
-        return {key: generic_to_pod(value, serialization_options) for (key, value) in vars(self).items()}
-
-class PODDeserializer:
-    """
-    A class that can construct itself from a POD type.
-    Sibling to PODSerializer.
-    """
-
-    @classmethod
-    def from_pod(cls: typing.Type[PODDeserializerClass],
-            data: PODType,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            ) -> PODDeserializerClass:
-        """
-        Create an instance of this class from a POD.
-
-        The default implementation will call the class' constructor with one of two things:
-        a splat/unpacking (**) of the incoming data if the data is a dict,
-        otherwise the data itself.
-        """
-
-        if (isinstance(data, dict)):
-            return cls(**data)
-
-        return cls(data)  # type: ignore[call-arg]
-
-class PODConverter(PODSerializer, PODDeserializer):
-    """ A PODSerializer and PODDeserializer. """
-
-class DictSerializationBase:
-    """
-    A base class for the dict serialization classes.
-
-    Note that this causes diamond inheritance for classes that extend DictConverter,
+    Note that this causes diamond inheritance for classes that extend *Converter,
     but since this class only provides simple functionality not overwritten by any branch child,
     there should be no issues.
     """
@@ -77,7 +34,12 @@ class DictSerializationBase:
     """ Do not include None (null) fields in serialization. """
 
     serialization_omit_empty: bool = False
-    """ Do not include empty fields (fields with a __len__ that return 0) in serialization. """
+    """
+    Do not include empty fields in serialization.
+    An empty field meets one of the following conditions:
+     - Has a `__len__` method which returns 0.
+     - Has a `_serialization_is_empty` method that returns true.
+    """
 
     @classmethod
     def skip_field(cls, name: str, value: typing.Any) -> bool:
@@ -92,26 +54,24 @@ class DictSerializationBase:
         if (cls.serialization_omit_empty and hasattr(value, '__len__') and (len(value) == 0)):
             return True
 
+        if (cls.serialization_omit_empty and hasattr(value, '_serialization_is_empty') and value._serialization_is_empty()):
+            return True
+
         return False
 
-class DictSerializer(DictSerializationBase):
+class PODSerializer(SerializationBase):
     """
-    A base class for class that can represent itself as a dict.
-    The intention is that the dict can then be cleanly converted to/from JSON.
-
-    General (but inefficient) implementations of several core Python equality, comparison, and representation methods are provided.
-    A default hash implementation is provided, but it is up to child classes themselves to ensure they are immutable
-    if they want to be used as set elements or dict keys.
+    A class that can represent itself as a POD type.
+    Sibling to PODDeserializer.
     """
 
-    def to_dict(self,
+    def to_pod(self,
             serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            ) -> typing.Dict[str, typing.Any]:
+            ) -> PODType:
         """
-        Return a dict that can be used to represent this object.
-        If the dict is passed to from_dict(), an identical object should be reconstructed.
+        Get a POD representation of this object.
 
-        A general (but inefficient) implementation is provided by default.
+        The default implementation will convert to a dict (similar to a DictSerializer).
         """
 
         data: typing.Dict[str, typing.Any] = {}
@@ -128,7 +88,7 @@ class DictSerializer(DictSerializationBase):
         """
         Check for equality.
 
-        This check uses to_dict() and compares the results.
+        This check uses to_pod() and compares the results.
         This may not be complete or efficient depending on the child class.
         """
 
@@ -136,9 +96,9 @@ class DictSerializer(DictSerializationBase):
         if (type(self) != type(other)):  # pylint: disable=unidiomatic-typecheck
             return False
 
-        return bool(self.to_dict() == other.to_dict())  # type: ignore[attr-defined]
+        return bool(self.to_pod() == other.to_pod())  # type: ignore[attr-defined]
 
-    def __lt__(self, other: 'DictSerializer') -> bool:
+    def __lt__(self, other: 'PODSerializer') -> bool:
         return repr(self) < repr(other)
 
     def __hash__(self) -> int:
@@ -150,15 +110,10 @@ class DictSerializer(DictSerializationBase):
     def __repr__(self) -> str:
         return edq.util.json.dumps(self)
 
-class DictDeserializer(DictSerializationBase):
+class PODDeserializer(SerializationBase):
     """
-    A base class for class that can reconstruct (deserialize) themselves from a dict.
-    The intention is that the class can be cleanly converted from JSON.
-
-    Any class that uses the default implementations should have a constructor
-    that accepts arguments with the same name as their members.
-    It is generally recommended to also have the constructor accept a kwargs,
-    since values will be blindly passed to the constructor.
+    A class that can construct itself from a POD type.
+    Sibling to PODSerializer.
     """
 
     @classmethod
@@ -188,6 +143,71 @@ class DictDeserializer(DictSerializationBase):
         return new_data
 
     @classmethod
+    def from_pod(cls: typing.Type[PODDeserializerClass],
+            data: PODType,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> PODDeserializerClass:
+        """
+        Create an instance of this class from a POD.
+
+        The default implementation will call the class' constructor with one of two things:
+        a splat/unpacking (**) of the incoming data if the data is a dict,
+        otherwise the data itself.
+        """
+
+        if (isinstance(data, dict)):
+            new_data = cls.prep_init_data(data, serialization_options)
+            return cls(**new_data)
+
+        return cls(data)  # type: ignore[call-arg]
+
+class PODConverter(PODSerializer, PODDeserializer):
+    """ A PODSerializer and PODDeserializer. """
+
+class DictSerializer(PODSerializer):
+    """
+    A base class for class that can represent itself as a dict.
+    The intention is that the dict can then be cleanly converted to/from JSON.
+
+    General (but inefficient) implementations of several core Python equality, comparison, and representation methods are provided.
+    A default hash implementation is provided, but it is up to child classes themselves to ensure they are immutable
+    if they want to be used as set elements or dict keys.
+    """
+
+    def to_dict(self,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> typing.Dict[str, typing.Any]:
+        """
+        Return a dict that can be used to represent this object.
+        If the dict is passed to from_dict(), an identical object should be reconstructed.
+
+        A general (but inefficient) implementation is provided by default.
+        """
+
+        data = super().to_pod(serialization_options)
+
+        if (not isinstance(data, dict)):
+            raise ValueError(f"DictSerializer's ancestor to_pod() did not return a dict, found '{type(data)}'.")
+
+        return data
+
+    def to_pod(self,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> PODType:
+        return self.to_dict(serialization_options)
+
+class DictDeserializer(PODDeserializer):
+    """
+    A base class for class that can reconstruct (deserialize) themselves from a dict.
+    The intention is that the class can be cleanly converted from JSON.
+
+    Any class that uses the default implementations should have a constructor
+    that accepts arguments with the same name as their members.
+    It is generally recommended to also have the constructor accept a kwargs,
+    since values will be blindly passed to the constructor.
+    """
+
+    @classmethod
     def from_dict(cls: typing.Type[DictDeserializerClass],
             data: typing.Dict[str, typing.Any],
             serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
@@ -203,8 +223,18 @@ class DictDeserializer(DictSerializationBase):
         This implementation will attempt to use type hints (of the classes constructor) to convert enums and DictDeserializers.
         """
 
-        new_data = cls.prep_init_data(data)
+        new_data = cls.prep_init_data(data, serialization_options)
         return cls(**new_data)
+
+    @classmethod
+    def from_pod(cls: typing.Type[DictDeserializerClass],
+            data: PODType,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> DictDeserializerClass:
+        if (not isinstance(data, dict)):
+            raise ValueError(f"DictDeserializer require a dict for deserialization, found a '{type(data)}'.")
+
+        return cls.from_dict(data, serialization_options)
 
     @classmethod
     def from_path(cls: typing.Type[DictDeserializerClass],
@@ -213,15 +243,19 @@ class DictDeserializer(DictSerializationBase):
             ) -> DictDeserializerClass:
         """ Read the path (as JSON) and call from_dict(). """
 
+        path = os.path.abspath(path)
+
         if (serialization_options is None):
             serialization_options = {}
 
-        serialization_options['base_dir'] = os.path.dirname(os.path.abspath(path))
+        serialization_options['base_dir'] = os.path.dirname(path)
+        serialization_options['path'] = path
+
         data = edq.util.json.load_path(path)
 
         return cls.from_dict(data, serialization_options)
 
-class DictConverter(DictSerializer, DictDeserializer):
+class DictConverter(PODConverter, DictSerializer, DictDeserializer):
     """ A DictSerializer and DictDeserializer. """
 
 def _check_issubclass(allowed_type: typing.Any, target: typing.Type) -> bool:
@@ -313,8 +347,7 @@ def _from_pod(
             return allowed_type.from_pod(raw_value, serialization_options)
 
         if (_check_issubclass(allowed_type, enum.Enum)):
-            enum_values = [member.value for member in allowed_type]
-            if (raw_value in enum_values):
+            if (edq.util.enum.has_value(allowed_type, raw_value)):
                 return allowed_type(raw_value)
 
         # Sequence container types.
