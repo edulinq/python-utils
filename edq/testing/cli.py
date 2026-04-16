@@ -208,7 +208,7 @@ class CLITestInfo:
         if (extra_options is None):
             extra_options = {}
 
-        self.extra_options: typing.Union[typing.Dict[str, typing.Any], None] = extra_options
+        self.extra_options: typing.Dict[str, typing.Any] = extra_options
         """
         A place to store additional options.
         Extra top-level options will cause tests to error.

@@ -1410,7 +1410,11 @@ class TestConfig(edq.testing.unittest.BaseTest):
         """
 
         # [(write config arguments, expected result, error substring), ...]
-        test_cases = [
+        test_cases: typing.List[typing.Tuple[
+            typing.Dict[str, typing.Any],
+            typing.Dict[str, typing.Any],
+            typing.Union[str, None],
+        ]] = [
             # Non-exisiting Path
             (
                 {
@@ -1490,13 +1494,13 @@ class TestConfig(edq.testing.unittest.BaseTest):
             with self.subTest(msg = f"Case {i}"):
                 temp_dir = create_test_dir(temp_dir_prefix = "edq-test-remove-config-")
 
-                kwargs['path'] = os.path.join(temp_dir, kwargs['path'])
+                kwargs['path'] = os.path.join(temp_dir, str(kwargs['path']))
 
                 previous_work_directory = os.getcwd()
                 os.chdir(temp_dir)
 
                 try:
-                    edq.core.config.remove_options_in_config_file(**kwargs)
+                    edq.core.config.remove_options_in_config_file(kwargs['path'], kwargs['config_to_remove'])
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
 
@@ -1512,7 +1516,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                 if (error_substring is not None):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
-                path = os.path.join(temp_dir, expected_result["path"])
+                path = os.path.join(temp_dir, str(expected_result["path"]))
 
                 data_actual = edq.util.json.load_path(path)
                 data_expected = expected_result['data']
