@@ -251,7 +251,9 @@ class DictDeserializer(PODDeserializer):
         serialization_options['base_dir'] = os.path.dirname(path)
         serialization_options['path'] = path
 
-        data = edq.util.json.load_path(path)
+        json_options = serialization_options.get('json', {})
+
+        data = edq.util.json.load_path(path, **json_options)
 
         return cls.from_dict(data, serialization_options)
 
