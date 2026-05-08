@@ -164,6 +164,16 @@ class PODDeserializer(SerializationBase):
 class PODConverter(PODSerializer, PODDeserializer):
     """ A PODSerializer and PODDeserializer. """
 
+    def copy(self,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> 'PODConverter':
+        """
+        Make a copy of this object.
+        The default implementation will use to_pod() and from_pod() to make a copy.
+        """
+
+        return self.from_pod(self.to_pod(serialization_options), serialization_options)
+
 class DictSerializer(PODSerializer):
     """
     A base class for class that can represent itself as a dict.
