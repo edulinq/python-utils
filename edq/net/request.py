@@ -271,7 +271,7 @@ def _make_request_with_cache(
     if (len(errors) == attempt_count):
         raise edq.core.errors.RetryError(f"HTTP {method} for '{url}'", attempt_count, retry_errors = errors)
 
-    return response
+    return typing.cast(requests.Response, response)
 
 def _cache_lookup(
         method: str,

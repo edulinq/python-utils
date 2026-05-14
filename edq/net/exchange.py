@@ -243,15 +243,18 @@ class HTTPExchange(edq.util.serial.DictConverter):
         These paths must be POSIX-style paths,
         they will be converted to system-specific paths.
         Once this exchange is ready for use, these paths should be resolved (and probably absolute).
-        However, when seriald these paths should probably be relative.
+        However, when serialized these paths should probably be relative.
         To reconcile this, resolve_paths() should be called before using this exchange.
         """
 
         if (headers is None):
             headers = {}
 
-        self.headers: typing.Dict[str, typing.Any] = headers
-        """ Headers in the request. """
+        self.headers: typing.Dict[str, typing.Any] = {key.lower().strip(): value for (key, value) in headers.items()}
+        """
+        Headers in the request.
+        All header keys are stored as lower case.
+        """
 
         if (allow_redirects is None):
             allow_redirects = True
@@ -265,8 +268,11 @@ class HTTPExchange(edq.util.serial.DictConverter):
         if (response_headers is None):
             response_headers = {}
 
-        self.response_headers: typing.Dict[str, typing.Any] = response_headers
-        """ Headers in the response. """
+        self.response_headers: typing.Dict[str, typing.Any] = {key.lower().strip(): value for (key, value) in response_headers.items()}
+        """
+        Headers in the response.
+        All header keys are stored as lower case.
+        """
 
         if (json_body is None):
             json_body = isinstance(response_body, (dict, list))
@@ -445,7 +451,8 @@ class HTTPExchange(edq.util.serial.DictConverter):
 
         return True, None
 
-    def _match_dict(self, label: str,
+    def _match_dict(self,
+            label: str,
             query_dict: typing.Dict[str, typing.Any],
             target_dict: typing.Dict[str, typing.Any],
             keys_to_skip: typing.Union[typing.List[str], None] = None,
@@ -489,7 +496,8 @@ class HTTPExchange(edq.util.serial.DictConverter):
 
         return url
 
-    def match_response(self, response: requests.Response,
+    def match_response(self,
+            response: requests.Response,
             override_body: typing.Union[str, None] = None,
             headers_to_skip: typing.Union[typing.List[str], None] = None,
             **kwargs: typing.Any) -> typing.Tuple[bool, typing.Union[str, None]]:
@@ -530,7 +538,8 @@ class HTTPExchange(edq.util.serial.DictConverter):
             body_hint = f"expected: '{self.response_body}', actual: '{actual_body}'"
             return False, f"body does not match ({body_hint})"
 
-        match, hint = self._match_dict('header', response.headers, self.response_headers,
+        response_headers = {key.lower().strip(): value for (key, value) in response.headers.items()}
+        match, hint = self._match_dict('header', response_headers, self.response_headers,
                 keys_to_skip = headers_to_skip,
                 query_label = 'response', target_label = 'exchange')
 
@@ -619,7 +628,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
             params_to_skip: typing.Union[typing.List[str], None] = None,
             allow_redirects: typing.Union[bool, None] = None,
             ) -> 'HTTPExchange':
-        """ Create a full excahnge from a response. """
+        """ Create a full exchange from a response. """
 
         if (headers_to_skip is None):
             headers_to_skip = DEFAULT_EXCHANGE_IGNORE_HEADERS
@@ -648,7 +657,10 @@ class HTTPExchange(edq.util.serial.DictConverter):
             request_headers.pop(key, None)
             response_headers.pop(key, None)
 
-        request_data, request_files = edq.net.util.parse_request_data(response.request.url, response.request.headers, response.request.body)
+        request_data, request_files = edq.net.util.parse_request_data(
+                response.request.url,
+                request_headers,
+                response.request.body)  # type: ignore[arg-type]
 
         # Clean parameters.
         for key in params_to_skip:
@@ -656,7 +668,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
 
         files = [FileInfo(name = name, content = content) for (name, content) in request_files.items()]
 
-        data = {
+        data: typing.Dict[str, typing.Any] = {
             'method': response.request.method,
             'url': response.request.url,
             'url_anchor': response.request.headers.get(ANCHOR_HEADER_KEY, None),

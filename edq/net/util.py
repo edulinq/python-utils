@@ -1,3 +1,11 @@
+"""
+General utilities for working with HTTP items.
+
+It is generally assumed that header keys will always be lower case.
+Or at least, the value will be accessible when looked up with a lower case key,
+e.g. if the header dict is case insensitive.
+"""
+
 import email.message
 import errno
 import io
@@ -49,7 +57,7 @@ def find_open_port(
     raise ValueError(f"Could not find open port in [{start_port}, {end_port}].")
 
 def parse_request_data(
-        url: str,
+        url: typing.Union[str, None],
         headers: typing.Union[email.message.Message, typing.Dict[str, typing.Any]],
         body: typing.Union[bytes, str, io.BufferedIOBase],
         ) -> typing.Tuple[typing.Dict[str, typing.Any], typing.Dict[str, bytes]]:
@@ -59,8 +67,9 @@ def parse_request_data(
     request_data, request_files = parse_request_body_data(headers, body)
 
     # Parse parameters from the URL.
-    url_parts = urllib.parse.urlparse(url)
-    request_data.update(parse_query_string(url_parts.query))
+    if (url is not None):
+        url_parts = urllib.parse.urlparse(url)
+        request_data.update(parse_query_string(url_parts.query))
 
     return request_data, request_files
 
@@ -73,7 +82,7 @@ def parse_request_body_data(
     data: typing.Dict[str, typing.Any] = {}
     files: typing.Dict[str, bytes] = {}
 
-    length = int(headers.get('Content-Length', 0))
+    length = int(headers.get('content-length', 0))
     if (length == 0):
         return data, files
 
@@ -84,7 +93,7 @@ def parse_request_body_data(
     else:
         raw_content = body
 
-    content_type = headers.get('Content-Type', '').lower()
+    content_type = headers.get('content-type', '').lower()
 
     if (content_type.startswith('text/plain')):
         data[''] = raw_content.decode(edq.util.dirent.DEFAULT_ENCODING).strip()
