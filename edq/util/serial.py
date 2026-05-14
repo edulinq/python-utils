@@ -161,6 +161,29 @@ class PODDeserializer(SerializationBase):
 
         return cls(data)  # type: ignore[call-arg]
 
+    @classmethod
+    def from_path(cls: typing.Type[PODDeserializerClass],
+            path: str,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> PODDeserializerClass:
+        """ Read the path (as JSON) and call from_dict(). """
+
+        path = os.path.abspath(path)
+
+        if (serialization_options is None):
+            serialization_options = {}
+        else:
+            serialization_options = serialization_options.copy()
+
+        serialization_options['base_dir'] = os.path.dirname(path)
+        serialization_options['path'] = path
+
+        json_options = serialization_options.get('json', {})
+
+        data = edq.util.json.load_path(path, **json_options)
+
+        return cls.from_pod(data, serialization_options)
+
 class PODConverter(PODSerializer, PODDeserializer):
     """ A PODSerializer and PODDeserializer. """
 
@@ -170,6 +193,9 @@ class PODConverter(PODSerializer, PODDeserializer):
         """
         Make a copy of this object.
         The default implementation will use to_pod() and from_pod() to make a copy.
+
+        This copy may be shallow or deep depending on the underlying class,
+        but implementers should favor deep copies.
         """
 
         return self.from_pod(self.to_pod(serialization_options), serialization_options)
@@ -243,27 +269,6 @@ class DictDeserializer(PODDeserializer):
             ) -> DictDeserializerClass:
         if (not isinstance(data, dict)):
             raise ValueError(f"DictDeserializer require a dict for deserialization, found a '{type(data)}'.")
-
-        return cls.from_dict(data, serialization_options)
-
-    @classmethod
-    def from_path(cls: typing.Type[DictDeserializerClass],
-            path: str,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            ) -> DictDeserializerClass:
-        """ Read the path (as JSON) and call from_dict(). """
-
-        path = os.path.abspath(path)
-
-        if (serialization_options is None):
-            serialization_options = {}
-
-        serialization_options['base_dir'] = os.path.dirname(path)
-        serialization_options['path'] = path
-
-        json_options = serialization_options.get('json', {})
-
-        data = edq.util.json.load_path(path, **json_options)
 
         return cls.from_dict(data, serialization_options)
 
