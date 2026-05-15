@@ -3,6 +3,8 @@ import re
 import time
 import typing
 
+import edq.util.serial
+
 PRETTY_SHORT_FORMAT: str = '%Y-%m-%d %H:%M'
 """
 The format string for a pretty timestamp.
@@ -51,7 +53,7 @@ class Duration(int):
 
         return self
 
-class Timestamp(int):
+class Timestamp(int, edq.util.serial.PODConverter):  # type: ignore[misc]
     """
     A Timestamp represent a moment in time (sometimes called "datetimes").
     Timestamps are internally represented by the number of milliseconds since the
@@ -212,6 +214,18 @@ class Timestamp(int):
             raise ValueError(f"Failed to parse timestamp string '{raw_value}'.") from ex
 
         return Timestamp.from_pytime(value)
+
+    def to_pod(self,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> int:
+        return self
+
+    @classmethod
+    def from_pod(cls: typing.Type['Timestamp'],
+            data: typing.Any,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> 'Timestamp':
+        return cls.guess(data)
 
 def get_local_timezone() -> datetime.tzinfo:
     """ Get the local (system) timezone or raise an exception. """

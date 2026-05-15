@@ -1,7 +1,9 @@
-import time
 import datetime
+import time
+import typing
 
 import edq.testing.unittest
+import edq.util.serial
 import edq.util.time
 
 TIMEZONE_UTC: datetime.timezone = datetime.timezone.utc
@@ -170,41 +172,201 @@ class TestTime(edq.testing.unittest.BaseTest):
     def test_timestamp_guess(self) -> None:
         """ Test guessing timestamps from values. """
 
-        # [(value, expected), ...]
+        # [(value, expected, error substring), ...]
         test_cases = [
             # Empty
-            (None, edq.util.time.Timestamp(0)),
-            ('', edq.util.time.Timestamp(0)),
+            (
+                None,
+                edq.util.time.Timestamp(0),
+                None,
+            ),
+            (
+                '',
+                edq.util.time.Timestamp(0),
+                None,
+            ),
 
             # Self
-            (edq.util.time.Timestamp(123), edq.util.time.Timestamp(123)),
+            (
+                edq.util.time.Timestamp(123),
+                edq.util.time.Timestamp(123),
+                None,
+            ),
 
             # Int
-            (0, edq.util.time.Timestamp(0)),
-            (123, edq.util.time.Timestamp(123000)),  # Secs
-            (1230000000, edq.util.time.Timestamp(1230000000000)),  # Secs
-            (1230000000000, edq.util.time.Timestamp(1230000000000)),  # MSecs
-            (1230000000000000, edq.util.time.Timestamp(1230000000000)),  # USecs
-            (1230000000000000000, edq.util.time.Timestamp(1230000000000)),  # NSecs
-            ('1230000000', edq.util.time.Timestamp(1230000000000)),
+            (
+                0,
+                edq.util.time.Timestamp(0),
+                None,
+            ),
+
+            # Int - Secs
+            (
+                123,
+                edq.util.time.Timestamp(123000),
+                None,
+            ),
+            (
+                1230000000,
+                edq.util.time.Timestamp(1230000000000),
+                None,
+            ),
+
+            # Int - MSecs
+            (
+                1230000000000,
+                edq.util.time.Timestamp(1230000000000),
+                None,
+            ),
+
+            # Int - USecs
+            (
+                1230000000000000,
+                edq.util.time.Timestamp(1230000000000),
+                None,
+            ),
+
+            # Int - NSecs
+            (
+                1230000000000000000,
+                edq.util.time.Timestamp(1230000000000),
+                None,
+            ),
+
+            # Int - String
+            (
+                '1230000000',
+                edq.util.time.Timestamp(1230000000000),
+                None,
+            ),
 
             # Float
-            (1230000000.0, edq.util.time.Timestamp(1230000000000)),
-            ('1230000000.0', edq.util.time.Timestamp(1230000000000)),
+            (
+                1230000000.0,
+                edq.util.time.Timestamp(1230000000000),
+                None,
+            ),
+            (
+                '1230000000.0',
+                edq.util.time.Timestamp(1230000000000),
+                None,
+            ),
 
             # String
-            ('2023-09-28T04:00:20Z', edq.util.time.Timestamp(1695873620000)),
-            ('2023-09-28T04:00:20+00:00', edq.util.time.Timestamp(1695873620000)),
-            ('2023-09-28T13:10:44+00:00', edq.util.time.Timestamp(1695906644000)),
-            ('2023-09-28T04:00:20.683684Z', edq.util.time.Timestamp(1695873620000)),
-            ('2023-09-28T04:00:20.683684+00:00', edq.util.time.Timestamp(1695873620000)),
-            ('2023-09-28T13:10:44.432050+00:00', edq.util.time.Timestamp(1695906644000)),
-            ('2023-09-28T13:10:44.43205+00:00', edq.util.time.Timestamp(1695906644000)),
+            (
+                '2023-09-28T04:00:20Z',
+                edq.util.time.Timestamp(1695873620000),
+                None,
+            ),
+            (
+                '2023-09-28T04:00:20+00:00',
+                edq.util.time.Timestamp(1695873620000),
+                None,
+            ),
+            (
+                '2023-09-28T13:10:44+00:00',
+                edq.util.time.Timestamp(1695906644000),
+                None,
+            ),
+            (
+                '2023-09-28T04:00:20.683684Z',
+                edq.util.time.Timestamp(1695873620000),
+                None,
+            ),
+            (
+                '2023-09-28T04:00:20.683684+00:00',
+                edq.util.time.Timestamp(1695873620000),
+                None,
+            ),
+            (
+                '2023-09-28T13:10:44.432050+00:00',
+                edq.util.time.Timestamp(1695906644000),
+                None,
+            ),
+            (
+                '2023-09-28T13:10:44.43205+00:00',
+                edq.util.time.Timestamp(1695906644000),
+                None,
+            ),
+
+            # Errors
+            (
+                'ZZZ',
+                None,
+                'Failed to parse timestamp string',
+            ),
         ]
 
         for (i, test_case) in enumerate(test_cases):
-            (value, expected) = test_case
+            (value, expected, error_substring) = test_case
 
             with self.subTest(msg = f"Case {i} ('{value}'):"):
-                actual = edq.util.time.Timestamp.guess(value)
+                try:
+                    actual = edq.util.time.Timestamp.guess(value)
+                except Exception as ex:
+                    error_string = self.format_error_string(ex)
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{error_string}'.")
+
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
+                    continue
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
+                self.assertEqual(expected, actual)
+
+    def test_timestamp_deserialization(self) -> None:
+        """ Test deserializing timestamps. """
+
+        # [(serial value, expected, error substring), ...]
+        test_cases: typing.List[typing.Tuple[
+                edq.util.serial.PODType,
+                typing.Union[edq.util.time.Timestamp, None],
+                typing.Union[str, None],
+        ]] = [
+            # Base
+            (
+                0,
+                edq.util.time.Timestamp(0),
+                None,
+            ),
+            (
+                123,
+                edq.util.time.Timestamp(123000),
+                None,
+            ),
+            (
+                '1230000000',
+                edq.util.time.Timestamp(1230000000000),
+                None,
+            ),
+
+            # Errors
+            (
+                'ZZZ',
+                None,
+                'Failed to parse timestamp string',
+            ),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (value, expected, error_substring) = test_case
+
+            with self.subTest(msg = f"Case {i} ('{value}'):"):
+                try:
+                    actual = edq.util.time.Timestamp.from_pod(value)
+                except Exception as ex:
+                    error_string = self.format_error_string(ex)
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{error_string}'.")
+
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
+                    continue
+
+                if (error_substring is not None):
+                    self.fail(f"Did not get expected error: '{error_substring}'.")
+
                 self.assertEqual(expected, actual)
