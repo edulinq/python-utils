@@ -41,6 +41,9 @@ class SerializationBase:
      - Has a `_serialization_is_empty` method that returns true.
     """
 
+    serialization_error_class: typing.Type[Exception] = ValueError
+    """ The class to use when raising errors. """
+
     @classmethod
     def skip_field(cls, name: str, value: typing.Any) -> bool:
         """ Check if a field should be skipped. """
@@ -80,7 +83,7 @@ class PODSerializer(SerializationBase):
             if (self.skip_field(key, value)):
                 continue
 
-            data[key] = generic_to_pod(value, serialization_options)
+            data[key] = generic_to_pod(value, self.serialization_error_class, serialization_options)
 
         return data
 
@@ -124,7 +127,7 @@ class PODDeserializer(SerializationBase):
         """
         Prepare data to be passed into this class' constructor.
 
-        By default, this is called by from_dict().
+        By default, this is called by from_pod().
         A child can override this or prep_init_data() depending on the functionality they want.
 
         A general (but inefficient) implementation is provided by default.
@@ -138,7 +141,7 @@ class PODDeserializer(SerializationBase):
             if (cls.skip_field(key, value)):
                 continue
 
-            new_data[key] = _from_pod(constructor_types.get(key, None), value, serialization_options)
+            new_data[key] = _from_pod(f"field {key}", constructor_types.get(key, None), value, cls.serialization_error_class, serialization_options)
 
         return new_data
 
@@ -166,7 +169,7 @@ class PODDeserializer(SerializationBase):
             path: str,
             serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             ) -> PODDeserializerClass:
-        """ Read the path (as JSON) and call from_dict(). """
+        """ Read the path (as JSON) and call from_pod(). """
 
         path = os.path.abspath(path)
 
@@ -223,7 +226,7 @@ class DictSerializer(PODSerializer):
         data = super().to_pod(serialization_options)
 
         if (not isinstance(data, dict)):
-            raise ValueError(f"DictSerializer's ancestor to_pod() did not return a dict, found '{type(data)}'.")
+            raise self.serialization_error_class(f"DictSerializer's ancestor to_pod() did not return a dict, found '{type(data)}'.")
 
         return data
 
@@ -268,7 +271,7 @@ class DictDeserializer(PODDeserializer):
             serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             ) -> DictDeserializerClass:
         if (not isinstance(data, dict)):
-            raise ValueError(f"DictDeserializer require a dict for deserialization, found a '{type(data)}'.")
+            raise cls.serialization_error_class(f"DictDeserializer require a dict for deserialization, found a '{type(data)}'.")
 
         return cls.from_dict(data, serialization_options)
 
@@ -291,6 +294,7 @@ def _check_issubclass(allowed_type: typing.Any, target: typing.Type) -> bool:
 
 def generic_to_pod(
         raw_value: typing.Any,
+        serialization_error_class: typing.Type[Exception] = ValueError,
         serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
         ) -> PODType:
     """
@@ -318,10 +322,10 @@ def generic_to_pod(
         return raw_value.to_pod(serialization_options)
 
     if (isinstance(raw_value, enum.Enum)):
-        return generic_to_pod(raw_value.value, serialization_options)
+        return generic_to_pod(raw_value.value, serialization_error_class, serialization_options)
 
     if (isinstance(raw_value, (list, tuple, set))):
-        items = [generic_to_pod(item, serialization_options) for item in raw_value]
+        items = [generic_to_pod(item, serialization_error_class, serialization_options) for item in raw_value]
 
         # Sort sets for consistency.
         if (isinstance(raw_value, set)):
@@ -332,13 +336,29 @@ def generic_to_pod(
         return items
 
     if (isinstance(raw_value, dict)):
-        return {key: generic_to_pod(value, serialization_options) for (key, value) in raw_value.items()}
+        return {key: generic_to_pod(value, serialization_error_class, serialization_options) for (key, value) in raw_value.items()}
 
-    raise ValueError(f"Unable to convert value to simple (edq.util.serial.POD) type: '{raw_value}' (type: '{type(raw_value)}').")
+    raise serialization_error_class(f"Unable to convert value to simple (edq.util.serial.POD) type: '{raw_value}' (type: '{type(raw_value)}').")
 
 def _from_pod(
+        label: str,
         type_hint: typing.Any,
         raw_value: typing.Any,
+        serialization_error_class: typing.Type[Exception] = ValueError,
+        serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+        ) -> typing.Any:
+    """ Attempt to convert a value to the hinted value. """
+
+    try:
+        return _from_pod_internal(label, type_hint, raw_value, serialization_error_class, serialization_options)
+    except Exception as ex:
+        raise serialization_error_class(f"Failed to deserialize {label}.") from ex
+
+def _from_pod_internal(
+        label: str,
+        type_hint: typing.Any,
+        raw_value: typing.Any,
+        serialization_error_class: typing.Type[Exception] = ValueError,
         serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
         ) -> typing.Any:
     """ Attempt to convert a value to the hinted value. """
@@ -376,7 +396,11 @@ def _from_pod(
             if (len(args) > 0):
                 item_type = args[0]
 
-            return collection_type([_from_pod(item_type, item, serialization_options) for item in raw_value])
+            return collection_type([
+                _from_pod(f"{label}[{i}]", item_type, item, serialization_error_class, serialization_options)
+                for (i, item)
+                in enumerate(raw_value)
+            ])
 
         # Dict
         if ((typing.get_origin(allowed_type) is dict) and isinstance(raw_value, dict)):
@@ -389,7 +413,8 @@ def _from_pod(
                 value_type = args[1]
 
             return {
-                _from_pod(key_type, key, serialization_options): _from_pod(value_type, value, serialization_options)
+                _from_pod(f"{label}.({key} (key))", key_type, key, serialization_error_class, serialization_options):
+                _from_pod(f"{label}.{key}", value_type, value, serialization_error_class, serialization_options)
                 for (key, value)
                 in raw_value.items()
             }

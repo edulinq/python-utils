@@ -51,11 +51,13 @@ class _TestDictConverter(edq.util.serial.DictConverter):
 
             nested: typing.Union['_TestDictConverter', None] = None,
 
+            list_int: typing.Union[typing.List[int], None] = None,
             list_str: typing.Union[typing.List[str], None] = None,
             list_nested: typing.Union[typing.List['_TestDictConverter'], None] = None,
             tuple_str: typing.Union[typing.Tuple[str, ...], None] = None,
             set_str: typing.Union[typing.Set[str], None] = None,
 
+            dict_int: typing.Union[typing.Dict[int, int], None] = None,
             dict_str: typing.Union[typing.Dict[str, str], None] = None,
             dict_mixed: typing.Union[typing.Dict[str, typing.Union[str, int, _TestEnumStr, _TestEnumInt]], None] = None,
             dict_nested: typing.Union[typing.Dict[str, '_TestDictConverter'], None] = None,
@@ -72,12 +74,14 @@ class _TestDictConverter(edq.util.serial.DictConverter):
 
         self.nested: typing.Union[_TestDictConverter, None] = nested
 
+        self.list_int: typing.Union[typing.List[int], None] = list_int
         self.list_str: typing.Union[typing.List[str], None] = list_str
         self.list_nested: typing.Union[typing.List['_TestDictConverter'], None] = list_nested
         # Skip a nested set/tuple because our testing type is mutable.
         self.tuple_str: typing.Union[typing.Tuple[str, ...], None] = tuple_str
         self.set_str: typing.Union[typing.Set[str], None] = set_str
 
+        self.dict_int: typing.Union[typing.Dict[int, int], None] = dict_int
         self.dict_str: typing.Union[typing.Dict[str, str], None] = dict_str
         self.dict_mixed: typing.Union[typing.Dict[str, typing.Union[str, int, _TestEnumStr, _TestEnumInt]], None] = dict_mixed
         self.dict_nested: typing.Union[typing.Dict[str, '_TestDictConverter'], None] = dict_nested
@@ -296,7 +300,7 @@ class TestSerialization(edq.testing.unittest.BaseTest):
             with self.subTest(msg = f"Case {i}:"):
                 try:
                     actual_dict = value.to_dict()
-                    new_object = value.__class__.from_dict(expected_dict)
+                    new_object = value.__class__.from_pod(expected_dict)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
                     if (error_substring is None):
@@ -458,3 +462,99 @@ class TestSerialization(edq.testing.unittest.BaseTest):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
                 self.assertEqual(expected, actual)
+
+    def test_from_pod_errors(self) -> None:
+        """
+        Test the errors that come out of from_pod().
+        """
+
+        # [(value, expected dict, error_substring), ...]
+        test_cases: typing.List[typing.Tuple[
+                typing.Dict[str, typing.Any],
+                typing.Union[str, None],
+        ]] = [
+            # Base
+            (
+                {
+                    'enum_mix': 'ZZZ',
+                },
+                'Failed to deserialize field enum_mix.',
+            ),
+
+            # Dict (Value)
+            (
+                {
+                    'dict_int': {
+                        1: 'ZZZ',
+                    },
+                },
+                'Failed to deserialize field dict_int.1.',
+            ),
+
+            # Dict (Key)
+            (
+                {
+                    'dict_int': {
+                        'ZZZ': 2,
+                    },
+                },
+                'Failed to deserialize field dict_int.(ZZZ (key)).',
+            ),
+
+            # List - Single
+            (
+                {
+                    'list_int': [
+                        'ZZZ',
+                    ],
+                },
+                'Failed to deserialize field list_int[0].',
+            ),
+
+            # List - Multiple
+            (
+                {
+                    'list_int': [
+                        '0',
+                        'ZZZ',
+                        '2',
+                    ],
+                },
+                'Failed to deserialize field list_int[1].',
+            ),
+
+            # Nested
+            (
+                {
+                    'nested': {
+                        'list_nested': [
+                            {
+                                'dict_nested': {
+                                    'object': {
+                                        'enum_int': 'ZZZ',
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                },
+                'Failed to deserialize field nested.; builtins.ValueError: Failed to deserialize field list_nested.; builtins.ValueError: Failed to deserialize field list_nested[0].; builtins.ValueError: Failed to deserialize field dict_nested.; builtins.ValueError: Failed to deserialize field dict_nested.object.; builtins.ValueError: Failed to deserialize field enum_int.',  # pylint: disable=line-too-long
+            ),
+        ]
+
+        for (i, test_case) in enumerate(test_cases):
+            (value, error_substring) = test_case
+
+            with self.subTest(msg = f"Case {i}:"):
+                try:
+                    _TestDictConverter.from_pod(value)
+                except Exception as ex:
+                    error_string = self.format_error_string(ex)
+                    if (error_substring is None):
+                        self.fail(f"Unexpected error: '{error_string}'.")
+
+                    self.assertIn(error_substring, error_string, 'Error is not as expected.')
+
+                    continue
+
+                self.fail(f"Did not get expected error: '{error_substring}'.")
