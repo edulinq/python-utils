@@ -87,6 +87,22 @@ class PODSerializer(SerializationBase):
 
         return data
 
+    def to_path(self,
+            path: str,
+            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            ) -> None:
+        """ Write this object to the given path as JSON. """
+
+        path = os.path.abspath(path)
+
+        if (serialization_options is None):
+            serialization_options = {}
+
+        data = self.to_pod(serialization_options)
+        json_options = serialization_options.get('json', {})
+
+        edq.util.json.dump_path(data, path, **json_options)
+
     def __eq__(self, other: object) -> bool:
         """
         Check for equality.
@@ -223,17 +239,11 @@ class DictSerializer(PODSerializer):
         A general (but inefficient) implementation is provided by default.
         """
 
-        data = super().to_pod(serialization_options)
-
+        data = self.to_pod(serialization_options)
         if (not isinstance(data, dict)):
-            raise self.serialization_error_class(f"DictSerializer's ancestor to_pod() did not return a dict, found '{type(data)}'.")
+            raise self.serialization_error_class(f"DictSerializer's to_pod() did not return a dict, found '{type(data)}'.")
 
         return data
-
-    def to_pod(self,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            ) -> PODType:
-        return self.to_dict(serialization_options)
 
 class DictDeserializer(PODDeserializer):
     """
@@ -262,18 +272,7 @@ class DictDeserializer(PODDeserializer):
         This implementation will attempt to use type hints (of the classes constructor) to convert enums and DictDeserializers.
         """
 
-        new_data = cls.prep_init_data(data, serialization_options)
-        return cls(**new_data)
-
-    @classmethod
-    def from_pod(cls: typing.Type[DictDeserializerClass],
-            data: PODType,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-            ) -> DictDeserializerClass:
-        if (not isinstance(data, dict)):
-            raise cls.serialization_error_class(f"DictDeserializer require a dict for deserialization, found a '{type(data)}'.")
-
-        return cls.from_dict(data, serialization_options)
+        return cls.from_pod(data, serialization_options)
 
 class DictConverter(PODConverter, DictSerializer, DictDeserializer):
     """ A DictSerializer and DictDeserializer. """
@@ -363,7 +362,8 @@ def _from_pod_internal(
         ) -> typing.Any:
     """ Attempt to convert a value to the hinted value. """
 
-    if (type_hint is None):
+    # If there is no type hint or anything is allowed, then just return the raw value.
+    if ((type_hint is None) or (type_hint is typing.Any)):
         return raw_value
 
     allowed_types: typing.Tuple[typing.Any, ...] = tuple([type_hint])
