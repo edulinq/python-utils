@@ -101,6 +101,18 @@ class Timestamp(int, edq.util.serial.PODConverter):  # type: ignore[misc]
 
         return pytime.isoformat(timespec = 'milliseconds')
 
+    def strftime(self, format_string: str, timezone: typing.Union[datetime.tzinfo, None] = None) -> str:
+        """
+        Convert the timesstamp to Python datetime and then call strftime with the given format.
+        """
+
+        if (timezone is None):
+            timezone = get_local_timezone()
+
+        pytime = self.to_pytime(timezone = timezone)
+
+        return pytime.strftime(format_string)
+
     @staticmethod
     def from_pytime(pytime: datetime.datetime) -> 'Timestamp':
         """ Convert a Python datetime to a timestamp. """
