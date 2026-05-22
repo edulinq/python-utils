@@ -40,7 +40,7 @@ class StringComparisonAssertion(typing.Protocol):
 def content_equals_raw(test: edq.testing.unittest.BaseTest, expected: str, actual: str, **kwargs: typing.Any) -> None:
     """ Check for equality using a simple string comparison. """
 
-    test.assertEqual(expected, actual)
+    test.assertStringEqual(expected, actual)
 
 def content_equals_normalize(test: edq.testing.unittest.BaseTest, expected: str, actual: str, **kwargs: typing.Any) -> None:
     """

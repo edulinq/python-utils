@@ -37,6 +37,22 @@ class BaseTest(unittest.TestCase):
 
         edq.util.time.set_testing_local_timezone(None)
 
+    def assertStringEqual(self, expected: str, actual: str, message: typing.Union[str, None] = None, strip: bool = False) -> None:  # pylint: disable=invalid-name
+        """ Check that two strings are equal. """
+
+        expected = str(expected)
+        actual = str(actual)
+
+        if (strip):
+            expected = expected.strip()
+            actual = actual.strip()
+
+        if (actual != expected):
+            if (message is None):
+                message = self._format_comparison_message(expected, actual)
+
+            self.fail(message)
+
     def assertJSONEqual(self, expected: typing.Any, actual: typing.Any, message: typing.Union[str, None] = None) -> None:  # pylint: disable=invalid-name
         """
         Like unittest.TestCase.assertEqual(),
