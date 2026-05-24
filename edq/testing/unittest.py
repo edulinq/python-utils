@@ -76,13 +76,13 @@ class BaseTest(unittest.TestCase):
 
         if (not isinstance(expected, dict)):
             if (isinstance(expected, edq.util.serial.DictConverter)):
-                expected = expected.to_dict()
+                expected = expected.to_dict(edq.util.serial.SerializationContext())
             else:
                 expected = vars(expected)
 
         if (not isinstance(actual, dict)):
             if (isinstance(actual, edq.util.serial.DictConverter)):
-                actual = actual.to_dict()
+                actual = actual.to_dict(edq.util.serial.SerializationContext())
             else:
                 actual = vars(actual)
 

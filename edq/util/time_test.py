@@ -356,7 +356,7 @@ class TestTime(edq.testing.unittest.BaseTest):
 
             with self.subTest(msg = f"Case {i} ('{value}'):"):
                 try:
-                    actual = edq.util.time.Timestamp.from_pod(value)
+                    actual = edq.util.time.Timestamp.from_pod(value, edq.util.serial.SerializationContext())
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
                     if (error_substring is None):

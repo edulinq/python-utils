@@ -156,7 +156,7 @@ class FileInfo(edq.util.serial.DictConverter):
         return edq.util.hash.sha256_hex(hash_content)
 
     def to_dict(self,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: edq.util.serial.SerializationContext,
             ) -> typing.Dict[str, typing.Any]:
         data = vars(self).copy()
 
@@ -170,7 +170,7 @@ class FileInfo(edq.util.serial.DictConverter):
     @classmethod
     def from_dict(cls,
             data: typing.Dict[str, typing.Any],
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: edq.util.serial.SerializationContext,
             ) -> typing.Any:
         return FileInfo(**data)
 
@@ -587,33 +587,33 @@ class HTTPExchange(edq.util.serial.DictConverter):
         return os.path.join(dirname, filename)
 
     def to_dict(self,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: edq.util.serial.SerializationContext,
             ) -> typing.Dict[str, typing.Any]:
         return vars(self)
 
     @classmethod
     def from_dict(cls,
             data: typing.Dict[str, typing.Any],
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: edq.util.serial.SerializationContext,
             ) -> typing.Any:
         return HTTPExchange(**data)
 
     @classmethod
     def from_path(cls,
             path: str,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
             ) -> 'HTTPExchange':
         """
         Load an exchange from a file.
         This will also handle setting the exchanges source path (if specified) and resolving the exchange's paths.
         """
 
-        exchange = super().from_path(path, serialization_options)
+        if (context is None):
+            context = edq.util.serial.SerializationContext()
 
-        if (serialization_options is None):
-            serialization_options = {}
+        exchange = super().from_path(path, context)
 
-        set_source_path = edq.util.parse.soft_boolean(serialization_options.get('set_source_path', True))
+        set_source_path = edq.util.parse.soft_boolean(context.extra.get('set_source_path', True))
         if (set_source_path is True):
             exchange.source_path = os.path.abspath(path)
 

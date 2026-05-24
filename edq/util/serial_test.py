@@ -32,7 +32,7 @@ class _TestPODConverter(edq.util.serial.PODConverter):
         self.value: str = value
 
     def to_pod(self,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: edq.util.serial.SerializationContext,
             ) -> str:
         return self.value
 
@@ -299,8 +299,8 @@ class TestSerialization(edq.testing.unittest.BaseTest):
 
             with self.subTest(msg = f"Case {i}:"):
                 try:
-                    actual_dict = value.to_dict()
-                    new_object = value.__class__.from_pod(expected_dict)
+                    actual_dict = value.to_dict(edq.util.serial.SerializationContext())
+                    new_object = value.__class__.from_pod(expected_dict, edq.util.serial.SerializationContext())
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
                     if (error_substring is None):
@@ -448,7 +448,7 @@ class TestSerialization(edq.testing.unittest.BaseTest):
 
             with self.subTest(msg = f"Case {i}: {raw_value}"):
                 try:
-                    actual = edq.util.serial.generic_to_pod(raw_value)
+                    actual = edq.util.serial.generic_to_pod(raw_value, edq.util.serial.SerializationContext())
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
                     if (error_substring is None):
@@ -547,7 +547,7 @@ class TestSerialization(edq.testing.unittest.BaseTest):
 
             with self.subTest(msg = f"Case {i}:"):
                 try:
-                    _TestDictConverter.from_pod(value)
+                    _TestDictConverter.from_pod(value, edq.util.serial.SerializationContext())
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
                     if (error_substring is None):

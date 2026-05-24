@@ -4,6 +4,7 @@ import typing
 
 import edq.core.errors
 
+import edq.util.common
 import edq.util.enum
 import edq.util.json
 
@@ -17,6 +18,9 @@ DictConverterClass = typing.TypeVar('DictConverterClass', bound = 'DictConverter
 PODSerializerClass = typing.TypeVar('PODSerializerClass', bound = 'PODSerializer')
 PODDeserializerClass = typing.TypeVar('PODDeserializerClass', bound = 'PODDeserializer')
 PODConverterClass = typing.TypeVar('PODConverterClass', bound = 'PODConverter')
+
+# Alias the context (which we don't store here because of a cyclic dependency with edq.util.json).
+SerializationContext = edq.util.common.SerializationContext
 
 class SerializationBase:
     """
@@ -69,7 +73,7 @@ class PODSerializer(SerializationBase):
     """
 
     def to_pod(self,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: SerializationContext,
             ) -> PODType:
         """
         Get a POD representation of this object.
@@ -83,25 +87,24 @@ class PODSerializer(SerializationBase):
             if (self.skip_field(key, value)):
                 continue
 
-            data[key] = generic_to_pod(value, self.serialization_error_class, serialization_options)
+            data[key] = generic_to_pod(value, context, self.serialization_error_class)
 
         return data
 
     def to_path(self,
             path: str,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: typing.Union[SerializationContext, None] = None,
             ) -> None:
         """ Write this object to the given path as JSON. """
 
         path = os.path.abspath(path)
 
-        if (serialization_options is None):
-            serialization_options = {}
+        if (context is None):
+            context = SerializationContext()
 
-        data = self.to_pod(serialization_options)
-        json_options = serialization_options.get('json', {})
+        data = self.to_pod(context)
 
-        edq.util.json.dump_path(data, path, **json_options)
+        edq.util.json.dump_path(data, path, **context.json_options)
 
     def __eq__(self, other: object) -> bool:
         """
@@ -115,7 +118,8 @@ class PODSerializer(SerializationBase):
         if (type(self) != type(other)):  # pylint: disable=unidiomatic-typecheck
             return False
 
-        return bool(self.to_pod() == other.to_pod())  # type: ignore[attr-defined]
+        context = edq.util.serial.SerializationContext()
+        return bool(self.to_pod(context) == other.to_pod(context))
 
     def __lt__(self, other: 'PODSerializer') -> bool:
         return repr(self) < repr(other)
@@ -138,7 +142,7 @@ class PODDeserializer(SerializationBase):
     @classmethod
     def prep_init_data(cls,
             data: typing.Dict[str, typing.Any],
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: SerializationContext,
             ) -> typing.Dict[str, typing.Any]:
         """
         Prepare data to be passed into this class' constructor.
@@ -157,14 +161,14 @@ class PODDeserializer(SerializationBase):
             if (cls.skip_field(key, value)):
                 continue
 
-            new_data[key] = _from_pod(f"field {key}", constructor_types.get(key, None), value, cls.serialization_error_class, serialization_options)
+            new_data[key] = _from_pod(f"field {key}", constructor_types.get(key, None), value, context, cls.serialization_error_class)
 
         return new_data
 
     @classmethod
     def from_pod(cls: typing.Type[PODDeserializerClass],
             data: PODType,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: SerializationContext,
             ) -> PODDeserializerClass:
         """
         Create an instance of this class from a POD.
@@ -175,7 +179,7 @@ class PODDeserializer(SerializationBase):
         """
 
         if (isinstance(data, dict)):
-            new_data = cls.prep_init_data(data, serialization_options)
+            new_data = cls.prep_init_data(data, context)
             return cls(**new_data)
 
         return cls(data)  # type: ignore[call-arg]
@@ -183,31 +187,32 @@ class PODDeserializer(SerializationBase):
     @classmethod
     def from_path(cls: typing.Type[PODDeserializerClass],
             path: str,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: typing.Union[SerializationContext, None] = None,
             ) -> PODDeserializerClass:
-        """ Read the path (as JSON) and call from_pod(). """
+        """
+        Read the path (as JSON) and call from_pod().
+
+        If a serialization context is passed in to this function,
+        its base dir and source path will be overwritten.
+        """
 
         path = os.path.abspath(path)
 
-        if (serialization_options is None):
-            serialization_options = {}
-        else:
-            serialization_options = serialization_options.copy()
+        if (context is None):
+            context = SerializationContext()
 
-        serialization_options['base_dir'] = os.path.dirname(path)
-        serialization_options['path'] = path
+        context.base_dir = os.path.dirname(path)
+        context.source_path = path
 
-        json_options = serialization_options.get('json', {})
+        data = edq.util.json.load_path(path, **context.json_options)
 
-        data = edq.util.json.load_path(path, **json_options)
-
-        return cls.from_pod(data, serialization_options)
+        return cls.from_pod(data, context)
 
 class PODConverter(PODSerializer, PODDeserializer):
     """ A PODSerializer and PODDeserializer. """
 
     def copy(self,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: typing.Union[SerializationContext, None] = None,
             ) -> 'PODConverter':
         """
         Make a copy of this object.
@@ -217,7 +222,10 @@ class PODConverter(PODSerializer, PODDeserializer):
         but implementers should favor deep copies.
         """
 
-        return self.from_pod(self.to_pod(serialization_options), serialization_options)
+        if (context is None):
+            context = SerializationContext()
+
+        return self.from_pod(self.to_pod(context), context)
 
 class DictSerializer(PODSerializer):
     """
@@ -230,7 +238,7 @@ class DictSerializer(PODSerializer):
     """
 
     def to_dict(self,
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: SerializationContext,
             ) -> typing.Dict[str, typing.Any]:
         """
         Return a dict that can be used to represent this object.
@@ -239,7 +247,7 @@ class DictSerializer(PODSerializer):
         A general (but inefficient) implementation is provided by default.
         """
 
-        data = self.to_pod(serialization_options)
+        data = self.to_pod(context)
         if (not isinstance(data, dict)):
             raise self.serialization_error_class(f"DictSerializer's to_pod() did not return a dict, found '{type(data)}'.")
 
@@ -259,7 +267,7 @@ class DictDeserializer(PODDeserializer):
     @classmethod
     def from_dict(cls: typing.Type[DictDeserializerClass],
             data: typing.Dict[str, typing.Any],
-            serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
+            context: SerializationContext,
             ) -> DictDeserializerClass:
         """
         Return an instance of this subclass created using the given dict.
@@ -272,7 +280,7 @@ class DictDeserializer(PODDeserializer):
         This implementation will attempt to use type hints (of the classes constructor) to convert enums and DictDeserializers.
         """
 
-        return cls.from_pod(data, serialization_options)
+        return cls.from_pod(data, context)
 
 class DictConverter(PODConverter, DictSerializer, DictDeserializer):
     """ A DictSerializer and DictDeserializer. """
@@ -293,8 +301,8 @@ def _check_issubclass(allowed_type: typing.Any, target: typing.Type) -> bool:
 
 def generic_to_pod(
         raw_value: typing.Any,
+        context: SerializationContext,
         serialization_error_class: typing.Type[Exception] = ValueError,
-        serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
         ) -> PODType:
     """
     Attempt to convert a value to a POD type.
@@ -315,16 +323,16 @@ def generic_to_pod(
         return raw_value
 
     if (isinstance(raw_value, DictSerializer)):
-        return raw_value.to_dict(serialization_options)
+        return raw_value.to_dict(context)
 
     if (isinstance(raw_value, PODSerializer)):
-        return raw_value.to_pod(serialization_options)
+        return raw_value.to_pod(context)
 
     if (isinstance(raw_value, enum.Enum)):
-        return generic_to_pod(raw_value.value, serialization_error_class, serialization_options)
+        return generic_to_pod(raw_value.value, context, serialization_error_class)
 
     if (isinstance(raw_value, (list, tuple, set))):
-        items = [generic_to_pod(item, serialization_error_class, serialization_options) for item in raw_value]
+        items = [generic_to_pod(item, context, serialization_error_class) for item in raw_value]
 
         # Sort sets for consistency.
         if (isinstance(raw_value, set)):
@@ -335,7 +343,7 @@ def generic_to_pod(
         return items
 
     if (isinstance(raw_value, dict)):
-        return {key: generic_to_pod(value, serialization_error_class, serialization_options) for (key, value) in raw_value.items()}
+        return {key: generic_to_pod(value, context, serialization_error_class) for (key, value) in raw_value.items()}
 
     raise serialization_error_class(f"Unable to convert value to simple (edq.util.serial.POD) type: '{raw_value}' (type: '{type(raw_value)}').")
 
@@ -343,13 +351,13 @@ def _from_pod(
         label: str,
         type_hint: typing.Any,
         raw_value: typing.Any,
+        context: SerializationContext,
         serialization_error_class: typing.Type[Exception] = ValueError,
-        serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
         ) -> typing.Any:
     """ Attempt to convert a value to the hinted value. """
 
     try:
-        return _from_pod_internal(label, type_hint, raw_value, serialization_error_class, serialization_options)
+        return _from_pod_internal(label, type_hint, raw_value, context, serialization_error_class)
     except Exception as ex:
         raise serialization_error_class(f"Failed to deserialize {label}.") from ex
 
@@ -357,8 +365,8 @@ def _from_pod_internal(
         label: str,
         type_hint: typing.Any,
         raw_value: typing.Any,
+        context: SerializationContext,
         serialization_error_class: typing.Type[Exception] = ValueError,
-        serialization_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
         ) -> typing.Any:
     """ Attempt to convert a value to the hinted value. """
 
@@ -378,10 +386,10 @@ def _from_pod_internal(
     # Check each possible type and match the first one.
     for allowed_type in allowed_types:
         if (_check_issubclass(allowed_type, DictDeserializer) and isinstance(raw_value, dict)):
-            return allowed_type.from_dict(raw_value, serialization_options)
+            return allowed_type.from_dict(raw_value, context)
 
         if (_check_issubclass(allowed_type, PODDeserializer)):
-            return allowed_type.from_pod(raw_value, serialization_options)
+            return allowed_type.from_pod(raw_value, context)
 
         if (_check_issubclass(allowed_type, enum.Enum)):
             if (edq.util.enum.has_value(allowed_type, raw_value)):
@@ -397,7 +405,7 @@ def _from_pod_internal(
                 item_type = args[0]
 
             return collection_type([
-                _from_pod(f"{label}[{i}]", item_type, item, serialization_error_class, serialization_options)
+                _from_pod(f"{label}[{i}]", item_type, item, context, serialization_error_class)
                 for (i, item)
                 in enumerate(raw_value)
             ])
@@ -413,8 +421,8 @@ def _from_pod_internal(
                 value_type = args[1]
 
             return {
-                _from_pod(f"{label}.({key} (key))", key_type, key, serialization_error_class, serialization_options):
-                _from_pod(f"{label}.{key}", value_type, value, serialization_error_class, serialization_options)
+                _from_pod(f"{label}.({key} (key))", key_type, key, context, serialization_error_class):
+                _from_pod(f"{label}.{key}", value_type, value, context, serialization_error_class)
                 for (key, value)
                 in raw_value.items()
             }

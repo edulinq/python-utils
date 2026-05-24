@@ -13,6 +13,7 @@ import typing
 
 import json5
 
+import edq.util.common
 import edq.util.dirent
 
 def load(
@@ -83,16 +84,16 @@ def load_path(
         except Exception as ex:
             raise ValueError(f"Failed to read JSON file '{path}'.") from ex
 
-def json_serialization_handle(value: typing.Any) -> typing.Union[typing.Dict[str, typing.Any], str]:
+def json_serialization_handle(value: typing.Any) -> typing.Union[typing.Dict[str, typing.Any], str, typing.Any]:
     """
     Handle objects that are not JSON serializable by default,
     e.g., calling vars() on an object.
     This is meant to be used as the `default` argument to `json` stdlib dumping functions.
     """
 
-    # If this looks like a edq.util.serial.DictSerializer.
-    if (hasattr(value, 'to_dict')):
-        return value.to_dict()  # type: ignore[no-any-return]
+    # If this looks like a edq.util.serial.PODSerializer.
+    if (hasattr(value, 'to_pod')):
+        return value.to_pod(edq.util.common.SerializationContext())
 
     if (isinstance(value, enum.Enum)):
         return str(value)
