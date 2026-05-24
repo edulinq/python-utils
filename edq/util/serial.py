@@ -97,14 +97,19 @@ class PODSerializer(SerializationBase):
             ) -> None:
         """ Write this object to the given path as JSON. """
 
-        path = os.path.abspath(path)
-
         if (context is None):
             context = SerializationContext()
+        else:
+            context = context.copy()
+
+        if ((not os.path.isabs(path)) and (context.base_dir is not None)):
+            path = os.path.join(context.base_dir, path)
+
+        context.source_path = os.path.abspath(path)
+        context.base_dir = os.path.dirname(context.source_path)
 
         data = self.to_pod(context)
-
-        edq.util.json.dump_path(data, path, **context.json_options)
+        edq.util.json.dump_path(data, context.source_path, **context.json_options)
 
     def __eq__(self, other: object) -> bool:
         """
@@ -119,7 +124,7 @@ class PODSerializer(SerializationBase):
             return False
 
         context = edq.util.serial.SerializationContext()
-        return bool(self.to_pod(context) == other.to_pod(context))
+        return bool(self.to_pod(context) == other.to_pod(context))  # type: ignore[attr-defined,unused-ignore]
 
     def __lt__(self, other: 'PODSerializer') -> bool:
         return repr(self) < repr(other)
@@ -193,13 +198,15 @@ class PODDeserializer(SerializationBase):
         Read the path (as JSON) and call from_pod().
 
         If a serialization context is passed in to this function,
-        its base dir and source path will be overwritten.
+        a copy will be made with the new base dir and source path.
         """
 
         path = os.path.abspath(path)
 
         if (context is None):
             context = SerializationContext()
+        else:
+            context = context.copy()
 
         context.base_dir = os.path.dirname(path)
         context.source_path = path

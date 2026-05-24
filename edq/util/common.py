@@ -4,6 +4,7 @@ Common files for utils.
 Objects are often placed here to break circular dependencies.
 """
 
+import copy
 import typing
 
 class SerializationContext:
@@ -48,3 +49,8 @@ class SerializationContext:
         Additional data to pass along the serialization process.
         This is where users can pass additional data.
         """
+
+    def copy(self) -> 'SerializationContext':
+        """ Make a deep copy of this context. """
+
+        return copy.deepcopy(self)
