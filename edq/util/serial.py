@@ -73,13 +73,16 @@ class PODSerializer(SerializationBase):
     """
 
     def to_pod(self,
-            context: SerializationContext,
+            context: typing.Union[SerializationContext, None] = None,
             ) -> PODType:
         """
         Get a POD representation of this object.
 
         The default implementation will convert to a dict (similar to a DictSerializer).
         """
+
+        if (context is None):
+            context = SerializationContext()
 
         data: typing.Dict[str, typing.Any] = {}
 
@@ -222,11 +225,11 @@ class PODConverter(PODSerializer, PODDeserializer):
             context: typing.Union[SerializationContext, None] = None,
             ) -> 'PODConverter':
         """
-        Make a copy of this object.
+        Make a deep copy of this object.
         The default implementation will use to_pod() and from_pod() to make a copy.
 
-        This copy may be shallow or deep depending on the underlying class,
-        but implementers should favor deep copies.
+        Callers should be cautious of fileds that are skipped in serialization,
+        e.g., via `SerializationBase.serialization_skip_fields`.
         """
 
         if (context is None):
@@ -245,7 +248,7 @@ class DictSerializer(PODSerializer):
     """
 
     def to_dict(self,
-            context: SerializationContext,
+            context: typing.Union[SerializationContext, None] = None,
             ) -> typing.Dict[str, typing.Any]:
         """
         Return a dict that can be used to represent this object.

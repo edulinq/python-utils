@@ -156,7 +156,7 @@ class FileInfo(edq.util.serial.DictConverter):
         return edq.util.hash.sha256_hex(hash_content)
 
     def to_dict(self,
-            context: edq.util.serial.SerializationContext,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
             ) -> typing.Dict[str, typing.Any]:
         data = vars(self).copy()
 
@@ -587,7 +587,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
         return os.path.join(dirname, filename)
 
     def to_dict(self,
-            context: edq.util.serial.SerializationContext,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
             ) -> typing.Dict[str, typing.Any]:
         return vars(self)
 

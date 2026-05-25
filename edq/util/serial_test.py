@@ -32,7 +32,7 @@ class _TestPODConverter(edq.util.serial.PODConverter):
         self.value: str = value
 
     def to_pod(self,
-            context: edq.util.serial.SerializationContext,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
             ) -> str:
         return self.value
 

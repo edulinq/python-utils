@@ -228,7 +228,7 @@ class Timestamp(int, edq.util.serial.PODConverter):  # type: ignore[misc]
         return Timestamp.from_pytime(value)
 
     def to_pod(self,
-            context: edq.util.serial.SerializationContext,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
             ) -> int:
         return self
 
