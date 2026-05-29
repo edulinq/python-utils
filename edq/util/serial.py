@@ -31,12 +31,6 @@ class SerializationBase:
     there should be no issues.
     """
 
-    serialization_skip_fields: typing.Union[typing.Set[str], None] = None
-    """ A list of field names to skip. """
-
-    serialization_omit_none: bool = False
-    """ Do not include None (null) fields in serialization. """
-
     serialization_omit_empty: bool = False
     """
     Do not include empty fields in serialization.
@@ -44,6 +38,15 @@ class SerializationBase:
      - Has a `__len__` method which returns 0.
      - Has a `_serialization_is_empty` method that returns true.
     """
+
+    serialization_omit_none: bool = False
+    """ Do not include None (null) fields in serialization. """
+
+    serialization_skip_fields: typing.Union[typing.Set[str], None] = None
+    """ A list of field names to skip. """
+
+    serialization_include_init_context: bool = False
+    """ Do not send the serialization context to an object's init. """
 
     serialization_error_class: typing.Type[Exception] = ValueError
     """ The class to use when raising errors. """
@@ -188,6 +191,10 @@ class PODDeserializer(SerializationBase):
 
         if (isinstance(data, dict)):
             new_data = cls.prep_init_data(data, context)
+
+            if (cls.serialization_include_init_context):
+                new_data['context'] = context
+
             return cls(**new_data)
 
         return cls(data)  # type: ignore[call-arg]
