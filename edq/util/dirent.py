@@ -242,9 +242,12 @@ def copy_contents(raw_source: str, raw_dest: str, no_clobber: bool = False) -> N
 def read_file(
         raw_path: str,
         strip: bool = True,
-        encoding: str = DEFAULT_ENCODING,
+        encoding: typing.Union[str, None] = DEFAULT_ENCODING,
         ) -> str:
     """ Read the contents of a file. """
+
+    if (encoding is None):
+        encoding = DEFAULT_ENCODING
 
     path = os.path.abspath(raw_path)
 
@@ -264,13 +267,16 @@ def write_file(
         contents: typing.Union[str, None],
         strip: bool = True,
         newline: bool = True,
-        encoding: str = DEFAULT_ENCODING,
+        encoding: typing.Union[str, None] = DEFAULT_ENCODING,
         no_clobber: bool = False,
         ) -> None:
     """
     Write the contents of a file.
     If clobbering, any existing dirent will be removed before write.
     """
+
+    if (encoding is None):
+        encoding = DEFAULT_ENCODING
 
     path = os.path.abspath(raw_path)
 
