@@ -1267,7 +1267,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     expected_config_options['config_filename'] = config_filename
 
                 expected_config_info = edq.core.config.TieredConfigInfo(
-                    config = expected_config,
+                    raw_config = expected_config,
                     sources = expected_sources,
                     **expected_config_options,
                 )
@@ -1294,6 +1294,7 @@ class TestConfig(edq.testing.unittest.BaseTest):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
                 self.assertJSONDictEqual(actual_config_info, expected_config_info)
+                self.assertJSONDictEqual(actual_config_info.application_config._extra, expected_config)
 
     def test_update_config_base(self) -> None:
         """

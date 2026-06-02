@@ -23,6 +23,8 @@ DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
 _config_filename: str = DEFAULT_CONFIG_FILENAME  # pylint: disable=invalid-name
 _legacy_config_filename: typing.Union[str, None] = None  # pylint: disable=invalid-name
 
+ApplicationConfigClass = typing.TypeVar('ApplicationConfigClass', bound = 'BaseApplicationConfig')
+
 class ConfigSource(edq.util.serial.DictConverter):
     """ A class for storing config source information. """
 
@@ -42,6 +44,23 @@ class ConfigSource(edq.util.serial.DictConverter):
     def __str__(self) -> str:
         return f"({self.label}, {self.path})"
 
+class BaseApplicationConfig(edq.util.serial.DictConverter):
+    """
+    A representation of the configuration options for an application, project, or use case.
+    The key use of this class is to provide typing for config options.
+    When creating a TieredConfigInfo, this class (or a subclass) will be constructed with from_dict() using the resulting raw config values.
+    Users of this library can extend this class (and pass that class along (usually in edq.core.argparse.get_default_parser())
+    to get config typed specifically for their application.
+    """
+
+    serialization_skip_fields = {
+        '_extra',
+    }
+
+    def __init__(self, **kwargs: typing.Any) -> None:
+        self._extra: typing.Dict[str, typing.Any] = kwargs
+        """ Config options that were not explicitly handled in the constructor. """
+
 class TieredConfigInfo(edq.util.serial.DictConverter):
     """ A class for storing config information read from a hierarchy of files and sources. """
 
@@ -49,8 +68,9 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
             config_filename: str,
             local_config_path: str,
             global_config_path: str,
-            config: typing.Dict[str, typing.Any],
+            raw_config: typing.Dict[str, edq.util.serial.PODType],
             sources: typing.Dict[str, ConfigSource],
+            config_class: typing.Union[typing.Type[ApplicationConfigClass], None] = None,
             ) -> None:
         self.config_filename: str = config_filename
         """ Config filename searched for. """
@@ -67,11 +87,19 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
         The file might not exist.
         """
 
-        self.config: typing.Dict[str, typing.Any] = config
+        self.raw_config: typing.Dict[str, edq.util.serial.PODType] = raw_config
         """ Key-value configurations. """
 
         self.sources: typing.Dict[str, ConfigSource] = sources
         """ Where configs came from. """
+
+        # Note that we set the default value here instead of in the arguments because of a bug in mypy with defaults on generic types:
+        # https://github.com/python/mypy/issues/3737.
+        if (config_class is None):
+            config_class = BaseApplicationConfig  # type: ignore[assignment]
+
+        self.application_config: ApplicationConfigClass = config_class.from_dict(raw_config.copy())  # type: ignore[union-attr]
+        """ The config typed for the specific application. """
 
 def set_config_filename(filename: str) -> None:
     """ Sets the config filename. """
@@ -164,6 +192,7 @@ def remove_options_in_config_file(path: str, config_to_remove: typing.List[str])
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
+        config_class: typing.Union[typing.Type[ApplicationConfigClass], None] = None,
         ) -> TieredConfigInfo:
     """
     Load all configuration options from files and command-line arguments.
@@ -172,7 +201,7 @@ def get_tiered_config(
     if (cli_arguments is None):
         cli_arguments = {}
 
-    config: typing.Dict[str, typing.Any] = {}
+    raw_config: typing.Dict[str, edq.util.serial.PODType] = {}
     sources: typing.Dict[str, ConfigSource] = {}
 
     # Ensure CLI arguments are always a dict,
@@ -182,7 +211,7 @@ def get_tiered_config(
 
     # Load the global user config file.
     global_config_path = cli_arguments.get(GLOBAL_CONFIG_KEY, get_global_config_path())
-    _load_config_file(global_config_path, config, sources, CONFIG_SOURCE_GLOBAL)
+    _load_config_file(global_config_path, raw_config, sources, CONFIG_SOURCE_GLOBAL)
 
     # Get and load local user config path.
     local_config_path = _get_local_config_path(
@@ -192,7 +221,7 @@ def get_tiered_config(
     if (local_config_path is None):
         local_config_path = os.path.abspath(get_config_filename())
 
-    _load_config_file(local_config_path, config, sources, CONFIG_SOURCE_LOCAL)
+    _load_config_file(local_config_path, raw_config, sources, CONFIG_SOURCE_LOCAL)
 
     # Check the config file specified on the command-line.
     config_paths = cli_arguments.get(CONFIG_PATHS_KEY, [])
@@ -200,23 +229,23 @@ def get_tiered_config(
         if (not os.path.exists(path)):
             raise FileNotFoundError(f"Specified config file does not exist: '{path}'.")
 
-        _load_config_file(path, config, sources, CONFIG_SOURCE_CLI_FILE)
+        _load_config_file(path, raw_config, sources, CONFIG_SOURCE_CLI_FILE)
 
     # Check the command-line config options.
     cli_configs = cli_arguments.get(CONFIG_OPTIONS_KEY, [])
     for cli_config_option in cli_configs:
         (key, value) = parse_string_config_option(cli_config_option)
 
-        config[key] = value
+        raw_config[key] = value
         sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
 
     # Finally, ignore any configs that is specified from CLI command.
     cli_ignore_configs = cli_arguments.get(IGNORE_CONFIG_OPTIONS_KEY, [])
     for ignore_config in cli_ignore_configs:
-        config.pop(ignore_config, None)
+        raw_config.pop(ignore_config, None)
         sources.pop(ignore_config, None)
 
-    return TieredConfigInfo(get_config_filename(), local_config_path, global_config_path, config, sources)
+    return TieredConfigInfo(get_config_filename(), local_config_path, global_config_path, raw_config, sources, config_class = config_class)
 
 def parse_string_config_option(config_option: str) -> typing.Tuple[str, str]:
     """
@@ -400,6 +429,7 @@ def load_config_into_args(
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any],
         cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
+        config_class: typing.Union[typing.Type[ApplicationConfigClass], None] = None,
         **kwargs: typing.Any,
         ) -> None:
     """
@@ -421,5 +451,5 @@ def load_config_into_args(
         if (value is not None):
             getattr(args, CONFIG_OPTIONS_KEY).append(f"{config_key}={value}")
 
-    config_info = get_tiered_config(cli_arguments = args)
+    config_info = get_tiered_config(cli_arguments = args, config_class = config_class)
     setattr(args, "_config_info", config_info)

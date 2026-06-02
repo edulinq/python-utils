@@ -15,7 +15,7 @@ def run_cli(args: argparse.Namespace) -> int:
     config_info = args._config_info
 
     rows = []
-    for (key, value) in config_info.config.items():
+    for (key, value) in config_info.raw_config.items():
         row = [key, str(value)]
         if (args.show_origin):
             config_source_obj = config_info.sources.get(key)
