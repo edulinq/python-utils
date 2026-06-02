@@ -170,7 +170,7 @@ class FileInfo(edq.util.serial.DictConverter):
     @classmethod
     def from_dict(cls,
             data: typing.Dict[str, typing.Any],
-            context: edq.util.serial.SerializationContext,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
             ) -> typing.Any:
         return FileInfo(**data)
 
@@ -594,7 +594,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
     @classmethod
     def from_dict(cls,
             data: typing.Dict[str, typing.Any],
-            context: edq.util.serial.SerializationContext,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
             ) -> typing.Any:
         return HTTPExchange(**data)
 

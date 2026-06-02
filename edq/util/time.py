@@ -235,7 +235,7 @@ class Timestamp(int, edq.util.serial.PODConverter):  # type: ignore[misc]
     @classmethod
     def from_pod(cls: typing.Type['Timestamp'],
             data: typing.Any,
-            context: edq.util.serial.SerializationContext,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
             ) -> 'Timestamp':
         return cls.guess(data)
 
