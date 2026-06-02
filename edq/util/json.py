@@ -91,6 +91,10 @@ def json_serialization_handle(value: typing.Any) -> typing.Union[typing.Dict[str
     This is meant to be used as the `default` argument to `json` stdlib dumping functions.
     """
 
+    # If this looks like a edq.util.serial.DictSerializer.
+    if (hasattr(value, 'to_dict')):
+        return value.to_dict(edq.util.common.SerializationContext())
+
     # If this looks like a edq.util.serial.PODSerializer.
     if (hasattr(value, 'to_pod')):
         return value.to_pod(edq.util.common.SerializationContext())
