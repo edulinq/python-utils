@@ -16,6 +16,7 @@ class SerializationContext:
     def __init__(self,
             base_dir: typing.Union[str, None] = None,
             source_path: typing.Union[str, None] = None,
+            key: typing.Union[str, None] = None,
             json_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
             extra: typing.Union[typing.Dict[str, typing.Any], None] = None,
             **kwargs: typing.Any) -> None:
@@ -30,6 +31,12 @@ class SerializationContext:
 
         self.source_path: typing.Union[str, None] = source_path
         """ If we are reading from a file, this attribute should be the absolute path to that file. """
+
+        self.key: typing.Union[str, None] = key
+        """
+        An key to use during (de)serialization.
+        For example, this may be an encryption key.
+        """
 
         if (json_options is None):
             json_options = {}

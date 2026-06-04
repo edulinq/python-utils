@@ -167,11 +167,10 @@ class PODSerializer(SerializationBase):
         This may not be complete or efficient depending on the child class.
         """
 
-        # Note the hard type check (done so we can keep this method general).
-        if (type(self) != type(other)):  # pylint: disable=unidiomatic-typecheck
+        if (not isinstance(other, type(self))):
             return False
 
-        context = edq.util.serial.SerializationContext()
+        context = SerializationContext()
         return bool(self.to_pod(context) == other.to_pod(context))  # type: ignore[attr-defined,unused-ignore]
 
 class PODDeserializer(SerializationBase):

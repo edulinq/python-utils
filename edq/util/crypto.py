@@ -1,4 +1,6 @@
+import enum
 import hashlib
+import logging
 import os
 import typing
 
@@ -6,8 +8,13 @@ import cryptography.hazmat.primitives
 import cryptography.hazmat.primitives.ciphers
 import cryptography.hazmat.primitives.padding
 
+import edq.core.errors
 import edq.util.constants
 import edq.util.encoding
+import edq.util.enum
+import edq.util.serial
+
+_logger = logging.getLogger(__name__)
 
 SCRYPT_DEFAULT_ITERATIONS: int = 2**11
 """
@@ -30,6 +37,153 @@ IV_LENGTH_BYTES: int = 16
 AES_BLOCK_SIZE_BYTES: int = 16
 """ AES always uses 128-bit blocks. """
 
+SECRET_PREFIX: str = '__edq_secret__'
+""" A string that must appear at the beginning of an encrypted secret. """
+
+SECRET_DELIM: str = '::'
+""" The delimiter for the components of an encrypted secret. """
+
+class EncryptionMethod(enum.Enum):
+    """ Supported encryption methods. """
+
+    AES256 = 'AES256'
+
+class Secret(edq.util.serial.PODConverter):
+    """
+    Secrets represent data that should be protected on disk.
+    This type can be configured to always be serialized in an encrypted form.
+    """
+
+    def __init__(self,
+            cleartext: str,
+            iv_b64: typing.Union[str, None] = None,
+            salt_b64: typing.Union[str, None] = None,
+            encryption_method: EncryptionMethod = EncryptionMethod.AES256,
+            write_encrypted: typing.Union[bool, None] = None,
+            ) -> None:
+        self.cleartext: str = cleartext
+        """ The contexts of the secret. """
+
+        self.iv_b64: typing.Union[str, None] = iv_b64
+        """
+        The base64 of the iv to use during encryption.
+        May be none is this secret has not been encrypted yet,
+        will be set during the first encryption.
+        """
+
+        self.salt_b64: typing.Union[str, None] = salt_b64
+        """
+        The base64 of the salt to use during encryption.
+        May be none is this secret has not been encrypted yet,
+        will be set during the first encryption.
+        """
+
+        self.encryption_method: EncryptionMethod = encryption_method
+        """ The encryption method to use. """
+
+        if (write_encrypted is None):
+            write_encrypted = (salt_b64 is not None)
+
+        self.write_encrypted: bool = write_encrypted
+        """
+        Whether to write (serialize) this secret in its encrypted form.
+        If not explicitly set, this will be set based on if the passed in salt is null
+        (if the salt not null, then encrypt).
+        """
+
+    def __repr__(self) -> str:
+        return self.cleartext
+
+    # Use generic dict serialization for equality.
+    def __eq__(self, other: object) -> bool:
+        if (not isinstance(other, Secret)):
+            return False
+
+        context = edq.util.serial.SerializationContext()
+        return bool(super().to_pod(context) == super(edq.util.serial.PODConverter, other).to_pod(context))  # type: ignore[attr-defined,unused-ignore]
+
+    def encrypt(self, key: str) -> str:
+        """
+        Get the full delimited and encrypted representation for this secret.
+        If the IV and/or salt has not been set, this call will set them.
+        """
+
+        if (self.encryption_method == EncryptionMethod.AES256):
+            ciphertext, self.iv_b64, self.salt_b64 = aes256_encrypt(key, self.cleartext, self.iv_b64, self.salt_b64)
+        else:
+            raise edq.core.errors.SerializationError(f"Secret has an unsupported encryption method: '{self.encryption_method}'.")
+
+        parts: typing.List[str] = [
+            SECRET_PREFIX,
+            self.encryption_method.value,
+            self.iv_b64,
+            self.salt_b64,
+            ciphertext,
+        ]
+
+        return SECRET_DELIM.join(parts)
+
+    def to_pod(self,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
+            ) -> edq.util.serial.PODType:
+        if (context is None):
+            context = edq.util.serial.SerializationContext()
+
+        if (not self.write_encrypted):
+            return self.cleartext
+
+        if (context.key is None):
+            raise edq.core.errors.SerializationError("No key provided for writing an encrypted secret.")
+
+        return self.encrypt(context.key)
+
+    @classmethod
+    def parse(cls, text: str, key: typing.Union[str, None] = None) -> 'Secret':
+        """
+        Parse a secret from text.
+        A key is required if the text is encrypted.
+        """
+
+        text = text.strip()
+
+        # Check for only cleartext.
+        if (not text.startswith(SECRET_PREFIX)):
+            return Secret(text)
+
+        if (key is None):
+            raise edq.core.errors.SerializationError("No key provided for reading an encrypted secret.")
+
+        parts = text.split(SECRET_DELIM)
+        if (len(parts) != 5):
+            raise edq.core.errors.SerializationError(f"Secret has an unexpected number of parts, expecting 5 and found {len(parts)}: '{text}'.")
+
+        (_, raw_method, iv_b64, salt_b64, ciphertext_b64) = parts
+
+        if (not edq.util.enum.has_value(EncryptionMethod, raw_method)):
+            raise edq.core.errors.SerializationError(f"Secret has an unknown encryption method: '{raw_method}'.")
+
+        encryption_method = EncryptionMethod(raw_method)
+
+        if (encryption_method == EncryptionMethod.AES256):
+            cleartext = aes256_decrypt(key, iv_b64, salt_b64, ciphertext_b64)
+        else:
+            raise edq.core.errors.SerializationError(f"Secret has an unsupported encryption method: '{encryption_method}'.")
+
+        return Secret(cleartext, iv_b64, salt_b64, encryption_method)
+
+    @classmethod
+    def from_pod(cls,
+            data: edq.util.serial.PODType,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
+            ) -> 'Secret':
+        if (not isinstance(data, str)):
+            raise edq.core.errors.SerializationError(f"Secrets should be deserialized from a string, found a '{type(data)}' ({data}).")
+
+        if (context is None):
+            context = edq.util.serial.SerializationContext()
+
+        return cls.parse(str(data), context.key)
+
 def aes256_encrypt(
         key: str,
         cleartext: str,
@@ -45,15 +199,15 @@ def aes256_encrypt(
 
     # Resolve optional fields.
 
-    if (salt_b64 is None):
-        salt_bytes = os.urandom(SALT_LENGTH_BYTES)
-    else:
-        salt_bytes = edq.util.encoding.from_base64(salt_b64, encoding = encoding)
-
     if (iv_b64 is None):
         iv_bytes = os.urandom(IV_LENGTH_BYTES)
     else:
         iv_bytes = edq.util.encoding.from_base64(iv_b64, encoding = encoding)
+
+    if (salt_b64 is None):
+        salt_bytes = os.urandom(SALT_LENGTH_BYTES)
+    else:
+        salt_bytes = edq.util.encoding.from_base64(salt_b64, encoding = encoding)
 
     # Derive fixed-sized keys from the key (32 bytes) and IV (16 bytes).
     aes_key = _derive_aes_key(key.encode(encoding), salt_bytes, 32)
@@ -109,7 +263,12 @@ def aes256_decrypt(
 
     # Unpad and decode the data.
     unpadder = cryptography.hazmat.primitives.padding.PKCS7(8 * AES_BLOCK_SIZE_BYTES).unpadder()
-    cleartext_bytes = unpadder.update(cleartext_bytes_padded) + unpadder.finalize()
+    try:
+        cleartext_bytes = unpadder.update(cleartext_bytes_padded) + unpadder.finalize()
+    except ValueError as ex:
+        _logger.debug("Decryption failed.", exc_info = ex)
+        raise edq.core.errors.UtilsError("Decryption failed. Do you have the correct key?")  # pylint: disable=raise-missing-from
+
     cleartext = cleartext_bytes.decode(encoding)
 
     return cleartext
