@@ -46,7 +46,7 @@ SECRET_DELIM: str = '::'
 class EncryptionMethod(enum.Enum):
     """ Supported encryption methods. """
 
-    AES256 = 'AES256'
+    AES256v1 = 'AES256v1'  # pylint: disable=invalid-name
 
 class Secret(edq.util.serial.PODConverter):
     """
@@ -58,7 +58,7 @@ class Secret(edq.util.serial.PODConverter):
             cleartext: str,
             iv_b64: typing.Union[str, None] = None,
             salt_b64: typing.Union[str, None] = None,
-            encryption_method: EncryptionMethod = EncryptionMethod.AES256,
+            encryption_method: EncryptionMethod = EncryptionMethod.AES256v1,
             write_encrypted: typing.Union[bool, None] = None,
             ) -> None:
         self.cleartext: str = cleartext
@@ -108,7 +108,7 @@ class Secret(edq.util.serial.PODConverter):
         If the IV and/or salt has not been set, this call will set them.
         """
 
-        if (self.encryption_method == EncryptionMethod.AES256):
+        if (self.encryption_method == EncryptionMethod.AES256v1):
             ciphertext, self.iv_b64, self.salt_b64 = aes256_encrypt(key, self.cleartext, self.iv_b64, self.salt_b64)
         else:
             raise edq.core.errors.SerializationError(f"Secret has an unsupported encryption method: '{self.encryption_method}'.")
@@ -164,7 +164,7 @@ class Secret(edq.util.serial.PODConverter):
 
         encryption_method = EncryptionMethod(raw_method)
 
-        if (encryption_method == EncryptionMethod.AES256):
+        if (encryption_method == EncryptionMethod.AES256v1):
             cleartext = aes256_decrypt(key, iv_b64, salt_b64, ciphertext_b64)
         else:
             raise edq.core.errors.SerializationError(f"Secret has an unsupported encryption method: '{encryption_method}'.")

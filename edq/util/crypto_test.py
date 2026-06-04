@@ -102,7 +102,7 @@ class CryptoTest(edq.testing.unittest.BaseTest):
 
             # Base - Encrypted
             (
-                '__edq_secret__::AES256::UldcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==',
+                '__edq_secret__::AES256v1::UldcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==',
                 'key',
                 'secret',
                 None,
@@ -110,7 +110,7 @@ class CryptoTest(edq.testing.unittest.BaseTest):
 
             # Bad Key
             (
-                '__edq_secret__::AES256::UldcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==',
+                '__edq_secret__::AES256v1::UldcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==',
                 'ZZZ',
                 None,
                 'Decryption failed',
@@ -118,7 +118,7 @@ class CryptoTest(edq.testing.unittest.BaseTest):
 
             # Bad IV
             (
-                '__edq_secret__::AES256::ZZZcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==',
+                '__edq_secret__::AES256v1::ZZZcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==',
                 'key',
                 None,
                 'Decryption failed',
@@ -126,7 +126,7 @@ class CryptoTest(edq.testing.unittest.BaseTest):
 
             # Bad Salt
             (
-                '__edq_secret__::AES256::UldcITh761FJcMRThJpkag==::ZZZb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==',
+                '__edq_secret__::AES256v1::UldcITh761FJcMRThJpkag==::ZZZb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==',
                 'key',
                 None,
                 'Decryption failed',
@@ -134,7 +134,7 @@ class CryptoTest(edq.testing.unittest.BaseTest):
 
             # No Key
             (
-                '__edq_secret__::AES256::UldcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==',
+                '__edq_secret__::AES256v1::UldcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==',
                 None,
                 None,
                 'No key provided',
@@ -150,7 +150,7 @@ class CryptoTest(edq.testing.unittest.BaseTest):
 
             # Malformed - Not Enough Parts,
             (
-                '__edq_secret__::AES256::UldcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==',
+                '__edq_secret__::AES256v1::UldcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==',
                 'key',
                 None,
                 'unexpected number of parts',
@@ -158,7 +158,7 @@ class CryptoTest(edq.testing.unittest.BaseTest):
 
             # Malformed - Too Many Parts,
             (
-                '__edq_secret__::AES256::UldcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==::foo',
+                '__edq_secret__::AES256v1::UldcITh761FJcMRThJpkag==::niOb2keWPoSwR1MlgWHayQ==::sN3Tl4WCA6X+xszcnTO+9Q==::foo',
                 'key',
                 None,
                 'unexpected number of parts',
@@ -211,6 +211,29 @@ class CryptoTest(edq.testing.unittest.BaseTest):
                 edq.util.encoding.to_base64('iv'),
                 edq.util.encoding.to_base64('salt'),
                 'abc123',
+                None,
+            ),
+
+            # Multiple Blocks
+            (
+                'key',
+                edq.util.encoding.to_base64('iv'),
+                edq.util.encoding.to_base64('salt'),
+                'a' * int(edq.util.crypto.AES_BLOCK_SIZE_BYTES * 1.5),
+                None,
+            ),
+            (
+                'key',
+                edq.util.encoding.to_base64('iv'),
+                edq.util.encoding.to_base64('salt'),
+                'a' * edq.util.crypto.AES_BLOCK_SIZE_BYTES * 2,
+                None,
+            ),
+            (
+                'key',
+                edq.util.encoding.to_base64('iv'),
+                edq.util.encoding.to_base64('salt'),
+                'a' * int(edq.util.crypto.AES_BLOCK_SIZE_BYTES * 2.5),
                 None,
             ),
 
