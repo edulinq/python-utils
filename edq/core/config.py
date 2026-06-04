@@ -71,6 +71,7 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
             raw_config: typing.Dict[str, edq.util.serial.PODType],
             sources: typing.Dict[str, ConfigSource],
             config_class: typing.Union[typing.Type[ApplicationConfigClass], None] = None,
+            serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
             ) -> None:
         self.config_filename: str = config_filename
         """ Config filename searched for. """
@@ -98,7 +99,10 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
         if (config_class is None):
             config_class = BaseApplicationConfig  # type: ignore[assignment]
 
-        self.application_config: ApplicationConfigClass = config_class.from_dict(raw_config.copy())  # type: ignore[union-attr]
+        self.application_config: ApplicationConfigClass = config_class.from_dict(  # type: ignore[union-attr]
+            raw_config.copy(),
+            context = serialization_context,
+        )
         """ The config typed for the specific application. """
 
 def set_config_filename(filename: str) -> None:
@@ -193,6 +197,7 @@ def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
         config_class: typing.Union[typing.Type[ApplicationConfigClass], None] = None,
+        serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
         ) -> TieredConfigInfo:
     """
     Load all configuration options from files and command-line arguments.
@@ -245,7 +250,15 @@ def get_tiered_config(
         raw_config.pop(ignore_config, None)
         sources.pop(ignore_config, None)
 
-    return TieredConfigInfo(get_config_filename(), local_config_path, global_config_path, raw_config, sources, config_class = config_class)
+    return TieredConfigInfo(
+        get_config_filename(),
+        local_config_path,
+        global_config_path,
+        raw_config,
+        sources,
+        config_class = config_class,
+        serialization_context = serialization_context,
+    )
 
 def parse_string_config_option(config_option: str) -> typing.Tuple[str, str]:
     """
@@ -430,6 +443,7 @@ def load_config_into_args(
         extra_state: typing.Dict[str, typing.Any],
         cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
         config_class: typing.Union[typing.Type[ApplicationConfigClass], None] = None,
+        serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
         **kwargs: typing.Any,
         ) -> None:
     """
@@ -451,5 +465,9 @@ def load_config_into_args(
         if (value is not None):
             getattr(args, CONFIG_OPTIONS_KEY).append(f"{config_key}={value}")
 
-    config_info = get_tiered_config(cli_arguments = args, config_class = config_class)
+    config_info = get_tiered_config(
+        cli_arguments = args,
+        config_class = config_class,
+        serialization_context = serialization_context,
+    )
     setattr(args, "_config_info", config_info)
