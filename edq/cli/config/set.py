@@ -10,24 +10,26 @@ import sys
 import typing
 
 import edq.core.argparser
-import edq.core.config
+import edq.config.argparser
+import edq.config.load
+import edq.config.util
 
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
     config_to_set: typing.Dict[str, str] = {}
     for config_option in args.config_to_set:
-        (key, value) = edq.core.config.parse_string_config_option(config_option)
+        (key, value) = edq.config.util.parse_string_config_option(config_option)
         config_to_set[key] = value
 
-    out_path = edq.core.config.resolve_config_location(
+    out_path = edq.config.load.resolve_config_location(
         args._config_info,
         args.scope_local,
         args.scope_global,
         args.scope_file,
     )
 
-    edq.core.config.update_options_in_config_file(out_path, config_to_set)
+    edq.config.util.update_options_in_config_file(out_path, config_to_set)
     print(f"Wrote config options to: '{os.path.abspath(out_path)}'.")
 
     return 0
@@ -54,7 +56,7 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
             +  " Expected config format is <key>=<value>."),
     )
 
-    edq.core.config.add_config_location_argument_group(parser)
+    edq.config.argparser.add_config_location_argument_group(parser)
 
 if (__name__ == '__main__'):
     sys.exit(main())

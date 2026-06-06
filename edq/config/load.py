@@ -4,33 +4,22 @@ import typing
 
 import platformdirs
 
+import edq.config.app
+import edq.config.constants
+import edq.config.util
 import edq.util.dirent
 import edq.util.json
 import edq.util.serial
 
-CONFIG_SOURCE_CLI: str = "<cli argument>"
-CONFIG_SOURCE_CLI_FILE: str = "<cli config file>"
-CONFIG_SOURCE_GLOBAL: str = "<global config file>"
-CONFIG_SOURCE_LOCAL: str = "<local config file>"
-
-CONFIG_PATHS_KEY: str = 'config_paths'
-GLOBAL_CONFIG_KEY: str = 'global_config_path'
-CONFIG_OPTIONS_KEY: str = 'configs'
-IGNORE_CONFIG_OPTIONS_KEY: str = 'ignore_configs'
-
-DEFAULT_CONFIG_FILENAME: str = "edq-config.json"
-
-_config_filename: str = DEFAULT_CONFIG_FILENAME  # pylint: disable=invalid-name
+_config_filename: str = edq.config.constants.DEFAULT_CONFIG_FILENAME  # pylint: disable=invalid-name
 _legacy_config_filename: typing.Union[str, None] = None  # pylint: disable=invalid-name
-
-ApplicationConfigClass = typing.TypeVar('ApplicationConfigClass', bound = 'BaseApplicationConfig')
 
 class ConfigSource(edq.util.serial.DictConverter):
     """ A class for storing config source information. """
 
     def __init__(self, label: str, path: typing.Union[str, None] = None) -> None:
         self.label = label
-        """ The label identifying the config (see CONFIG_SOURCE_* constants). """
+        """ The label identifying the config (see edq.config.constants.CONFIG_SOURCE_* constants). """
 
         self.path = path
         """ The path of where the config was sourced from. """
@@ -44,23 +33,6 @@ class ConfigSource(edq.util.serial.DictConverter):
     def __str__(self) -> str:
         return f"({self.label}, {self.path})"
 
-class BaseApplicationConfig(edq.util.serial.DictConverter):
-    """
-    A representation of the configuration options for an application, project, or use case.
-    The key use of this class is to provide typing for config options.
-    When creating a TieredConfigInfo, this class (or a subclass) will be constructed with from_dict() using the resulting raw config values.
-    Users of this library can extend this class (and pass that class along (usually in edq.core.argparse.get_default_parser())
-    to get config typed specifically for their application.
-    """
-
-    serialization_skip_fields = {
-        '_extra',
-    }
-
-    def __init__(self, **kwargs: typing.Any) -> None:
-        self._extra: typing.Dict[str, typing.Any] = kwargs
-        """ Config options that were not explicitly handled in the constructor. """
-
 class TieredConfigInfo(edq.util.serial.DictConverter):
     """ A class for storing config information read from a hierarchy of files and sources. """
 
@@ -70,7 +42,7 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
             global_config_path: str,
             raw_config: typing.Dict[str, edq.util.serial.PODType],
             sources: typing.Dict[str, ConfigSource],
-            config_class: typing.Union[typing.Type[ApplicationConfigClass], None] = None,
+            config_class: typing.Union[typing.Type[edq.config.app.BaseApplicationConfig], None] = None,
             serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
             ) -> None:
         self.config_filename: str = config_filename
@@ -97,9 +69,9 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
         # Note that we set the default value here instead of in the arguments because of a bug in mypy with defaults on generic types:
         # https://github.com/python/mypy/issues/3737.
         if (config_class is None):
-            config_class = BaseApplicationConfig  # type: ignore[assignment]
+            config_class = edq.config.app.BaseApplicationConfig
 
-        self.application_config: ApplicationConfigClass = config_class.from_dict(  # type: ignore[union-attr]
+        self.application_config: edq.config.app.BaseApplicationConfig = config_class.from_dict(
             raw_config.copy(),
             context = serialization_context,
         )
@@ -165,38 +137,10 @@ def resolve_config_location(
 
     raise ValueError("Unknown config location (e.g., not local or global).")
 
-def update_options_in_config_file(path: str, config_to_write: typing.Dict[str, str]) -> None:
-    """
-    Write configs to the specified path.
-    Create the path if it does not exist.
-    Existing keys in the file will be overwritten with the new values.
-    """
-
-    config = {}
-    if (edq.util.dirent.exists(path)):
-        config = edq.util.json.load_path(path)
-
-    config.update(config_to_write)
-
-    edq.util.dirent.mkdir(os.path.dirname(path))
-    edq.util.json.dump_path(config, path, indent = 4)
-
-def remove_options_in_config_file(path: str, config_to_remove: typing.List[str]) -> None:
-    """
-    Remove configs from the specified path.
-    Raises an exception if the given path doesn't exist.
-    """
-
-    config = edq.util.json.load_path(path)
-    for config_option in config_to_remove:
-        config.pop(config_option, None)
-
-    edq.util.json.dump_path(config, path, indent = 4)
-
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
-        config_class: typing.Union[typing.Type[ApplicationConfigClass], None] = None,
+        config_class: typing.Union[typing.Type[edq.config.app.BaseApplicationConfig], None] = None,
         serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
         ) -> TieredConfigInfo:
     """
@@ -215,8 +159,8 @@ def get_tiered_config(
         cli_arguments = vars(cli_arguments)
 
     # Load the global user config file.
-    global_config_path = cli_arguments.get(GLOBAL_CONFIG_KEY, get_global_config_path())
-    _load_config_file(global_config_path, raw_config, sources, CONFIG_SOURCE_GLOBAL)
+    global_config_path = cli_arguments.get(edq.config.constants.GLOBAL_CONFIG_KEY, get_global_config_path())
+    _load_config_file(global_config_path, raw_config, sources, edq.config.constants.CONFIG_SOURCE_GLOBAL)
 
     # Get and load local user config path.
     local_config_path = _get_local_config_path(
@@ -226,26 +170,26 @@ def get_tiered_config(
     if (local_config_path is None):
         local_config_path = os.path.abspath(get_config_filename())
 
-    _load_config_file(local_config_path, raw_config, sources, CONFIG_SOURCE_LOCAL)
+    _load_config_file(local_config_path, raw_config, sources, edq.config.constants.CONFIG_SOURCE_LOCAL)
 
     # Check the config file specified on the command-line.
-    config_paths = cli_arguments.get(CONFIG_PATHS_KEY, [])
+    config_paths = cli_arguments.get(edq.config.constants.CONFIG_PATHS_KEY, [])
     for path in config_paths:
         if (not os.path.exists(path)):
             raise FileNotFoundError(f"Specified config file does not exist: '{path}'.")
 
-        _load_config_file(path, raw_config, sources, CONFIG_SOURCE_CLI_FILE)
+        _load_config_file(path, raw_config, sources, edq.config.constants.CONFIG_SOURCE_CLI_FILE)
 
     # Check the command-line config options.
-    cli_configs = cli_arguments.get(CONFIG_OPTIONS_KEY, [])
+    cli_configs = cli_arguments.get(edq.config.constants.CONFIG_OPTIONS_KEY, [])
     for cli_config_option in cli_configs:
-        (key, value) = parse_string_config_option(cli_config_option)
+        (key, value) = edq.config.util.parse_string_config_option(cli_config_option)
 
         raw_config[key] = value
-        sources[key] = ConfigSource(label = CONFIG_SOURCE_CLI)
+        sources[key] = ConfigSource(label = edq.config.constants.CONFIG_SOURCE_CLI)
 
     # Finally, ignore any configs that is specified from CLI command.
-    cli_ignore_configs = cli_arguments.get(IGNORE_CONFIG_OPTIONS_KEY, [])
+    cli_ignore_configs = cli_arguments.get(edq.config.constants.IGNORE_CONFIG_OPTIONS_KEY, [])
     for ignore_config in cli_ignore_configs:
         raw_config.pop(ignore_config, None)
         sources.pop(ignore_config, None)
@@ -259,31 +203,6 @@ def get_tiered_config(
         config_class = config_class,
         serialization_context = serialization_context,
     )
-
-def parse_string_config_option(config_option: str) -> typing.Tuple[str, str]:
-    """
-    Parse and validate a configuration option string in the format of '<key>=<value>'.
-    Returns the resulting config option as a key-value pair.
-    """
-
-    if ("=" not in config_option):
-        raise ValueError(
-            f"Invalid configuration option string '{config_option}'."
-            + " Configuration options must be provided in the format '<key>=<value>'.")
-
-    (key, value) = config_option.split('=', maxsplit = 1)
-    key = _validate_config_key(key, value)
-
-    return key, value
-
-def _validate_config_key(config_key: str, config_value: str) -> str:
-    """ Validate a configuration key and return its clean version. """
-
-    key = config_key.strip()
-    if (key == ''):
-        raise ValueError(f"Found an empty configuration option key associated with the value '{config_value}'.")
-
-    return key
 
 def _load_config_file(
         config_path: str,
@@ -304,7 +223,7 @@ def _load_config_file(
 
     config_path = os.path.abspath(config_path)
     for (key, value) in edq.util.json.load_path(config_path).items():
-        key = _validate_config_key(key, value)
+        key = edq.config.util.validate_config_key(key, value)
 
         config[key] = value
         sources[key] = ConfigSource(label = source_label, path = config_path)
@@ -375,99 +294,3 @@ def _get_ancestor_config_file_path(
         current_directory = parent_dir
 
     return None
-
-def set_cli_args(
-        parser: argparse.ArgumentParser,
-        extra_state: typing.Dict[str, typing.Any],
-        **kwargs: typing.Any,
-        ) -> None:
-    """
-    Set common CLI arguments for configuration.
-    """
-
-    group = parser.add_argument_group('config options')
-
-    group.add_argument('--config', dest = CONFIG_OPTIONS_KEY, metavar = "<KEY>=<VALUE>",
-        action = 'append', type = str, default = [],
-        help = ('Set a configuration option from the command-line.'
-            + ' Specify options as <key>=<value> pairs.'
-            + ' This flag can be specified multiple times.'
-            + ' The options are applied in the order provided and later options override earlier ones.'
-            + ' Will override options form all config files.')
-    )
-
-    group.add_argument('--config-file', dest = CONFIG_PATHS_KEY,
-        action = 'append', type = str, default = [],
-        help = ('Load config options from a JSON file.'
-            + ' This flag can be specified multiple times.'
-            + ' Files are applied in the order provided and later files override earlier ones.'
-            + ' Will override options form both global and local config files.')
-    )
-
-    group.add_argument('--config-global', dest = GLOBAL_CONFIG_KEY,
-        action = 'store', type = str, default = get_global_config_path(),
-        help = 'Set the default global config file path (default: %(default)s).',
-    )
-
-    group.add_argument('--ignore-config-option', dest = IGNORE_CONFIG_OPTIONS_KEY,
-        action = 'append', type = str, default = [],
-        help = ('Ignore any config option with the specified key.'
-            + ' The system-provided default value will be used for that option if one exists.'
-            + ' This flag can be specified multiple times.'
-            + ' Ignored options are processed last.')
-    )
-
-def add_config_location_argument_group(parser: argparse.ArgumentParser) -> None:
-    """ Add the configuration location argument group to the parser. """
-
-    group = parser.add_argument_group("config location options").add_mutually_exclusive_group()
-
-    group.add_argument('--local',
-        action = 'store_true', dest = 'scope_local',
-        help = ("Target config option(s) in a local config file.")
-    )
-
-    group.add_argument('--global',
-        action = 'store_true', dest = 'scope_global',
-        help =  ("Target config option(s) in the global config file."),
-    )
-
-    group.add_argument('--file', metavar = "<FILE>",
-        action = 'store', type = str, default = None, dest = 'scope_file',
-        help = ("Target config option(s) in a specified config file.")
-    )
-
-def load_config_into_args(
-        parser: argparse.ArgumentParser,
-        args: argparse.Namespace,
-        extra_state: typing.Dict[str, typing.Any],
-        cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
-        config_class: typing.Union[typing.Type[ApplicationConfigClass], None] = None,
-        serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
-        **kwargs: typing.Any,
-        ) -> None:
-    """
-    Take in args from a parser that was passed to set_cli_args(),
-    and get the tired configuration with the appropriate parameters, and attache it to args.
-
-    Arguments that appear on the CLI as flags (e.g. `--foo bar`) can be copied over to the config options via `cli_arg_config_map`.
-    The keys of `cli_arg_config_map` represent attributes in the CLI arguments (`args`),
-    while the values represent the desired config name this argument should be set as.
-    For example, a `cli_arg_config_map` of `{'foo': 'baz'}` will make the CLI argument `--foo bar`
-    be equivalent to `--config baz=bar`.
-    """
-
-    if (cli_arg_config_map is None):
-        cli_arg_config_map = {}
-
-    for (cli_key, config_key) in cli_arg_config_map.items():
-        value = getattr(args, cli_key, None)
-        if (value is not None):
-            getattr(args, CONFIG_OPTIONS_KEY).append(f"{config_key}={value}")
-
-    config_info = get_tiered_config(
-        cli_arguments = args,
-        config_class = config_class,
-        serialization_context = serialization_context,
-    )
-    setattr(args, "_config_info", config_info)

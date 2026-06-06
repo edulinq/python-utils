@@ -9,12 +9,14 @@ import os
 import sys
 
 import edq.core.argparser
-import edq.core.config
+import edq.config.argparser
+import edq.config.load
+import edq.config.util
 
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
-    out_path = edq.core.config.resolve_config_location(
+    out_path = edq.config.load.resolve_config_location(
         args._config_info,
         args.scope_local,
         args.scope_global,
@@ -25,7 +27,7 @@ def run_cli(args: argparse.Namespace) -> int:
         print(f"Config file does not exist: '{os.path.abspath(out_path)}'.")
         return 0
 
-    edq.core.config.remove_options_in_config_file(out_path, args.config_to_unset)
+    edq.config.util.remove_options_in_config_file(out_path, args.config_to_unset)
     print(f"Unset config options from: '{os.path.abspath(out_path)}'.")
 
     return 0
@@ -51,7 +53,7 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
         help = ("Configuration key to unset."),
     )
 
-    edq.core.config.add_config_location_argument_group(parser)
+    edq.config.argparser.add_config_location_argument_group(parser)
 
 if (__name__ == '__main__'):
     sys.exit(main())

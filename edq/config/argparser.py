@@ -1,0 +1,103 @@
+import argparse
+import typing
+
+import edq.config.app
+import edq.config.constants
+import edq.config.load
+import edq.util.serial
+
+def set_cli_args(
+        parser: argparse.ArgumentParser,
+        extra_state: typing.Dict[str, typing.Any],
+        **kwargs: typing.Any,
+        ) -> None:
+    """
+    Set common CLI arguments for configuration.
+    """
+
+    group = parser.add_argument_group('config options')
+
+    group.add_argument('--config', dest = edq.config.constants.CONFIG_OPTIONS_KEY, metavar = "<KEY>=<VALUE>",
+        action = 'append', type = str, default = [],
+        help = ('Set a configuration option from the command-line.'
+            + ' Specify options as <key>=<value> pairs.'
+            + ' This flag can be specified multiple times.'
+            + ' The options are applied in the order provided and later options override earlier ones.'
+            + ' Will override options form all config files.')
+    )
+
+    group.add_argument('--config-file', dest = edq.config.constants.CONFIG_PATHS_KEY,
+        action = 'append', type = str, default = [],
+        help = ('Load config options from a JSON file.'
+            + ' This flag can be specified multiple times.'
+            + ' Files are applied in the order provided and later files override earlier ones.'
+            + ' Will override options form both global and local config files.')
+    )
+
+    group.add_argument('--config-global', dest = edq.config.constants.GLOBAL_CONFIG_KEY,
+        action = 'store', type = str, default = edq.config.load.get_global_config_path(),
+        help = 'Set the default global config file path (default: %(default)s).',
+    )
+
+    group.add_argument('--ignore-config-option', dest = edq.config.constants.IGNORE_CONFIG_OPTIONS_KEY,
+        action = 'append', type = str, default = [],
+        help = ('Ignore any config option with the specified key.'
+            + ' The system-provided default value will be used for that option if one exists.'
+            + ' This flag can be specified multiple times.'
+            + ' Ignored options are processed last.')
+    )
+
+def add_config_location_argument_group(parser: argparse.ArgumentParser) -> None:
+    """ Add the configuration location argument group to the parser. """
+
+    group = parser.add_argument_group("config location options").add_mutually_exclusive_group()
+
+    group.add_argument('--local',
+        action = 'store_true', dest = 'scope_local',
+        help = ("Target config option(s) in a local config file.")
+    )
+
+    group.add_argument('--global',
+        action = 'store_true', dest = 'scope_global',
+        help =  ("Target config option(s) in the global config file."),
+    )
+
+    group.add_argument('--file', metavar = "<FILE>",
+        action = 'store', type = str, default = None, dest = 'scope_file',
+        help = ("Target config option(s) in a specified config file.")
+    )
+
+def load_config_into_args(
+        parser: argparse.ArgumentParser,
+        args: argparse.Namespace,
+        extra_state: typing.Dict[str, typing.Any],
+        cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
+        config_class: typing.Union[typing.Type[edq.config.app.BaseApplicationConfig], None] = None,
+        serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
+        **kwargs: typing.Any,
+        ) -> None:
+    """
+    Take in args from a parser that was passed to set_cli_args(),
+    and get the tired configuration with the appropriate parameters, and attache it to args.
+
+    Arguments that appear on the CLI as flags (e.g. `--foo bar`) can be copied over to the config options via `cli_arg_config_map`.
+    The keys of `cli_arg_config_map` represent attributes in the CLI arguments (`args`),
+    while the values represent the desired config name this argument should be set as.
+    For example, a `cli_arg_config_map` of `{'foo': 'baz'}` will make the CLI argument `--foo bar`
+    be equivalent to `--config baz=bar`.
+    """
+
+    if (cli_arg_config_map is None):
+        cli_arg_config_map = {}
+
+    for (cli_key, config_key) in cli_arg_config_map.items():
+        value = getattr(args, cli_key, None)
+        if (value is not None):
+            getattr(args, edq.config.constants.CONFIG_OPTIONS_KEY).append(f"{config_key}={value}")
+
+    config_info = edq.config.load.get_tiered_config(
+        cli_arguments = args,
+        config_class = config_class,
+        serialization_context = serialization_context,
+    )
+    setattr(args, "_config_info", config_info)

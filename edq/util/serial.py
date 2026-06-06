@@ -109,7 +109,7 @@ class SerializationBase:
 
         data = edq.util.json.load_path(path, **context.json_options)
 
-        return deserializer(data, context)
+        return deserializer(data, context)  # type: ignore[no-any-return]
 
 class PODSerializer(SerializationBase):
     """

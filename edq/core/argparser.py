@@ -11,7 +11,7 @@ import argparse
 import functools
 import typing
 
-import edq.core.config
+import edq.config.argparser
 import edq.core.log
 import edq.net.cli
 
@@ -127,8 +127,8 @@ def get_default_parser(description: str,
         parser.register_callbacks('log', edq.core.log.set_cli_args, edq.core.log.init_from_args)
 
     if (include_config):
-        config_pre_func = functools.partial(edq.core.config.set_cli_args, **config_options)
-        config_post_func = functools.partial(edq.core.config.load_config_into_args, **config_options)
+        config_pre_func = functools.partial(edq.config.argparser.set_cli_args, **config_options)
+        config_post_func = functools.partial(edq.config.argparser.load_config_into_args, **config_options)
         parser.register_callbacks('config', config_pre_func, config_post_func)
 
     if (include_net):
