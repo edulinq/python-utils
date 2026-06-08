@@ -6,13 +6,11 @@ import platformdirs
 
 import edq.config.app
 import edq.config.constants
+import edq.config.settings
 import edq.config.util
 import edq.util.dirent
 import edq.util.json
 import edq.util.serial
-
-_config_filename: str = edq.config.constants.DEFAULT_CONFIG_FILENAME  # pylint: disable=invalid-name
-_legacy_config_filename: typing.Union[str, None] = None  # pylint: disable=invalid-name
 
 class ConfigSource(edq.util.serial.DictConverter):
     """ A class for storing config source information. """
@@ -42,8 +40,7 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
             global_config_path: str,
             raw_config: typing.Dict[str, edq.util.serial.PODType],
             sources: typing.Dict[str, ConfigSource],
-            config_class: typing.Union[typing.Type[edq.config.app.BaseApplicationConfig], None] = None,
-            serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
+            application_config: typing.Union[edq.config.app.BaseApplicationConfig, None] = None,
             ) -> None:
         self.config_filename: str = config_filename
         """ Config filename searched for. """
@@ -66,43 +63,16 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
         self.sources: typing.Dict[str, ConfigSource] = sources
         """ Where configs came from. """
 
-        # Note that we set the default value here instead of in the arguments because of a bug in mypy with defaults on generic types:
-        # https://github.com/python/mypy/issues/3737.
-        if (config_class is None):
-            config_class = edq.config.app.BaseApplicationConfig
+        if (application_config is None):
+            application_config = edq.config.app.BaseApplicationConfig()
 
-        self.application_config: edq.config.app.BaseApplicationConfig = config_class.from_dict(
-            raw_config.copy(),
-            context = serialization_context,
-        )
+        self.application_config: edq.config.app.BaseApplicationConfig = application_config
         """ The config typed for the specific application. """
-
-def set_config_filename(filename: str) -> None:
-    """ Sets the config filename. """
-
-    global _config_filename  # pylint: disable=global-statement
-    _config_filename = filename
-
-def set_legacy_config_filename(legacy_filename: typing.Union[str, None]) -> None:
-    """ Sets the legacy config filename. """
-
-    global _legacy_config_filename  # pylint: disable=global-statement
-    _legacy_config_filename = legacy_filename
-
-def get_config_filename() -> str:
-    """ Gets the config filename. """
-
-    return _config_filename
-
-def get_legacy_config_filename() -> typing.Union[str, None]:
-    """ Gets the config legacy filename. """
-
-    return _legacy_config_filename
 
 def get_global_config_path() -> str:
     """ Get the path for the global config file. """
 
-    return platformdirs.user_config_dir(get_config_filename())
+    return platformdirs.user_config_dir(edq.config.settings.get_config_filename())
 
 def resolve_config_location(
         config_info: TieredConfigInfo,
@@ -140,7 +110,6 @@ def resolve_config_location(
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
-        config_class: typing.Union[typing.Type[edq.config.app.BaseApplicationConfig], None] = None,
         serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
         ) -> TieredConfigInfo:
     """
@@ -168,7 +137,7 @@ def get_tiered_config(
     )
 
     if (local_config_path is None):
-        local_config_path = os.path.abspath(get_config_filename())
+        local_config_path = os.path.abspath(edq.config.settings.get_config_filename())
 
     _load_config_file(local_config_path, raw_config, sources, edq.config.constants.CONFIG_SOURCE_LOCAL)
 
@@ -194,14 +163,22 @@ def get_tiered_config(
         raw_config.pop(ignore_config, None)
         sources.pop(ignore_config, None)
 
+    # Create an application config with all config we have seen.
+    all_config = cli_arguments.copy()
+    all_config.update(raw_config)
+
+    application_config = edq.config.settings.get_application_config_class().from_dict(
+        all_config,
+        context = serialization_context,
+    )
+
     return TieredConfigInfo(
-        get_config_filename(),
+        edq.config.settings.get_config_filename(),
         local_config_path,
         global_config_path,
         raw_config,
         sources,
-        config_class = config_class,
-        serialization_context = serialization_context,
+        application_config = application_config,
     )
 
 def _load_config_file(
@@ -244,8 +221,8 @@ def _get_local_config_path(
     preventing detection of config file in higher-level directories during testing.
     """
 
-    config_filename = get_config_filename()
-    legacy_config_filename = get_legacy_config_filename()
+    config_filename = edq.config.settings.get_config_filename()
+    legacy_config_filename = edq.config.settings.get_legacy_config_filename()
 
     # Provided config file is in current directory.
     if (os.path.isfile(config_filename)):
@@ -279,7 +256,7 @@ def _get_ancestor_config_file_path(
 
     current_directory = os.path.abspath(current_directory)
     for _ in range(edq.util.dirent.DEPTH_LIMIT):
-        config_file_path = os.path.join(current_directory, get_config_filename())
+        config_file_path = os.path.join(current_directory, edq.config.settings.get_config_filename())
         if (os.path.isfile(config_file_path)):
             return config_file_path
 

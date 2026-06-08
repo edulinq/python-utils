@@ -1,3 +1,4 @@
+import enum
 import os
 import typing
 
@@ -10,33 +11,46 @@ import edq.util.crypto
 import edq.util.json
 import edq.util.serial
 
+class _TestEnumStr(enum.Enum):
+    """ A test enum that only has strings. """
+
+    FIRST = 'a'
+    SECOND = 'b'
+
+class _TestApplicationConfig(edq.config.app.BaseApplicationConfig):
+    """ A test application config. """
+
+    serialization_omit_none = True
+
+    def __init__(self,
+            user: typing.Union[str, None] = None,
+            token: typing.Union[edq.util.crypto.Secret, None] = None,
+            number: typing.Union[int, None] = None,
+            enum_value: typing.Union[_TestEnumStr, None] = None,
+            **kwargs: typing.Any) -> None:
+        super().__init__(**kwargs)
+
+        self.user: typing.Union[str, None] = user
+        self.token: typing.Union[edq.util.crypto.Secret, None] = token
+        self.number: typing.Union[int, None] = number
+        self.enum_value: typing.Union[_TestEnumStr, None] = enum_value
+
+    def __eq__(self, other: object) -> bool:
+        if (not isinstance(other, _TestApplicationConfig)):
+            return False
+
+        return (self.user, self.token, self.number) == (other.user, other.token, other.number)
+
 class TestApplicationConfig(edq.testing.unittest.BaseTest):
     """ Test basic operations on configs. """
+
+    def tearDown(self) -> None:
+        edq.config.settings.set_application_config_class()
 
     def test_application_config_base(self) -> None:
         """
         Test loading config into an application config.
         """
-
-        class _TestApplicationConfig(edq.config.app.BaseApplicationConfig):
-            serialization_omit_none = True
-
-            def __init__(self,
-                    user: typing.Union[str, None] = None,
-                    token: typing.Union[edq.util.crypto.Secret, None] = None,
-                    number: typing.Union[int, None] = None,
-                    **kwargs: typing.Any) -> None:
-                super().__init__(**kwargs)
-
-                self.user: typing.Union[str, None] = user
-                self.token: typing.Union[edq.util.crypto.Secret, None] = token
-                self.number: typing.Union[int, None] = number
-
-            def __eq__(self, other: object) -> bool:
-                if (not isinstance(other, _TestApplicationConfig)):
-                    return False
-
-                return (self.user, self.token, self.number) == (other.user, other.token, other.number)
 
         # [(application config, dict POD config), ...]
         test_cases: typing.List[typing.Tuple[
@@ -56,6 +70,14 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
                 _TestApplicationConfig(number = 4),
                 {
                     'number': 4,
+                },
+            ),
+
+            # Enum
+            (
+                _TestApplicationConfig(enum_value = _TestEnumStr.FIRST),
+                {
+                    'enum_value': 'a',
                 },
             ),
 
@@ -90,10 +112,11 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
                 config_path = os.path.join(temp_dir, 'config.json')
                 edq.util.json.dump_path(expected_dict_config, config_path)
 
+                edq.config.settings.set_application_config_class(_TestApplicationConfig)
+
                 # Load the tiered config.
                 tiered_config = edq.config.load.get_tiered_config(
                     cli_arguments = {edq.config.constants.GLOBAL_CONFIG_KEY: config_path},
-                    config_class = _TestApplicationConfig,
                     serialization_context = serialization_context,
                 )
 

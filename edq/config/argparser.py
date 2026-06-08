@@ -1,7 +1,6 @@
 import argparse
 import typing
 
-import edq.config.app
 import edq.config.constants
 import edq.config.load
 import edq.util.serial
@@ -72,7 +71,6 @@ def load_config_into_args(
         args: argparse.Namespace,
         extra_state: typing.Dict[str, typing.Any],
         cli_arg_config_map: typing.Union[typing.Dict[str, str], None] = None,
-        config_class: typing.Union[typing.Type[edq.config.app.BaseApplicationConfig], None] = None,
         serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
         **kwargs: typing.Any,
         ) -> None:
@@ -97,7 +95,6 @@ def load_config_into_args(
 
     config_info = edq.config.load.get_tiered_config(
         cli_arguments = args,
-        config_class = config_class,
         serialization_context = serialization_context,
     )
     setattr(args, "_config_info", config_info)

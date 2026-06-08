@@ -9,6 +9,10 @@ import edq.testing.unittest
 class TestLoadConfig(edq.testing.unittest.BaseTest):
     """ Test basic operations of loading configs. """
 
+    def tearDown(self) -> None:
+        edq.config.settings.set_config_filename(edq.config.constants.DEFAULT_CONFIG_FILENAME)
+        edq.config.settings.set_legacy_config_filename(None)
+
     def test_get_tiered_config_base(self) -> None:
         """
         Test that configuration files are loaded correctly from the file system with the expected tier.
@@ -1064,14 +1068,14 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (test_work_dir, config_filenames, extra_args, expected_config, expected_sources,  expected_config_options, error_substring) = test_case
 
             with self.subTest(msg = f"Case {i} ('{test_work_dir}'):"):
-                edq.config.load.set_config_filename(edq.config.constants.DEFAULT_CONFIG_FILENAME)
-                edq.config.load.set_legacy_config_filename(None)
+                edq.config.settings.set_config_filename(edq.config.constants.DEFAULT_CONFIG_FILENAME)
+                edq.config.settings.set_legacy_config_filename(None)
 
                 config_filename = config_filenames.get('config_filename', edq.config.constants.DEFAULT_CONFIG_FILENAME)
-                edq.config.load.set_config_filename(config_filename)
+                edq.config.settings.set_config_filename(config_filename)
 
                 legacy_config_filename = config_filenames.get("legacy_config_filename", None)
-                edq.config.load.set_legacy_config_filename(legacy_config_filename)
+                edq.config.settings.set_legacy_config_filename(legacy_config_filename)
 
                 cli_args = extra_args.get("cli_arguments", None)
                 if cli_args is None:
@@ -1133,4 +1137,10 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
                 self.assertJSONDictEqual(actual_config_info, expected_config_info)
+
+                # Remove common keys from the application config.
+                remove_extra_keys = ['config_paths', 'configs', 'global_config_path', 'ignore_configs']
+                for remove_extra_key in remove_extra_keys:
+                    actual_config_info.application_config._extra.pop(remove_extra_key, None)
+
                 self.assertJSONDictEqual(actual_config_info.application_config._extra, expected_config)
