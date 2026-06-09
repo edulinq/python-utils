@@ -46,6 +46,7 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
 
     def tearDown(self) -> None:
         edq.config.settings.set_application_config_class()
+        os.environ.pop('EDQ__ENCRYPTION_KEY', None)
 
     def test_application_config_base(self) -> None:
         """
@@ -101,6 +102,7 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
         ]
 
         # Use a fixed key.
+        os.environ['EDQ__ENCRYPTION_KEY'] = 'key'
         serialization_context = edq.util.serial.SerializationContext(key = 'key')
 
         for (i, test_case) in enumerate(test_cases):
@@ -115,9 +117,9 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
                 edq.config.settings.set_application_config_class(_TestApplicationConfig)
 
                 # Load the tiered config.
+                # Note that they encryption key is passed via an environmental variable.
                 tiered_config = edq.config.load.get_tiered_config(
                     cli_arguments = {edq.config.constants.GLOBAL_CONFIG_KEY: config_path},
-                    serialization_context = serialization_context,
                 )
 
                 # Ensure that the loaded application config matches the expected application config.

@@ -46,6 +46,11 @@ def set_cli_args(
             + ' Ignored options are processed last.')
     )
 
+    group.add_argument('--encryption-key', dest = edq.config.constants.CONFIG_ENCRYPTION_KEY,
+        action = 'store', type = str, default = None,
+        help = 'Encryption key to use for configuration secrets (e.g., passwords and tokens).',
+    )
+
 def add_config_location_argument_group(parser: argparse.ArgumentParser) -> None:
     """ Add the configuration location argument group to the parser. """
 
