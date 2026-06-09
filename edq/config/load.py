@@ -141,6 +141,9 @@ def get_tiered_config(
 
     _load_config_file(local_config_path, raw_config, sources, edq.config.constants.CONFIG_SOURCE_LOCAL)
 
+    # Check for environmental variables.
+    _load_env_variables(raw_config, sources)
+
     # Check the config file specified on the command-line.
     config_paths = cli_arguments.get(edq.config.constants.CONFIG_PATHS_KEY, [])
     for path in config_paths:
@@ -204,6 +207,25 @@ def _load_config_file(
 
         config[key] = value
         sources[key] = ConfigSource(label = source_label, path = config_path)
+
+def _load_env_variables(
+        config: typing.Dict[str, typing.Any],
+        sources: typing.Dict[str, ConfigSource],
+        ) -> None:
+    """
+    Load config from environmental variables.
+    Any variable with a matching prefix will have the prefix removed and lower-cased.
+    """
+
+    prefix = edq.config.settings.get_env_prefix()
+    for (key, value) in os.environ.items():
+        if (not key.startswith(prefix)):
+            continue
+
+        key = key.removeprefix(prefix).lower()
+
+        config[key] = value
+        sources[key] = ConfigSource(label = edq.config.constants.CONFIG_SOURCE_ENV)
 
 def _get_local_config_path(
         local_config_root_cutoff: typing.Union[str, None] = None,

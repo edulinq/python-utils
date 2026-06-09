@@ -3,6 +3,7 @@ import typing
 
 import edq.config.constants
 import edq.config.load
+import edq.config.settings
 import edq.config.testing
 import edq.testing.unittest
 
@@ -13,6 +14,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
         edq.config.settings.set_config_filename(edq.config.constants.DEFAULT_CONFIG_FILENAME)
         edq.config.settings.set_legacy_config_filename(None)
 
+        # Clear env variables.
+        _clear_env()
+
     def test_get_tiered_config_base(self) -> None:
         """
         Test that configuration files are loaded correctly from the file system with the expected tier.
@@ -20,10 +24,12 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
 
         temp_dir = edq.config.testing.create_test_dir(temp_dir_prefix = "edq-test-config-get-tiered-config-")
 
-        # [(work directory, config filenames, extra arguments, expected config, expected sources, expected config options, error substring), ...]
+        # [(work directory, config filenames, env variables, extra arguments, expected config,
+        #   expected sources, expected config options, error substring), ...]
         test_cases: typing.List[typing.Tuple[
             str,
             typing.Dict[str, typing.Any],
+            typing.Dict[str, str],
             typing.Dict[str, typing.Any],
             typing.Dict[str, typing.Any],
             typing.Dict[str, typing.Any],
@@ -38,6 +44,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 {},
+                {},
                 None,
             ),
 
@@ -46,6 +53,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Custom Global Config Path
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -71,6 +79,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty", edq.config.constants.DEFAULT_CONFIG_FILENAME),
@@ -88,6 +97,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty-key", edq.config.constants.DEFAULT_CONFIG_FILENAME),
@@ -102,6 +112,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Directory Config JSON
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -120,6 +131,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "empty-dir", "non-existent-config.json"),
@@ -137,6 +149,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "malformed", edq.config.constants.DEFAULT_CONFIG_FILENAME),
@@ -151,6 +164,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Ignore Config Option
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -180,6 +194,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Ignore Non-Existing Config Option
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -211,6 +226,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 "simple",
                 {},
                 {},
+                {},
                 {
                     "user": "user@test.edulinq.org",
                 },
@@ -232,6 +248,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 {
                     'config_filename': "custom-edq-config.json",
                 },
+                {},
                 {},
                 {
                     "user": "user@test.edulinq.org",
@@ -256,6 +273,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "legacy_config_filename": "config.json",
                 },
                 {},
+                {},
                 {
                     "user": "user@test.edulinq.org",
                 },
@@ -274,6 +292,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Default config file in an ancestor directory.
             (
                 os.path.join("nested", "nest1", "nest2a"),
+                {},
                 {},
                 {},
                 {
@@ -301,12 +320,14 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 {},
+                {},
                 None,
             ),
 
             # Empty Config JSON
             (
                 "empty",
+                {},
                 {},
                 {},
                 {},
@@ -325,12 +346,14 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 {},
+                {},
                 "Found an empty configuration option key associated with the value 'user@test.edulinq.org'.",
             ),
 
             # Directory Config JSON
             (
                 "dir-config",
+                {},
                 {},
                 {},
                 {},
@@ -347,12 +370,14 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 {},
                 {},
                 {},
+                {},
                 "Failed to read JSON file",
             ),
 
             # Ignore Config Option
             (
                 "multiple-options",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -379,6 +404,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Ignore Non-Existing Config Option
             (
                 "simple",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -410,6 +436,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "legacy_config_filename": "config.json",
                 },
                 {},
+                {},
                 {
                     "user": "user@test.edulinq.org",
                 },
@@ -433,6 +460,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Distinct Keys
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -464,6 +492,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_PATHS_KEY: [
@@ -489,6 +518,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_PATHS_KEY: [
@@ -505,6 +535,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Empty Key Config JSON
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -523,6 +554,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_PATHS_KEY: [
@@ -539,6 +571,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Non-Existent Config JSON
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -557,6 +590,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_PATHS_KEY: [
@@ -573,6 +607,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Ignore Config Option
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -600,6 +635,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Ignore Non-Existing Config Option
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -631,6 +667,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_OPTIONS_KEY: [
@@ -652,6 +689,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_OPTIONS_KEY: [
@@ -668,6 +706,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Empty Config Value
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -690,6 +729,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_OPTIONS_KEY: [
@@ -711,6 +751,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_OPTIONS_KEY: [
@@ -727,6 +768,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Ignore Config Option
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -752,6 +794,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Ignore Non-Existing Config Option
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -779,6 +822,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "simple",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.config.constants.DEFAULT_CONFIG_FILENAME),
@@ -803,6 +847,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Global Config + CLI Provided Config
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -831,6 +876,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "empty-dir",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_OPTIONS_KEY: [
@@ -854,6 +900,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Local Config + CLI Provided Config
             (
                 "simple",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -881,6 +928,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "simple",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_OPTIONS_KEY: [
@@ -903,6 +951,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             #  CLI Provided Config + CLI Bare Options
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -927,6 +976,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Global Config + CLI Provided Config + CLI Bare Options
             (
                 "empty-dir",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -955,6 +1005,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "simple",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_OPTIONS_KEY: [
@@ -979,6 +1030,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Global Config + Local Config + CLI Provided Config
             (
                 "simple",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -1008,6 +1060,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             (
                 "simple",
                 {},
+                {},
                 {
                     "cli_arguments": {
                         edq.config.constants.CONFIG_OPTIONS_KEY: [
@@ -1033,6 +1086,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             # Global Config + Local Config + CLI Provided Config + CLI Bare Options
             (
                 "simple",
+                {},
                 {},
                 {
                     "cli_arguments": {
@@ -1062,14 +1116,119 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 },
                 None,
             ),
+
+            # ENV Variable
+            (
+                "empty-dir",
+                {},
+                {
+                    'EDQ__USER': 'user@test.edulinq.org',
+                },
+                {},
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.config.load.ConfigSource(
+                        label = edq.config.constants.CONFIG_SOURCE_ENV,
+                    ),
+                },
+                {},
+                None,
+            ),
+
+            # ENV Variable - Casing
+            (
+                "empty-dir",
+                {},
+                {
+                    'EDQ__UsEr': 'user@test.edulinq.org',
+                },
+                {},
+                {
+                    "user": "user@test.edulinq.org",
+                },
+                {
+                    "user": edq.config.load.ConfigSource(
+                        label = edq.config.constants.CONFIG_SOURCE_ENV,
+                    ),
+                },
+                {},
+                None,
+            ),
+
+            # ENV Variable - Multiple
+            (
+                "empty-dir",
+                {},
+                {
+                    'EDQ__USER': 'user@test.edulinq.org',
+                    'EDQ__PASS': 'password1234',
+                },
+                {},
+                {
+                    "user": "user@test.edulinq.org",
+                    "pass": "password1234",
+                },
+                {
+                    "user": edq.config.load.ConfigSource(
+                        label = edq.config.constants.CONFIG_SOURCE_ENV,
+                    ),
+                    "pass": edq.config.load.ConfigSource(
+                        label = edq.config.constants.CONFIG_SOURCE_ENV,
+                    ),
+                },
+                {},
+                None,
+            ),
+
+            # ENV Variable - Override Local
+            (
+                "simple",
+                {},
+                {
+                    'EDQ__USER': 'other@test.edulinq.org',
+                },
+                {},
+                {
+                    "user": "other@test.edulinq.org",
+                },
+                {
+                    "user": edq.config.load.ConfigSource(
+                        label = edq.config.constants.CONFIG_SOURCE_ENV,
+                    ),
+                },
+                {
+                    'local_config_path': os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                },
+                None,
+            ),
+
+            # ENV Variable - Bad Prefix
+            (
+                "empty-dir",
+                {},
+                {
+                    'ZZZ__USER': 'user@test.edulinq.org',
+                },
+                {},
+                {},
+                {},
+                {},
+                None,
+            ),
         ]
 
         for (i, test_case) in enumerate(test_cases):
-            (test_work_dir, config_filenames, extra_args, expected_config, expected_sources,  expected_config_options, error_substring) = test_case
+            (test_work_dir, config_filenames, env_variables, extra_args,
+                expected_config, expected_sources,  expected_config_options, error_substring) = test_case
 
             with self.subTest(msg = f"Case {i} ('{test_work_dir}'):"):
                 edq.config.settings.set_config_filename(edq.config.constants.DEFAULT_CONFIG_FILENAME)
                 edq.config.settings.set_legacy_config_filename(None)
+
+                _clear_env()
+                os.environ.update(env_variables)
 
                 config_filename = config_filenames.get('config_filename', edq.config.constants.DEFAULT_CONFIG_FILENAME)
                 edq.config.settings.set_config_filename(config_filename)
@@ -1136,11 +1295,18 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 if (error_substring is not None):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
-                self.assertJSONDictEqual(actual_config_info, expected_config_info)
+                self.assertJSONDictEqual(expected_config_info, actual_config_info)
 
                 # Remove common keys from the application config.
                 remove_extra_keys = ['config_paths', 'configs', 'global_config_path', 'ignore_configs']
                 for remove_extra_key in remove_extra_keys:
                     actual_config_info.application_config._extra.pop(remove_extra_key, None)
 
-                self.assertJSONDictEqual(actual_config_info.application_config._extra, expected_config)
+                self.assertJSONDictEqual(expected_config, actual_config_info.application_config._extra)
+
+def _clear_env():
+    """ Clear out any EDQ-looking environment variables. """
+
+    for key in os.environ.keys():
+        if (key.startswith(edq.config.settings.get_env_prefix())):
+            os.environ.pop(key, None)
