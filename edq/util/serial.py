@@ -87,6 +87,21 @@ class SerializationBase:
     def __repr__(self) -> str:
         return edq.util.json.dumps(self)
 
+    def _eq(self,
+            other: object,
+            self_serializer: typing.Callable,
+            other_serializer: typing.Callable,
+            context: typing.Union[SerializationContext, None] = None,
+            ) -> bool:
+        """
+        Check for equality using the given func..
+        """
+
+        if (not isinstance(other, type(self))):
+            return False
+
+        return bool(self_serializer(context) == other_serializer(context))
+
     @classmethod
     def _from_path(cls: typing.Type[SerializationBaseClass],
             path: str,
@@ -110,6 +125,27 @@ class SerializationBase:
         data = edq.util.json.load_path(path, **context.json_options)
 
         return deserializer(data, context)  # type: ignore[no-any-return]
+
+    def _to_path(self,
+            path: str,
+            serializer: typing.Callable,
+            context: typing.Union[SerializationContext, None] = None,
+            ) -> None:
+        """ Write this object to the given path as JSON. """
+
+        if (context is None):
+            context = SerializationContext()
+        else:
+            context = context.copy()
+
+        if ((not os.path.isabs(path)) and (context.base_dir is not None)):
+            path = os.path.join(context.base_dir, path)
+
+        context.source_path = os.path.abspath(path)
+        context.base_dir = os.path.dirname(context.source_path)
+
+        data = serializer(context)
+        edq.util.json.dump_path(data, context.source_path, **context.json_options)
 
 class PODSerializer(SerializationBase):
     """
@@ -145,19 +181,7 @@ class PODSerializer(SerializationBase):
             ) -> None:
         """ Write this object to the given path as JSON. """
 
-        if (context is None):
-            context = SerializationContext()
-        else:
-            context = context.copy()
-
-        if ((not os.path.isabs(path)) and (context.base_dir is not None)):
-            path = os.path.join(context.base_dir, path)
-
-        context.source_path = os.path.abspath(path)
-        context.base_dir = os.path.dirname(context.source_path)
-
-        data = self.to_pod(context)
-        edq.util.json.dump_path(data, context.source_path, **context.json_options)
+        self._to_path(path, self.to_pod, context)
 
     def __eq__(self, other: object) -> bool:
         """
@@ -167,11 +191,7 @@ class PODSerializer(SerializationBase):
         This may not be complete or efficient depending on the child class.
         """
 
-        if (not isinstance(other, type(self))):
-            return False
-
-        context = SerializationContext()
-        return bool(self.to_pod(context) == other.to_pod(context))  # type: ignore[attr-defined,unused-ignore]
+        return self._eq(other, self.to_pod, getattr(other, 'to_pod', None))  # type: ignore[arg-type]
 
 class PODDeserializer(SerializationBase):
     """
@@ -275,7 +295,7 @@ class DictSerializer(PODSerializer):
 
     def to_dict(self,
             context: typing.Union[SerializationContext, None] = None,
-            ) -> typing.Dict[str, 'PODType']:
+            ) -> typing.Dict[str, PODType]:
         """
         Return a dict that can be used to represent this object.
         If the dict is passed to from_dict(), an identical object should be reconstructed.
@@ -288,6 +308,24 @@ class DictSerializer(PODSerializer):
             raise self.serialization_error_class(f"DictSerializer's to_pod() did not return a dict, found '{type(data)}'.")
 
         return data
+
+    def to_path(self,
+            path: str,
+            context: typing.Union[SerializationContext, None] = None,
+            ) -> None:
+        """ Write this object to the given path as JSON. """
+
+        self._to_path(path, self.to_dict, context)
+
+    def __eq__(self, other: object) -> bool:
+        """
+        Check for equality.
+
+        This check uses to_pod() and compares the results.
+        This may not be complete or efficient depending on the child class.
+        """
+
+        return self._eq(other, self.to_dict, getattr(other, 'to_dict', None))  # type: ignore[arg-type]
 
 class DictDeserializer(PODDeserializer):
     """
@@ -302,7 +340,7 @@ class DictDeserializer(PODDeserializer):
 
     @classmethod
     def from_dict(cls: typing.Type[DictDeserializerClass],
-            data: typing.Dict[str, 'PODType'],
+            data: typing.Dict[str, PODType],
             context: typing.Union[SerializationContext, None] = None,
             ) -> DictDeserializerClass:
         """
