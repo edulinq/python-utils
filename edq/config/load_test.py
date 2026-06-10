@@ -1,6 +1,7 @@
 import os
 import typing
 
+import edq.config.app
 import edq.config.constants
 import edq.config.load
 import edq.config.settings
@@ -1271,8 +1272,12 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 expected_config_info = edq.config.load.TieredConfigInfo(
                     raw_config = expected_config,
                     sources = expected_sources,
+                    application_config = edq.config.app.BaseApplicationConfig.from_dict(expected_config),
                     **expected_config_options,
                 )
+
+                if (edq.config.constants.CONFIG_ENCRYPTION_KEY not in expected_config):
+                    expected_config_info.application_config.encryption_key = edq.config.settings.get_default_encryption_key()
 
                 previous_work_directory = os.getcwd()
                 initial_work_directory = os.path.join(temp_dir, test_work_dir)
@@ -1295,14 +1300,13 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 if (error_substring is not None):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
+                # Normalize some keys from the application config.
+                normalize_keys = ['config_paths', 'configs', 'global_config_path', 'ignore_configs']
+                for normalize_key in normalize_keys:
+                    setattr(actual_config_info.application_config, normalize_key, None)
+                    setattr(expected_config_info.application_config, normalize_key, None)
+
                 self.assertJSONDictEqual(expected_config_info, actual_config_info)
-
-                # Remove common keys from the application config.
-                remove_extra_keys = ['config_paths', 'configs', 'global_config_path', 'ignore_configs']
-                for remove_extra_key in remove_extra_keys:
-                    actual_config_info.application_config._extra.pop(remove_extra_key, None)
-
-                self.assertJSONDictEqual(expected_config, actual_config_info.application_config._extra)
 
 def _clear_env():
     """ Clear out any EDQ-looking environment variables. """

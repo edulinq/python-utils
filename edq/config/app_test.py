@@ -35,12 +35,6 @@ class _TestApplicationConfig(edq.config.app.BaseApplicationConfig):
         self.number: typing.Union[int, None] = number
         self.enum_value: typing.Union[_TestEnumStr, None] = enum_value
 
-    def __eq__(self, other: object) -> bool:
-        if (not isinstance(other, _TestApplicationConfig)):
-            return False
-
-        return (self.user, self.token, self.number) == (other.user, other.token, other.number)
-
 class TestApplicationConfig(edq.testing.unittest.BaseTest):
     """ Test basic operations on configs. """
 
@@ -121,6 +115,14 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
                 tiered_config = edq.config.load.get_tiered_config(
                     cli_arguments = {edq.config.constants.GLOBAL_CONFIG_KEY: config_path},
                 )
+
+                # Ignore some config fields by setting them equal.
+                ignore_fields = ['encryption_key', 'global_config_path']
+                for ignore_field in ignore_fields:
+                    value = getattr(tiered_config.application_config, ignore_field)
+
+                    setattr(expected_application_config, ignore_field, value)
+                    expected_dict_config[ignore_field] = value
 
                 # Ensure that the loaded application config matches the expected application config.
                 self.assertEqual(expected_application_config, tiered_config.application_config)
