@@ -2,7 +2,7 @@ import os
 
 import edq.config.constants
 import edq.testing.cli
-import edq.testing.cli_test
+import edq.testing.unittest
 import edq.util.dirent
 import edq.util.json
 
@@ -127,7 +127,7 @@ def create_test_dir(temp_dir_prefix: str) -> str:
     return temp_dir
 
 def create_cli_test_dir(
-    test: edq.testing.cli_test.CLITest,
+    test: edq.testing.unittest.BaseTest,
     test_info: edq.testing.cli.CLITestInfo,
     ) -> None:
     """
@@ -154,7 +154,7 @@ def create_cli_test_dir(
     )
 
 def verify_cli_test_config_content(
-    test: edq.testing.cli_test.CLITest,
+    test: edq.testing.unittest.BaseTest,
     test_info: edq.testing.cli.CLITestInfo,
     ) -> None:
     """ Verify the contents of a config file created by a CLI test. """
