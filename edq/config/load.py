@@ -175,8 +175,8 @@ def get_tiered_config(
     else:
         serialization_context = serialization_context.copy()
 
-    if (edq.config.constants.CONFIG_ENCRYPTION_KEY in raw_config):
-        serialization_context.key = raw_config.get(edq.config.constants.CONFIG_ENCRYPTION_KEY, None)  # type: ignore[assignment]
+    serialization_context.key = all_config.get(  # type: ignore[assignment]
+            edq.config.constants.CONFIG_ENCRYPTION_KEY, edq.config.constants.DEFAULT_ENCRYPTION_KEY)
 
     application_config = edq.config.settings.get_application_config_class().from_dict(
         all_config,
