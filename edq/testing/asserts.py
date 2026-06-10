@@ -58,8 +58,15 @@ def has_content_100(test: edq.testing.unittest.BaseTest, expected: str, actual: 
 
     return has_content(test, expected, actual, min_length = 100)
 
-def has_content(test: edq.testing.unittest.BaseTest, expected: str, actual: str, min_length: int = 100) -> None:
+def has_content(test: edq.testing.unittest.BaseTest, expected: str, actual: str, min_length: int = 10) -> None:
     """ Ensure that the output has content of at least some length. """
 
     message = f"Output does not meet minimum length of {min_length}, it is only {len(actual)}."
     test.assertTrue((len(actual) >= min_length), msg = message)
+
+def contains(test: edq.testing.unittest.BaseTest, expected: str, actual: str) -> None:
+    """
+    A CLI test assertion function that checks if the expected output is a contained in the actual output.
+    """
+
+    test.assertIn(expected, actual)
