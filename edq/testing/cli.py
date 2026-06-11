@@ -468,7 +468,7 @@ def discover_test_cases(target_class: type, test_cases_dir: str, data_dir: str,
 
 def setup_teardown_copy(
     test: edq.testing.unittest.BaseTest,
-    test_info: edq.testing.cli.CLITestInfo,
+    test_info: CLITestInfo,
     ) -> None:
     """
     A setup/teardown function for copying dirents.
