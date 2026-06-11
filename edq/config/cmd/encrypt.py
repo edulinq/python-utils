@@ -15,11 +15,14 @@ def run(args: argparse.Namespace) -> int:
 
     config_info = args._config_info
 
-    paths = {
-        args._config_info.local_config_path,
-        args._config_info.global_config_path,
-    }
-    paths |= {source.path for source in args._config_info.sources.values() if (source.path is not None)}
+    paths = set()
+
+    if (len(args.paths) > 0):
+        paths |= set(args.paths)
+    else:
+        paths.add(args._config_info.local_config_path)
+        paths.add(args._config_info.global_config_path)
+        paths |= {source.path for source in args._config_info.sources.values() if (source.path is not None)}
 
     encryption_key = config_info.application_config.encryption_key
     config_class = type(config_info.application_config)
@@ -64,9 +67,14 @@ def run(args: argparse.Namespace) -> int:
 def modify_parser(parser: argparse.ArgumentParser) -> None:
     """ Add this CLI's flags to the given parser. """
 
-    group = parser.add_argument_group('list options')
+    group = parser.add_argument_group('encrypt options')
 
-    group.add_argument("--dry-run", dest = 'dry_run',
+    group.add_argument('--dry-run', dest = 'dry_run',
         action = 'store_true',
         help = "Do not write any data, just state would would happen.",
+    )
+
+    group.add_argument('paths', metavar = 'PATHS',
+        action = 'store', nargs = '*', type = str,
+        help = "Optional paths to look for unencrypted secrets. If no paths are specified, all active config paths will be used.",
     )
