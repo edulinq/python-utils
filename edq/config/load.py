@@ -16,10 +16,10 @@ class ConfigSource(edq.util.serial.DictConverter):
     """ A class for storing config source information. """
 
     def __init__(self, label: str, path: typing.Union[str, None] = None) -> None:
-        self.label = label
+        self.label: str = label
         """ The label identifying the config (see edq.config.constants.CONFIG_SOURCE_* constants). """
 
-        self.path = path
+        self.path: typing.Union[str, None] = path
         """ The path of where the config was sourced from. """
 
     def __eq__(self, other: object) -> bool:
@@ -45,7 +45,7 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
         self.config_filename: str = config_filename
         """ Config filename searched for. """
 
-        self.local_config_path: str  = local_config_path
+        self.local_config_path: str = local_config_path
         """
         Path searched for local config.
         The file might not exist.

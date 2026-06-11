@@ -1,5 +1,6 @@
 import typing
 
+import edq.config.common
 import edq.util.serial
 
 class BaseApplicationConfig(edq.util.serial.DictConverter):
@@ -37,7 +38,10 @@ class BaseApplicationConfig(edq.util.serial.DictConverter):
         self.ignore_configs: typing.Union[typing.List[str], None] = ignore_configs
         """ Config keys to ignore. """
 
-        self.encryption_key: typing.Union[str, None] = encryption_key
+        if (encryption_key is None):
+            encryption_key = edq.config.common._default_encryption_key
+
+        self.encryption_key: str = encryption_key
         """ The encryption key to use for config secrets. """
 
         self.debug: typing.Union[bool, None] = debug
