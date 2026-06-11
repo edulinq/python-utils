@@ -74,8 +74,8 @@ class CLITestInfo:
             data_dir: str,
             temp_dir: str,
             work_dir: typing.Union[str, None] = None,
-            setup_func: typing.Union[str, None] = None,
-            teardown_func: typing.Union[str, None] = None,
+            setup_funcs: typing.Union[typing.List[str], str, None] = None,
+            teardown_funcs: typing.Union[typing.List[str], str, None] = None,
             cli: typing.Union[str, None] = None,
             arguments: typing.Union[typing.List[str], None] = None,
             error: bool = False,
@@ -135,17 +135,25 @@ class CLITestInfo:
         self.work_dir: str = work_dir
         """ The directory the test runs from. """
 
-        self.setup_func: typing.Union[SetupTeardownFunction, None] = None
-        """ The function to run before the test to setup. """
+        self.setup_funcs: typing.List[SetupTeardownFunction] = []
+        """ The functions to run before the test to setup. """
 
-        if (setup_func is not None):
-            self.setup_func = edq.util.pyimport.fetch(setup_func)
+        if (setup_funcs is not None):
+            if (isinstance(setup_funcs, str)):
+                setup_funcs = [setup_funcs]
 
-        self.teardown_func: typing.Union[SetupTeardownFunction, None] = None
-        """ The function to run after the test to cleanup. """
+            for setup_func in setup_funcs:
+                self.setup_funcs.append(edq.util.pyimport.fetch(setup_func))
 
-        if (teardown_func is not None):
-            self.teardown_func = edq.util.pyimport.fetch(teardown_func)
+        self.teardown_funcs: typing.List[SetupTeardownFunction] = []
+        """ The functions to run after the test to cleanup. """
+
+        if (teardown_funcs is not None):
+            if (isinstance(teardown_funcs, str)):
+                teardown_funcs = [teardown_funcs]
+
+            for teardown_func in teardown_funcs:
+                self.teardown_funcs.append(edq.util.pyimport.fetch(teardown_func))
 
         if (cli is None):
             raise ValueError("Missing CLI module.")
@@ -374,8 +382,8 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
         if (test_info.should_skip()):
             self.skipTest(test_info.skip_message())
 
-        if (test_info.setup_func is not None):
-            test_info.setup_func(self, test_info)
+        for setup_func in test_info.setup_funcs:
+            setup_func(self, test_info)
 
         old_args = sys.argv
         sys.argv = [test_info.module.__file__] + test_info.arguments
@@ -409,8 +417,8 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
             os.chdir(previous_work_directory)
             sys.argv = old_args
 
-            if (test_info.teardown_func is not None):
-                test_info.teardown_func(self, test_info)
+            for teardown_func in test_info.teardown_funcs:
+                teardown_func(self, test_info)
 
         if (not test_info.split_stdout_stderr):
             if ((len(stdout_text) > 0) and (len(stderr_text) > 0)):
@@ -457,3 +465,28 @@ def discover_test_cases(target_class: type, test_cases_dir: str, data_dir: str,
 
     paths = list(sorted(glob.glob(os.path.join(test_cases_dir, "**", "*.txt"), recursive = True)))
     add_test_paths(target_class, data_dir, paths, test_method_wrapper = test_method_wrapper)
+
+def setup_teardown_copy(
+    test: edq.testing.unittest.BaseTest,
+    test_info: edq.testing.cli.CLITestInfo,
+    ) -> None:
+    """
+    A setup/teardown function for copying dirents.
+
+    Will read copy operands from the list `test_info.extra_options['copy']` as two-item tuples (source, dest).
+    Paths should be absolute or relative to the test's work dir and use POSIX-style path separators.
+    """
+
+    for (source, dest) in test_info.extra_options.get('copy', []):
+        source = test_info._process_text(source)
+        dest = test_info._process_text(dest)
+
+        source = os.sep.join(source.split('/'))
+        if (not os.path.isabs(source)):
+            source = os.path.join(test_info.work_dir, source)
+
+        dest = os.sep.join(dest.split('/'))
+        if (not os.path.isabs(dest)):
+            dest = os.path.join(test_info.work_dir, dest)
+
+        edq.util.dirent.copy(source, dest)

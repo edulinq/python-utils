@@ -1,4 +1,3 @@
-import enum
 import os
 import typing
 
@@ -10,30 +9,6 @@ import edq.testing.unittest
 import edq.util.crypto
 import edq.util.json
 import edq.util.serial
-
-class _TestEnumStr(enum.Enum):
-    """ A test enum that only has strings. """
-
-    FIRST = 'a'
-    SECOND = 'b'
-
-class _TestApplicationConfig(edq.config.app.BaseApplicationConfig):
-    """ A test application config. """
-
-    serialization_omit_none = True
-
-    def __init__(self,
-            user: typing.Union[str, None] = None,
-            token: typing.Union[edq.util.crypto.Secret, None] = None,
-            number: typing.Union[int, None] = None,
-            enum_value: typing.Union[_TestEnumStr, None] = None,
-            **kwargs: typing.Any) -> None:
-        super().__init__(**kwargs)
-
-        self.user: typing.Union[str, None] = user
-        self.token: typing.Union[edq.util.crypto.Secret, None] = token
-        self.number: typing.Union[int, None] = number
-        self.enum_value: typing.Union[_TestEnumStr, None] = enum_value
 
 class TestApplicationConfig(edq.testing.unittest.BaseTest):
     """ Test basic operations on configs. """
@@ -54,7 +29,7 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
         ]] = [
             # Base
             (
-                _TestApplicationConfig(user = 'alice'),
+                edq.config.testing.TestApplicationConfig(user = 'alice'),
                 {
                     'user': 'alice',
                 },
@@ -62,7 +37,7 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
 
             # Numeric
             (
-                _TestApplicationConfig(number = 4),
+                edq.config.testing.TestApplicationConfig(number = 4),
                 {
                     'number': 4,
                 },
@@ -70,7 +45,7 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
 
             # Enum
             (
-                _TestApplicationConfig(enum_value = _TestEnumStr.FIRST),
+                edq.config.testing.TestApplicationConfig(enum_value = edq.config.testing.TestEnumStr.FIRST),
                 {
                     'enum_value': 'a',
                 },
@@ -78,7 +53,7 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
 
             # Secret - No Encryption
             (
-                _TestApplicationConfig(token = edq.util.crypto.Secret('secret')),
+                edq.config.testing.TestApplicationConfig(token = edq.util.crypto.Secret('secret')),
                 {
                     'token': 'secret',
                 },
@@ -86,7 +61,7 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
 
             # Secret - Encryption
             (
-                _TestApplicationConfig(
+                edq.config.testing.TestApplicationConfig(
                     token = edq.util.crypto.Secret('secret', iv_b64 = 'UldcITh761FJcMRThJpkag==', salt_b64 = 'niOb2keWPoSwR1MlgWHayQ=='),
                 ),
                 {
@@ -108,7 +83,7 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
                 config_path = os.path.join(temp_dir, 'config.json')
                 edq.util.json.dump_path(expected_dict_config, config_path)
 
-                edq.config.settings.set_application_config_class(_TestApplicationConfig)
+                edq.config.settings.set_application_config_class(edq.config.testing.TestApplicationConfig)
 
                 # Load the tiered config.
                 # Note that they encryption key is passed via an environmental variable.
@@ -132,5 +107,5 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
                 self.assertJSONDictEqual(expected_dict_config, new_dict_config)
 
                 # Deserialize the dict config into an application config, and ensure it matches the application config.
-                new_application_config = _TestApplicationConfig.from_dict(new_dict_config, context = serialization_context)
+                new_application_config = edq.config.testing.TestApplicationConfig.from_dict(new_dict_config, context = serialization_context)
                 self.assertEqual(tiered_config.application_config, new_application_config)
