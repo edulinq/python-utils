@@ -1308,7 +1308,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
 
                 self.assertJSONDictEqual(expected_config_info, actual_config_info)
 
-def _clear_env():
+def _clear_env() -> None:
     """ Clear out any EDQ-looking environment variables. """
 
     for key in os.environ.keys():
