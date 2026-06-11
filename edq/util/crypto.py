@@ -91,6 +91,15 @@ class Secret(edq.util.serial.PODConverter):
         (if the salt not null, then encrypt).
         """
 
+    def is_encrypted(self) -> bool:
+        """
+        Check if this secret is encrypted on disk.
+        This is meant to be used by regular users who use parse().
+        Advanced users may have to make their own checks.
+        """
+
+        return (self.salt_b64 is not None)
+
     def __repr__(self) -> str:
         return self.cleartext
 
