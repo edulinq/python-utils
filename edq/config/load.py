@@ -24,15 +24,18 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
             sources: typing.Dict[str, edq.config.source.ConfigSource],
             application_config: typing.Union[edq.config.app.BaseApplicationConfig, None] = None,
             ) -> None:
+        # TEST - Remove?
         self.config_filename: str = config_filename
         """ Config filename searched for. """
 
+        # TEST - Remove?
         self.local_config_path: str = local_config_path
         """
         Path searched for local config.
         The file might not exist.
         """
 
+        # TEST - Remove?
         self.global_config_path: str = global_config_path
         """
         Path searched for global config.
@@ -51,11 +54,13 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
         self.application_config: edq.config.app.BaseApplicationConfig = application_config
         """ The config typed for the specific application. """
 
+# TEST - Remove?
 def get_global_config_path() -> str:
     """ Get the path for the global config file. """
 
     return platformdirs.user_config_dir(edq.config.settings.get_config_filename())
 
+# TEST - Rework?
 def resolve_config_location(
         config_info: TieredConfigInfo,
         is_local: bool,
@@ -93,10 +98,14 @@ def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
         local_config_root_cutoff: typing.Union[str, None] = None,
         serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
+        load_order: typing.Union[typing.List[edq.config.source.ConfigSource], None] = None,
         ) -> TieredConfigInfo:
     """
     Load all configuration options from files and command-line arguments.
     """
+
+    if (load_order is None):
+        load_order = edq.config.settings.get_load_order()
 
     if (cli_arguments is None):
         cli_arguments = {}
@@ -105,44 +114,48 @@ def get_tiered_config(
     sources: typing.Dict[str, edq.config.source.ConfigSource] = {}
 
     # Ensure CLI arguments are always a dict,
-    # even if provided as argparse.Namespace.
+    # even if provided as an argparse.Namespace.
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
 
-    # Load the global user config file.
-    global_config_path = cli_arguments.get(edq.config.constants.GLOBAL_CONFIG_KEY, get_global_config_path())
-    _load_config_file(global_config_path, raw_config, sources, edq.config.source.SourceLabel.GLOBAL)
+    # TEST
+    default_global_config_path = cli_arguments.get(edq.config.constants.GLOBAL_CONFIG_KEY, get_global_config_path())
 
-    # Get and load local user config path.
-    local_config_path = _get_local_config_path(
-        local_config_root_cutoff = local_config_root_cutoff,
-    )
+    default_local_config_path = _get_local_config_path(local_config_root_cutoff = local_config_root_cutoff)
+    if (default_local_config_path is None):
+        default_local_config_path = os.path.abspath(edq.config.settings.get_config_filename())
 
-    if (local_config_path is None):
-        local_config_path = os.path.abspath(edq.config.settings.get_config_filename())
+    # Load from each specified source.
+    for source in load_order:
+        if (source.label == edq.config.source.SourceLabel.CLI):
+            cli_configs = cli_arguments.get(edq.config.constants.CONFIG_OPTIONS_KEY, [])
+            for cli_config_option in cli_configs:
+                (key, value) = edq.config.util.parse_string_config_option(cli_config_option)
 
-    _load_config_file(local_config_path, raw_config, sources, edq.config.source.SourceLabel.LOCAL)
+                raw_config[key] = value
+                sources[key] = edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI)
+        elif (source.label == edq.config.source.SourceLabel.CLI_FILE):
+            config_paths = cli_arguments.get(edq.config.constants.CONFIG_PATHS_KEY, [])
+            for path in config_paths:
+                if (not os.path.exists(path)):
+                    raise FileNotFoundError(f"Specified config file does not exist: '{path}'.")
 
-    # Check for environmental variables.
-    _load_env_variables(raw_config, sources)
+                _load_config_file(path, raw_config, sources, edq.config.source.SourceLabel.CLI_FILE)
+        elif (source.label == edq.config.source.SourceLabel.ENV):
+            _load_env_variables(raw_config, sources)
+        elif (source.label == edq.config.source.SourceLabel.GLOBAL):
+            path = cli_arguments.get(edq.config.constants.GLOBAL_CONFIG_KEY, get_global_config_path())
+            _load_config_file(path, raw_config, sources, edq.config.source.SourceLabel.GLOBAL)
+        elif (source.label == edq.config.source.SourceLabel.LOCAL):
+            path = source.path
+            if (path is None):
+                path = default_local_config_path
 
-    # Check the config file specified on the command-line.
-    config_paths = cli_arguments.get(edq.config.constants.CONFIG_PATHS_KEY, [])
-    for path in config_paths:
-        if (not os.path.exists(path)):
-            raise FileNotFoundError(f"Specified config file does not exist: '{path}'.")
+            _load_config_file(path, raw_config, sources, edq.config.source.SourceLabel.LOCAL)
+        else:
+            raise ValueError(f"Unknown config source label: '{source.label}'.")
 
-        _load_config_file(path, raw_config, sources, edq.config.source.SourceLabel.CLI_FILE)
-
-    # Check the command-line config options.
-    cli_configs = cli_arguments.get(edq.config.constants.CONFIG_OPTIONS_KEY, [])
-    for cli_config_option in cli_configs:
-        (key, value) = edq.config.util.parse_string_config_option(cli_config_option)
-
-        raw_config[key] = value
-        sources[key] = edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI)
-
-    # Finally, ignore any configs that is specified from CLI command.
+    # Finally, ignore any configs that are specified from CLI command.
     cli_ignore_configs = cli_arguments.get(edq.config.constants.IGNORE_CONFIG_OPTIONS_KEY, [])
     for ignore_config in cli_ignore_configs:
         raw_config.pop(ignore_config, None)
@@ -173,8 +186,10 @@ def get_tiered_config(
 
     return TieredConfigInfo(
         edq.config.settings.get_config_filename(),
-        local_config_path,
-        global_config_path,
+        # TEST
+        default_local_config_path,
+        # TEST
+        default_global_config_path,
         raw_config,
         sources,
         application_config = application_config,

@@ -13,6 +13,8 @@ class SourceLabel(enum.Enum):
     LOCAL = 'local config file'
     PROJECT = 'project config file'
 
+# TEST - Filename
+# TEST - Difference between a source to be loaded and one that already was loaded? SourceSpec vs Source?
 class ConfigSource(edq.util.serial.DictConverter):
     """ A representation of where a config value can be taken from. """
 

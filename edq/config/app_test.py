@@ -100,7 +100,7 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
                     expected_dict_config[ignore_field] = value
 
                 # Ensure that the loaded application config matches the expected application config.
-                self.assertEqual(expected_application_config, tiered_config.application_config)
+                self.assertJSONEqual(expected_application_config, tiered_config.application_config)
 
                 # Serialize the application config, and ensure it matches the dict config.
                 new_dict_config = tiered_config.application_config.to_dict(context = serialization_context)
