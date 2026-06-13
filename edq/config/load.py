@@ -7,29 +7,11 @@ import platformdirs
 import edq.config.app
 import edq.config.constants
 import edq.config.settings
+import edq.config.source
 import edq.config.util
 import edq.util.dirent
 import edq.util.json
 import edq.util.serial
-
-class ConfigSource(edq.util.serial.DictConverter):
-    """ A class for storing config source information. """
-
-    def __init__(self, label: str, path: typing.Union[str, None] = None) -> None:
-        self.label: str = label
-        """ The label identifying the config (see edq.config.constants.CONFIG_SOURCE_* constants). """
-
-        self.path: typing.Union[str, None] = path
-        """ The path of where the config was sourced from. """
-
-    def __eq__(self, other: object) -> bool:
-        if (not isinstance(other, ConfigSource)):
-            return False
-
-        return ((self.label == other.label) and (self.path == other.path))
-
-    def __str__(self) -> str:
-        return f"({self.label}, {self.path})"
 
 class TieredConfigInfo(edq.util.serial.DictConverter):
     """ A class for storing config information read from a hierarchy of files and sources. """
@@ -39,7 +21,7 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
             local_config_path: str,
             global_config_path: str,
             raw_config: typing.Dict[str, edq.util.serial.PODType],
-            sources: typing.Dict[str, ConfigSource],
+            sources: typing.Dict[str, edq.config.source.ConfigSource],
             application_config: typing.Union[edq.config.app.BaseApplicationConfig, None] = None,
             ) -> None:
         self.config_filename: str = config_filename
@@ -60,7 +42,7 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
         self.raw_config: typing.Dict[str, edq.util.serial.PODType] = raw_config
         """ Key-value configurations. """
 
-        self.sources: typing.Dict[str, ConfigSource] = sources
+        self.sources: typing.Dict[str, edq.config.source.ConfigSource] = sources
         """ Where configs came from. """
 
         if (application_config is None):
@@ -120,7 +102,7 @@ def get_tiered_config(
         cli_arguments = {}
 
     raw_config: typing.Dict[str, edq.util.serial.PODType] = {}
-    sources: typing.Dict[str, ConfigSource] = {}
+    sources: typing.Dict[str, edq.config.source.ConfigSource] = {}
 
     # Ensure CLI arguments are always a dict,
     # even if provided as argparse.Namespace.
@@ -129,7 +111,7 @@ def get_tiered_config(
 
     # Load the global user config file.
     global_config_path = cli_arguments.get(edq.config.constants.GLOBAL_CONFIG_KEY, get_global_config_path())
-    _load_config_file(global_config_path, raw_config, sources, edq.config.constants.CONFIG_SOURCE_GLOBAL)
+    _load_config_file(global_config_path, raw_config, sources, edq.config.source.SourceLabel.GLOBAL)
 
     # Get and load local user config path.
     local_config_path = _get_local_config_path(
@@ -139,7 +121,7 @@ def get_tiered_config(
     if (local_config_path is None):
         local_config_path = os.path.abspath(edq.config.settings.get_config_filename())
 
-    _load_config_file(local_config_path, raw_config, sources, edq.config.constants.CONFIG_SOURCE_LOCAL)
+    _load_config_file(local_config_path, raw_config, sources, edq.config.source.SourceLabel.LOCAL)
 
     # Check for environmental variables.
     _load_env_variables(raw_config, sources)
@@ -150,7 +132,7 @@ def get_tiered_config(
         if (not os.path.exists(path)):
             raise FileNotFoundError(f"Specified config file does not exist: '{path}'.")
 
-        _load_config_file(path, raw_config, sources, edq.config.constants.CONFIG_SOURCE_CLI_FILE)
+        _load_config_file(path, raw_config, sources, edq.config.source.SourceLabel.CLI_FILE)
 
     # Check the command-line config options.
     cli_configs = cli_arguments.get(edq.config.constants.CONFIG_OPTIONS_KEY, [])
@@ -158,7 +140,7 @@ def get_tiered_config(
         (key, value) = edq.config.util.parse_string_config_option(cli_config_option)
 
         raw_config[key] = value
-        sources[key] = ConfigSource(label = edq.config.constants.CONFIG_SOURCE_CLI)
+        sources[key] = edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI)
 
     # Finally, ignore any configs that is specified from CLI command.
     cli_ignore_configs = cli_arguments.get(edq.config.constants.IGNORE_CONFIG_OPTIONS_KEY, [])
@@ -201,8 +183,8 @@ def get_tiered_config(
 def _load_config_file(
         config_path: str,
         config: typing.Dict[str, typing.Any],
-        sources: typing.Dict[str, ConfigSource],
-        source_label: str,
+        sources: typing.Dict[str, edq.config.source.ConfigSource],
+        source_label: edq.config.source.SourceLabel,
         ) -> None:
     """
     Loads config variables and the source from the given config JSON file.
@@ -220,11 +202,11 @@ def _load_config_file(
         key = edq.config.util.validate_config_key(key, value)
 
         config[key] = value
-        sources[key] = ConfigSource(label = source_label, path = config_path)
+        sources[key] = edq.config.source.ConfigSource(label = source_label, path = config_path)
 
 def _load_env_variables(
         config: typing.Dict[str, typing.Any],
-        sources: typing.Dict[str, ConfigSource],
+        sources: typing.Dict[str, edq.config.source.ConfigSource],
         ) -> None:
     """
     Load config from environmental variables.
@@ -239,7 +221,7 @@ def _load_env_variables(
         key = key.removeprefix(prefix).lower()
 
         config[key] = value
-        sources[key] = ConfigSource(label = edq.config.constants.CONFIG_SOURCE_ENV)
+        sources[key] = edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.ENV)
 
 def _get_local_config_path(
         local_config_root_cutoff: typing.Union[str, None] = None,
