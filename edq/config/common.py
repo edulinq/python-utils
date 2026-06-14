@@ -4,12 +4,12 @@ import edq.config.constants
 import edq.config.source
 import edq.util.serial
 
-DEFAULT_LOAD_ORDER: typing.List[edq.config.source.ConfigSource] = [
-    edq.config.source.ConfigSource(edq.config.source.SourceLabel.GLOBAL),
-    edq.config.source.ConfigSource(edq.config.source.SourceLabel.LOCAL),
-    edq.config.source.ConfigSource(edq.config.source.SourceLabel.ENV),
-    edq.config.source.ConfigSource(edq.config.source.SourceLabel.CLI_FILE),
-    edq.config.source.ConfigSource(edq.config.source.SourceLabel.CLI),
+DEFAULT_LOAD_ORDER: typing.List[edq.config.source.ConfigSourceSpec] = [
+    edq.config.source.GlobalSpec(),
+    edq.config.source.LocalSpec(),
+    edq.config.source.ENVSpec(),
+    edq.config.source.CLIFileSpec(),
+    edq.config.source.CLISpec(),
 ]
 
 # Private module-level options.
@@ -27,4 +27,4 @@ _env_prefix: str = edq.config.constants.DEFAULT_ENV_PREFIX  # pylint: disable=in
 
 _legacy_config_filename: typing.Union[str, None] = None  # pylint: disable=invalid-name
 
-_load_order: typing.List[edq.config.source.ConfigSource] = DEFAULT_LOAD_ORDER.copy()
+_load_order: typing.List[edq.config.source.ConfigSourceSpec] = DEFAULT_LOAD_ORDER.copy()

@@ -67,12 +67,12 @@ def set_legacy_config_filename(legacy_filename: typing.Union[str, None]) -> None
 
     edq.config.common._legacy_config_filename = legacy_filename
 
-def get_load_order() -> typing.List[edq.config.source.ConfigSource]:
+def get_load_order() -> typing.List[edq.config.source.ConfigSourceSpec]:
     """ Get the order to load config sources. """
 
     return edq.config.common._load_order
 
-def set_load_order(load_order: typing.Union[typing.List[edq.config.source.ConfigSource], None]) -> None:
+def set_load_order(load_order: typing.Union[typing.List[edq.config.source.ConfigSourceSpec], None]) -> None:
     """ Set the legacy config filename. """
 
     if (load_order is None):

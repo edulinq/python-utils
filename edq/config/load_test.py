@@ -66,8 +66,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.GLOBAL,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.GlobalSpec(),
                         path = os.path.join(temp_dir, "global", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -181,8 +181,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.GLOBAL,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.GlobalSpec(),
                         path = os.path.join(temp_dir, "multiple-options", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -210,8 +210,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.GLOBAL,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.GlobalSpec(),
                         path = os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -233,8 +233,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.LOCAL,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.LocalSpec(),
                         path = os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -256,8 +256,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.LOCAL,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.LocalSpec(),
                         path = os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                     ),
                 },
@@ -280,8 +280,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.LOCAL,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.LocalSpec(),
                         path = os.path.join(temp_dir, "old-name", "config.json"),
                     ),
                 },
@@ -301,8 +301,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "server": "http://test.edulinq.org",
                 },
                 {
-                    "server": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.LOCAL,
+                    "server": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.LocalSpec(),
                         path = os.path.join(temp_dir, "nested", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -392,8 +392,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.LOCAL,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.LocalSpec(),
                         path = os.path.join(temp_dir, "multiple-options", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -419,8 +419,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.LOCAL,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.LocalSpec(),
                         path = os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -443,8 +443,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.LOCAL,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.LocalSpec(),
                         path = os.path.join(temp_dir, "nested", "nest1", "nest2b", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -477,12 +477,12 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "server": "http://test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.CLI_FILE,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLIFileSpec(),
                         path = os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
-                    "server": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.CLI_FILE,
+                    "server": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLIFileSpec(),
                         path = os.path.join(temp_dir, "nested", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -507,8 +507,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.CLI_FILE,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLIFileSpec(),
                         path = os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -625,8 +625,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.CLI_FILE,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLIFileSpec(),
                         path = os.path.join(temp_dir, "multiple-options", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -653,8 +653,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.CLI_FILE,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLIFileSpec(),
                         path = os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -681,7 +681,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {},
                 None,
@@ -721,7 +723,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {},
                 None,
@@ -743,7 +747,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "pass": "password=1234",
                 },
                 {
-                    "pass": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "pass": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {},
                 None,
@@ -787,7 +793,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {},
                 None,
@@ -812,7 +820,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {},
                 None,
@@ -834,8 +844,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.LOCAL,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.LocalSpec(),
                         path = os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -863,8 +873,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.CLI_FILE,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLIFileSpec(),
                         path = os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
                     ),
                 },
@@ -891,7 +901,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {
                     edq.config.constants.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.config.constants.DEFAULT_CONFIG_FILENAME),
@@ -915,8 +927,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.CLI_FILE,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLIFileSpec(),
                         path = os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                     ),
                 },
@@ -942,7 +954,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {
                     'local_config_path': os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
@@ -969,7 +983,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {},
                 None,
@@ -995,7 +1011,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {
                     edq.config.constants.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.config.constants.DEFAULT_CONFIG_FILENAME),
@@ -1020,7 +1038,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {
                     edq.config.constants.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.config.constants.DEFAULT_CONFIG_FILENAME),
@@ -1046,8 +1066,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.CLI_FILE,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLIFileSpec(),
                         path = os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                     ),
                 },
@@ -1077,7 +1097,9 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {
                     'local_config_path': os.path.join(temp_dir, "simple", edq.config.constants.DEFAULT_CONFIG_FILENAME),
@@ -1106,11 +1128,13 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "pass": "password1234",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.CLI_FILE,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLIFileSpec(),
                         path = os.path.join(temp_dir, "custom-name", "custom-edq-config.json"),
                     ),
-                    "pass": edq.config.source.ConfigSource(label = edq.config.source.SourceLabel.CLI),
+                    "pass": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.CLISpec(),
+                    ),
                 },
                 {
                     edq.config.constants.GLOBAL_CONFIG_KEY: os.path.join(temp_dir, "global", edq.config.constants.DEFAULT_CONFIG_FILENAME),
@@ -1131,8 +1155,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.ENV,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.ENVSpec(),
                     ),
                 },
                 {},
@@ -1151,8 +1175,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "user@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.ENV,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.ENVSpec(),
                     ),
                 },
                 {},
@@ -1173,11 +1197,11 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "pass": "password1234",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.ENV,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.ENVSpec(),
                     ),
-                    "pass": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.ENV,
+                    "pass": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.ENVSpec(),
                     ),
                 },
                 {},
@@ -1196,8 +1220,8 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     "user": "other@test.edulinq.org",
                 },
                 {
-                    "user": edq.config.source.ConfigSource(
-                        label = edq.config.source.SourceLabel.ENV,
+                    "user": edq.config.load.ConfigLoadResult(
+                        spec = edq.config.source.ENVSpec(),
                     ),
                 },
                 {
