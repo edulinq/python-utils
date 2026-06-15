@@ -1,9 +1,16 @@
 {
     "cli": "edq.cli.config.list",
-    "arguments": [
-        "--config-global", "__DATA_DIR__(configs/empty/edq-config.json)",
+    "setup_funcs": [
+        "edq.testing.cli.create_directory_structure",
     ],
-    "work_dir": "__TEMP_DIR__()"
+    "arguments": [
+        "--config-global", "global.json",
+    ],
+    "work_dir": "__TEMP_DIR__()",
+    "extra_options": {
+        "directory_structure": [
+        ],
+    },
 }
 ---
 Key	Value

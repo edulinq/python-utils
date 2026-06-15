@@ -25,9 +25,6 @@ class ConfigLoadResult(edq.util.serial.DictConverter):
         self.spec: edq.config.source.ConfigSourceSpec = spec
         """ The config source spec that caused this item to be loaded. """
 
-        if (path is not None):
-            path = os.path.abspath(path)
-
         self.path: typing.Union[str, None] = path
         """ If this result was loaded from a file, this is the path to that file. """
 
@@ -63,9 +60,8 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
 
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
-        local_config_root_cutoff: typing.Union[str, None] = None,
-        serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
         load_order: typing.Union[typing.List[edq.config.source.ConfigSourceSpec], None] = None,
+        serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
         ) -> TieredConfigInfo:
     """
     Load all configuration options from files and command-line arguments.

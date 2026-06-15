@@ -171,7 +171,6 @@ class ProjectSpec(AbstractPathSpec):
 edq.config.common._DEFAULT_LOAD_ORDER = [
     GlobalSpec(),
     ProjectSpec(),
-    LocalSpec(),
     ENVSpec(),
     CLIFileSpec(),
     CLISpec(),

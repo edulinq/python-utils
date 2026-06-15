@@ -1,5 +1,5 @@
 {
-    "cli": "edq.cli.config.set",
+    "cli": "edq.cli.config.unset",
     "setup_funcs": [
         "edq.testing.cli.create_directory_structure",
     ],
@@ -7,22 +7,22 @@
         "edq.config.testing.verify_cli_test_config_content",
     ],
     "arguments": [
-        "pass=password1234",
-        "--file", "config.json",
+        "user",
+        "--project",
     ],
     "work_dir": "__TEMP_DIR__()",
     "extra_options": {
         "directory_structure": [
-            ["config.json", {
+            ["edq-config.json", {
                 "user": "user@test.edulinq.org",
+                "pass": "password1234",
             }],
         ],
-        "path": "config.json",
+        "path": "edq-config.json",
         "data": {
-            "user": "user@test.edulinq.org",
             "pass": "password1234",
         },
     },
 }
 ---
-Wrote 1 config option(s) to: '__TEMP_DIR__(config.json)'.
+Unset config option ('user') from: '__TEMP_DIR__(edq-config.json)'.

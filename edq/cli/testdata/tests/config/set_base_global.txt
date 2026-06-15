@@ -1,15 +1,24 @@
 {
     "cli": "edq.cli.config.set",
+    "setup_funcs": [
+        "edq.testing.cli.create_directory_structure",
+    ],
+    "teardown_funcs": [
+        "edq.config.testing.verify_cli_test_config_content",
+    ],
     "arguments": [
         "pass=password1234",
         "--global",
-        "--config-global", "__TEMP_DIR__(simple/edq-config.json)",
+        "--config-global", "global.json",
     ],
     "work_dir": "__TEMP_DIR__()",
-    "teardown_funcs": ["edq.config.testing.verify_cli_test_config_content"],
-    "setup_funcs": ["edq.config.testing.create_cli_test_dir"],
     "extra_options": {
-        "path": "simple/edq-config.json",
+        "directory_structure": [
+            ["global.json", {
+                "user": "user@test.edulinq.org",
+            }],
+        ],
+        "path": "global.json",
         "data": {
             'pass': 'password1234',
             'user': 'user@test.edulinq.org',
@@ -17,4 +26,4 @@
     },
 }
 ---
-Wrote 1 config option(s) to: '__TEMP_DIR__(simple/edq-config.json)'.
+Wrote 1 config option(s) to: '__TEMP_DIR__(global.json)'.

@@ -63,6 +63,11 @@ def add_config_location_argument_group(parser: argparse.ArgumentParser) -> None:
         help = ("Target config option(s) in a local config file.")
     )
 
+    group.add_argument('--project',
+        action = 'store_true', dest = 'scope_project',
+        help = ("Target config option(s) in a project config file.")
+    )
+
     group.add_argument('--global',
         action = 'store_true', dest = 'scope_global',
         help =  ("Target config option(s) in the global config file."),

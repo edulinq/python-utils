@@ -1,4 +1,3 @@
-
 {
     "cli": "edq.cli.config.set",
     "arguments": [

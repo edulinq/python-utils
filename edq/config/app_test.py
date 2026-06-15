@@ -7,6 +7,7 @@ import edq.config.load
 import edq.config.testing
 import edq.testing.unittest
 import edq.util.crypto
+import edq.util.dirent
 import edq.util.json
 import edq.util.serial
 
@@ -21,6 +22,14 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
         """
         Test loading config into an application config.
         """
+
+        edq.config.settings.set_application_config_class(edq.config.testing.TestApplicationConfig)
+
+        temp_dir = edq.util.dirent.get_temp_dir(prefix = "edq-test_application_config_base")
+
+        # Use a fixed key.
+        os.environ['EDQ__ENCRYPTION_KEY'] = 'key'
+        serialization_context = edq.util.serial.SerializationContext(key = 'key')
 
         # [(application config, dict POD config), ...]
         test_cases: typing.List[typing.Tuple[
@@ -70,20 +79,16 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
             ),
         ]
 
-        # Use a fixed key.
-        os.environ['EDQ__ENCRYPTION_KEY'] = 'key'
-        serialization_context = edq.util.serial.SerializationContext(key = 'key')
-
         for (i, test_case) in enumerate(test_cases):
             expected_application_config, expected_dict_config = test_case
 
             with self.subTest(msg = f"Case {i}"):
-                # Write the dict config to disk.
-                temp_dir = edq.config.testing.create_test_dir(temp_dir_prefix = "edq-test-application-config-base-")
-                config_path = os.path.join(temp_dir, 'config.json')
-                edq.util.json.dump_path(expected_dict_config, config_path)
+                base_dir = os.path.join(temp_dir, f"{i:03d}")
+                edq.util.dirent.mkdir(base_dir)
 
-                edq.config.settings.set_application_config_class(edq.config.testing.TestApplicationConfig)
+                # Write the dict config to disk.
+                config_path = os.path.join(base_dir, 'config.json')
+                edq.util.json.dump_path(expected_dict_config, config_path)
 
                 # Load the tiered config.
                 # Note that they encryption key is passed via an environmental variable.

@@ -52,10 +52,13 @@ def _get_path_from_source(key: str, args: argparse.Namespace) -> typing.Union[st
             continue
 
         # If nothing was specified, match the first path.
-        if ((not args.scope_local) and (not args.scope_global)):
+        if ((not args.scope_local) and (not args.scope_project) and (not args.scope_global)):
             return source.path
 
         if (args.scope_local and isinstance(source.spec, edq.config.source.LocalSpec)):
+            return source.path
+
+        if (args.scope_project and isinstance(source.spec, edq.config.source.ProjectSpec)):
             return source.path
 
         if (args.scope_global and isinstance(source.spec, edq.config.source.GlobalSpec)):

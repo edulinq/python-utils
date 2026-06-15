@@ -490,3 +490,15 @@ def setup_teardown_copy(
             dest = os.path.join(test_info.work_dir, dest)
 
         edq.util.dirent.copy(source, dest)
+
+def create_directory_structure(
+        test: edq.testing.unittest.BaseTest,
+        test_info: CLITestInfo,
+        ) -> None:
+    """
+    A version of edq.testing.unittest.create_directory_structure() callable from a CLI test.
+    The test's temp dir will be used as the base dir,
+    and 'directory_structure' on the extra options will be used as the spec.
+    """
+
+    edq.testing.unittest.create_directory_structure(test_info.extra_options.get('directory_structure', []), test_info.temp_dir)

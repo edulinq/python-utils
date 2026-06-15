@@ -1,5 +1,6 @@
 import datetime
 import difflib
+import os
 import typing
 import unittest
 
@@ -10,6 +11,12 @@ import edq.util.serial
 import edq.util.time
 
 FORMAT_STR: str = "\n--- Expected ---\n%s\n--- Actual ---\n%s\n---\n"
+
+DirentSpec = typing.Tuple[str, typing.Union[str, typing.Dict[str, edq.util.serial.PODType], typing.List['DirentSpec']]]  # pylint: disable=invalid-name
+"""
+A simple spec for a directory entry.
+See create_directory_structure().
+"""
 
 class BaseTest(unittest.TestCase):
     """
@@ -162,3 +169,27 @@ class BaseTest(unittest.TestCase):
         message += "\n--- Diff ---\n" + ''.join(lines) + "\n------------"
 
         return message
+
+def create_directory_structure(spec: typing.List[DirentSpec], base_dir: str) -> None:
+    """
+    Create a directory strucutre from a simple definition.
+    The definition represents a list of direents.
+    Each dirent is a tuple with the name of a dirent and the contents of the dirent.
+    The contents can be:
+        1) a list if dirents (indicating that this dirent is a directory),
+        2) a dict (indicating that this dirent is a JSON file),
+        or 3) a string (indicating that this dirent is a text file).
+    """
+
+    for (name, contents) in spec:
+        path = os.path.join(base_dir, name)
+
+        if (isinstance(contents, str)):
+            edq.util.dirent.write_file(path, contents)
+        elif (isinstance(contents, dict)):
+            edq.util.json.dump_path(contents, path, indent = 4)
+        elif (isinstance(contents, list)):
+            edq.util.dirent.mkdir(path)
+            create_directory_structure(contents, path)
+        else:
+            raise ValueError(f"Unknown dirent content type ('{type(contents)}') at path: '{path}'.")

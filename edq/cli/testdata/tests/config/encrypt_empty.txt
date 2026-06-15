@@ -2,14 +2,16 @@
     "cli": "edq.cli.config.encrypt",
     "setup_funcs": [
         "edq.config.testing.set_testing_application_config_class",
-        "edq.testing.cli.setup_teardown_copy",
+        "edq.testing.cli.create_directory_structure",
     ],
     "teardown_funcs": [
         "edq.config.testing.clear_testing_application_config_class",
     ],
     "extra_options": {
-        "copy": [
-            ["__DATA_DIR__(configs/secret/ciphertext.json)", "edq-config.json"],
+        "directory_structure": [
+            ["edq-config.json", {
+                "token": "__edq_secret__::AES256v1::PhL6S1bcK8EYsfR7NcTFrA==::jy8pQSZCwI/h+JMMps5J/w==::AOTrY7prHSVxLt9DvMNfxw==",
+            }],
         ],
     },
     "arguments": [

@@ -16,88 +16,107 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
         Test that the given config is updated correctly and paths are created correctly.
         """
 
-        # [(write config arguments, expected result, error substring), ...]
+        temp_dir = edq.util.dirent.get_temp_dir(prefix = "edq-test_update_config_base")
+
+        # [(directory structure, rel path, config to write, expected result, error substring), ...]
         test_cases: typing.List[typing.Tuple[
+            typing.List[edq.testing.unittest.DirentSpec],
+            str,
             typing.Dict[str, typing.Any],
             typing.Dict[str, typing.Any],
             typing.Union[str, None],
         ]] = [
             # Non-exisiting Path
             (
+                [],
+                'non-exisiting.json',
                 {
-                    'path': os.path.join('non-exisiting-path', edq.config.settings.get_config_filename()),
-                    'config_to_write': {'user': 'user@test.edulinq.org'},
+                    'user': 'user@test.edulinq.org',
                 },
                 {
-                    'path': os.path.join('non-exisiting-path', edq.config.settings.get_config_filename()),
-                    'data': {'user': 'user@test.edulinq.org'},
+                    'user': 'user@test.edulinq.org',
                 },
                 None,
             ),
 
             # Directory Path
             (
-                {
-                    'path': os.path.join("dir-config", edq.config.settings.get_config_filename()),
-                    'config_to_write': {'user': 'user@test.edulinq.org'},
-                },
+                [
+                    ('some-dir', []),
+                ],
+                'some-dir',
+                {},
                 {},
                 "Cannot open JSON file, expected a file but got a directory",
             ),
 
             # Empty Config
             (
+                [
+                    ('config.json', {}),
+                ],
+                'config.json',
                 {
-                    'path': os.path.join('empty', edq.config.settings.get_config_filename()),
-                    'config_to_write': {'user': 'user@test.edulinq.org'},
+                    'user': 'user@test.edulinq.org',
                 },
                 {
-                    'path': os.path.join('empty', edq.config.settings.get_config_filename()),
-                    'data': {'user': 'user@test.edulinq.org'},
+                    'user': 'user@test.edulinq.org',
                 },
                 None,
             ),
 
             # Non-empty Config
             (
+                [
+                    ('config.json', {
+                        'user': 'user@test.edulinq.org',
+                    }),
+                ],
+                'config.json',
                 {
-                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
-                    'config_to_write': {'pass': 'password1234'},
+                    'pass': 'password1234',
                 },
                 {
-                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
-                    'data': {'user': 'user@test.edulinq.org', 'pass': 'password1234'},
+                    'user': 'user@test.edulinq.org',
+                    'pass': 'password1234',
                 },
                 None,
             ),
 
             # Non-empty Config (Overwrite)
             (
+                [
+                    ('config.json', {
+                        'user': 'alice@test.edulinq.org',
+                    }),
+                ],
+                'config.json',
                 {
-                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
-                    'config_to_write': {'user': 'admin@test.edulinq.org'},
+                    'user': 'user@test.edulinq.org',
                 },
                 {
-                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
-                    'data': {'user': 'admin@test.edulinq.org'},
+                    'user': 'user@test.edulinq.org',
                 },
                 None,
             ),
         ]
 
         for (i, test_case) in enumerate(test_cases):
-            kwargs, expected_result, error_substring = test_case
+            directory_structure, relpath, config_to_write, expected, error_substring = test_case
 
             with self.subTest(msg = f"Case {i}"):
-                temp_dir = edq.config.testing.create_test_dir(temp_dir_prefix = "edq-test-update-config-")
+                base_dir = os.path.join(temp_dir, f"{i:03d}")
+                edq.util.dirent.mkdir(base_dir)
 
-                kwargs['path'] = os.path.join(temp_dir, kwargs['path'])
+                path = os.path.join(base_dir, relpath)
+
+                edq.testing.unittest.create_directory_structure(directory_structure, base_dir)
 
                 previous_work_directory = os.getcwd()
-                os.chdir(temp_dir)
+                os.chdir(base_dir)
 
                 try:
-                    edq.config.util.update_options_in_config_file(**kwargs)
+                    edq.config.util.update_options_in_config_file(path, config_to_write)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
 
@@ -113,110 +132,126 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
                 if (error_substring is not None):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
-                path = os.path.join(temp_dir, expected_result["path"])
-
-                data_actual = edq.util.json.load_path(path)
-                data_expected = expected_result['data']
-
-                self.assertJSONDictEqual(data_actual, data_expected)
+                actual = edq.util.json.load_path(path)
+                self.assertJSONDictEqual(expected, actual)
 
     def test_remove_config_option_base(self) -> None:
         """
         Test that the given config option(s) are removed correctly.
         """
 
-        # [(write config arguments, expected result, error substring), ...]
+        temp_dir = edq.util.dirent.get_temp_dir(prefix = "edq-test_remove_config_option_base")
+
+        # [(directory structure, rel path, config to remove, expected result, error substring), ...]
         test_cases: typing.List[typing.Tuple[
-            typing.Dict[str, typing.Any],
+            typing.List[edq.testing.unittest.DirentSpec],
+            str,
+            typing.List[str],
             typing.Dict[str, typing.Any],
             typing.Union[str, None],
         ]] = [
             # Non-exisiting Path
             (
-                {
-                    'path': os.path.join('non-exisiting-path', edq.config.settings.get_config_filename()),
-                    'config_to_remove': ['user'],
-                },
+                [],
+                'non-exisiting.json',
+                [],
                 {},
                 "FileNotFoundError",
             ),
 
-            # Remove No Options
-            (
-                {
-                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
-                    'config_to_remove': [],
-                },
-                {
-                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
-                    'data': {'user': 'user@test.edulinq.org'},
-                },
-                None,
-            ),
-
             # Directory Path
             (
-                {
-                    'path': os.path.join("dir-config", edq.config.settings.get_config_filename()),
-                    'config_to_remove': ['user'],
-                },
+                [
+                    ('some-dir', []),
+                ],
+                'some-dir',
+                [],
                 {},
                 "Cannot open JSON file, expected a file but got a directory",
             ),
 
+            # Remove No Options
+            (
+                [
+                    ('config.json', {
+                        'user': 'user@test.edulinq.org',
+                    }),
+                ],
+                'config.json',
+                [
+                    'pass',
+                ],
+                {
+                    'user': 'user@test.edulinq.org',
+                },
+                None,
+            ),
+
             # Empty Config
             (
-                {
-                    'path': os.path.join('empty', edq.config.settings.get_config_filename()),
-                    'config_to_remove': ['user'],
-                },
-                {
-                    'path': os.path.join('empty', edq.config.settings.get_config_filename()),
-                    'data': {},
-                },
+                [
+                    ('config.json', {}),
+                ],
+                'config.json',
+                [
+                    'user',
+                ],
+                {},
                 None,
             ),
 
             # Non-empty Config (Remove Single Option)
             (
+                [
+                    ('config.json', {
+                        'user': 'user@test.edulinq.org',
+                        'pass': 'password1234',
+                    }),
+                ],
+                'config.json',
+                [
+                    'user',
+                ],
                 {
-                    'path': os.path.join('multiple-options', edq.config.settings.get_config_filename()),
-                    'config_to_remove': ['pass'],
-                },
-                {
-                    'path': os.path.join('multiple-options', edq.config.settings.get_config_filename()),
-                    'data': {'user': 'user@test.edulinq.org'},
+                    'pass': 'password1234',
                 },
                 None,
             ),
 
             # Non-empty Config (Remove Multiple Options)
             (
-                {
-                    'path': os.path.join('multiple-options', edq.config.settings.get_config_filename()),
-                    'config_to_remove': ['pass', 'user'],
-                },
-                {
-                    'path': os.path.join('multiple-options', edq.config.settings.get_config_filename()),
-                    'data': {},
-                },
+                [
+                    ('config.json', {
+                        'user': 'user@test.edulinq.org',
+                        'pass': 'password1234',
+                    }),
+                ],
+                'config.json',
+                [
+                    'user',
+                    'pass',
+                ],
+                {},
                 None,
             ),
         ]
 
         for (i, test_case) in enumerate(test_cases):
-            kwargs, expected_result, error_substring = test_case
+            directory_structure, relpath, config_to_remove, expected, error_substring = test_case
 
             with self.subTest(msg = f"Case {i}"):
-                temp_dir = edq.config.testing.create_test_dir(temp_dir_prefix = "edq-test-remove-config-")
+                base_dir = os.path.join(temp_dir, f"{i:03d}")
+                edq.util.dirent.mkdir(base_dir)
 
-                kwargs['path'] = os.path.join(temp_dir, str(kwargs['path']))
+                path = os.path.join(base_dir, relpath)
+
+                edq.testing.unittest.create_directory_structure(directory_structure, base_dir)
 
                 previous_work_directory = os.getcwd()
-                os.chdir(temp_dir)
+                os.chdir(base_dir)
 
                 try:
-                    edq.config.util.remove_options_in_config_file(kwargs['path'], kwargs['config_to_remove'])
+                    edq.config.util.remove_options_in_config_file(path, config_to_remove)
                 except Exception as ex:
                     error_string = self.format_error_string(ex)
 
@@ -232,9 +267,5 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
                 if (error_substring is not None):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
-                path = os.path.join(temp_dir, str(expected_result["path"]))
-
-                data_actual = edq.util.json.load_path(path)
-                data_expected = expected_result['data']
-
-                self.assertJSONDictEqual(data_actual, data_expected)
+                actual = edq.util.json.load_path(path)
+                self.assertJSONDictEqual(expected, actual)

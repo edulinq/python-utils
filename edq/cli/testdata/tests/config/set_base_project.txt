@@ -8,21 +8,21 @@
     ],
     "arguments": [
         "pass=password1234",
-        "--file", "config.json",
+        "--project",
     ],
     "work_dir": "__TEMP_DIR__()",
     "extra_options": {
         "directory_structure": [
-            ["config.json", {
+            ["edq-config.json", {
                 "user": "user@test.edulinq.org",
             }],
         ],
-        "path": "config.json",
+        "path": "edq-config.json",
         "data": {
-            "user": "user@test.edulinq.org",
-            "pass": "password1234",
+            'pass': 'password1234',
+            'user': 'user@test.edulinq.org',
         },
     },
 }
 ---
-Wrote 1 config option(s) to: '__TEMP_DIR__(config.json)'.
+Wrote 1 config option(s) to: '__TEMP_DIR__(edq-config.json)'.

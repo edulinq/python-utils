@@ -103,6 +103,9 @@ class InternalConfigSourceSpec(edq.util.serial.DictConverter):
         if (len(self.label) == 0):
             raise ValueError(f"ConfigSourceSpec child class ({type(self)}) did not set label.")
 
+        self.type: str = self.label
+        """ A label identifying the type of source this is (mainly used for identification during serialization). """
+
 # Will be set by edq.config.app on import.
 _DEFAULT_APPLICATION_CONFIG_CLASS: typing.Type[InternalApplicationConfig] = InternalApplicationConfig
 _application_config_class: typing.Type[InternalApplicationConfig] = _DEFAULT_APPLICATION_CONFIG_CLASS

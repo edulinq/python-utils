@@ -48,22 +48,25 @@ def modify_parser(parser: argparse.ArgumentParser) -> None:
 def _get_target_path(args: argparse.Namespace) -> typing.Union[str, None]:
     """
     Decide where to write the given config to.
-    If no source is explicitly specified, write to the first local config.
+    If no source is explicitly specified, write to the first local or project config.
     If no config location can be determined, return None.
     """
 
     if (args.scope_file is not None):
         return args.scope_file
 
-    # Use a local path if no source is specified or if local is explicitly specified.
-    use_local = (args.scope_local or (not args.scope_global))
+    # If no explicit scope is provided, use either local or project scopes (whichever appears first).
+    no_explicit_scope = ((not args.scope_local) and (not args.scope_project) and (not args.scope_global))
 
     for spec in edq.config.settings.get_load_order():
         # Skip specs that do not have a path.
         if (not isinstance(spec, edq.config.source.AbstractPathSpec)):
             continue
 
-        if (use_local and isinstance(spec, edq.config.source.LocalSpec)):
+        if ((args.scope_local or no_explicit_scope) and isinstance(spec, edq.config.source.LocalSpec)):
+            return spec.resolve_path()
+
+        if ((args.scope_project or no_explicit_scope) and isinstance(spec, edq.config.source.ProjectSpec)):
             return spec.resolve_path()
 
         if (args.scope_global and isinstance(spec, edq.config.source.GlobalSpec)):
