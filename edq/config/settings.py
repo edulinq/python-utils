@@ -3,13 +3,11 @@ import typing
 import edq.config.app
 import edq.config.common
 import edq.config.constants
+import edq.config.source
 import edq.util.serial
 
 def get_application_config_class() -> typing.Type[edq.config.app.BaseApplicationConfig]:
     """ Get the application config class. """
-
-    if (edq.config.common._application_config_class is None):
-        edq.config.common._application_config_class = edq.config.app.BaseApplicationConfig
 
     return typing.cast(typing.Type[edq.config.app.BaseApplicationConfig], edq.config.common._application_config_class)
 
@@ -17,17 +15,20 @@ def set_application_config_class(config_class: typing.Union[typing.Type[edq.conf
     """ Set the application config class. """
 
     if (config_class is None):
-        config_class = edq.config.app.BaseApplicationConfig
+        config_class = edq.config.common._DEFAULT_APPLICATION_CONFIG_CLASS  # type: ignore[assignment]
 
-    edq.config.common._application_config_class = config_class
+    edq.config.common._application_config_class = config_class  # type: ignore[assignment]
 
 def get_config_filename() -> str:
     """ Get the config filename. """
 
     return edq.config.common._config_filename
 
-def set_config_filename(filename: str) -> None:
+def set_config_filename(filename: typing.Union[str, None] = None) -> None:
     """ Set the config filename. """
+
+    if (filename is None):
+        filename = edq.config.common._DEFAULT_CONFIG_FILENAME
 
     edq.config.common._config_filename = filename
 
@@ -40,7 +41,7 @@ def set_default_encryption_key(encryption_key: typing.Union[str, None] = None) -
     """ Set the default encryption key. """
 
     if (encryption_key is None):
-        encryption_key = edq.config.constants.DEFAULT_ENCRYPTION_KEY
+        encryption_key = edq.config.common._DEFAULT_DEFAULT_ENCRYPTION_KEY
 
     edq.config.common._default_encryption_key = encryption_key
 
@@ -53,29 +54,32 @@ def set_env_prefix(prefix: typing.Union[str, None] = None) -> None:
     """ Set the environmental variable prefix. """
 
     if (prefix is None):
-        prefix = edq.config.constants.DEFAULT_ENV_PREFIX
+        prefix = edq.config.common._DEFAULT_ENV_PREFIX
 
     edq.config.common._env_prefix = prefix
 
-def get_legacy_config_filename() -> typing.Union[str, None]:
-    """ Get the config legacy filename. """
+def get_global_dir() -> str:
+    """ Get the global config dir. """
 
-    return edq.config.common._legacy_config_filename
+    return edq.config.common._global_dir
 
-def set_legacy_config_filename(legacy_filename: typing.Union[str, None]) -> None:
-    """ Set the legacy config filename. """
+def set_global_dir(global_dir: typing.Union[str, None] = None) -> None:
+    """ Set the global config dir. """
 
-    edq.config.common._legacy_config_filename = legacy_filename
+    if (global_dir is None):
+        global_dir = edq.config.common._DEFAULT_GLOBAL_DIR
+
+    edq.config.common._global_dir = global_dir
 
 def get_load_order() -> typing.List[edq.config.source.ConfigSourceSpec]:
     """ Get the order to load config sources. """
 
-    return edq.config.common._load_order
+    return typing.cast(typing.List[edq.config.source.ConfigSourceSpec], edq.config.common._load_order)
 
 def set_load_order(load_order: typing.Union[typing.List[edq.config.source.ConfigSourceSpec], None]) -> None:
-    """ Set the legacy config filename. """
+    """ Set the order to load config sources. """
 
     if (load_order is None):
-        load_order = edq.config.common.DEFAULT_LOAD_ORDER.copy()
+        load_order = typing.cast(typing.List[edq.config.source.ConfigSourceSpec], edq.config.common._DEFAULT_LOAD_ORDER.copy())
 
-    edq.config.common._load_order = load_order
+    edq.config.common._load_order = load_order  # type: ignore[assignment]

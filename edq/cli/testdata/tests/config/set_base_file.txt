@@ -16,4 +16,4 @@
     },
 }
 ---
-Wrote config options to: '__TEMP_DIR__(simple/edq-config.json)'.
+Wrote 1 config option(s) to: '__TEMP_DIR__(simple/edq-config.json)'.

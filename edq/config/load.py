@@ -2,8 +2,6 @@ import argparse
 import os
 import typing
 
-import platformdirs
-
 import edq.config.app
 import edq.config.constants
 import edq.config.settings
@@ -17,9 +15,13 @@ class ConfigLoadResult(edq.util.serial.DictConverter):
     """ An instance of a config value being loaded from some config source. """
 
     def __init__(self,
+            value: edq.util.serial.PODType,
             spec: edq.config.source.ConfigSourceSpec,
             path: typing.Union[str, None] = None,
             ) -> None:
+        self.value: edq.util.serial.PODType = value
+        """ The raw config value loaded. """
+
         self.spec: edq.config.source.ConfigSourceSpec = spec
         """ The config source spec that caused this item to be loaded. """
 
@@ -39,82 +41,25 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
     """ A class for storing config information read from a hierarchy of files and sources. """
 
     def __init__(self,
-            config_filename: str,
-            local_config_path: str,
-            global_config_path: str,
             raw_config: typing.Dict[str, edq.util.serial.PODType],
-            sources: typing.Dict[str, ConfigLoadResult],
+            sources: typing.Dict[str, typing.List[ConfigLoadResult]],
             application_config: typing.Union[edq.config.app.BaseApplicationConfig, None] = None,
             ) -> None:
-        # TEST - Remove?
-        self.config_filename: str = config_filename
-        """ Config filename searched for. """
-
-        # TEST - Remove?
-        self.local_config_path: str = local_config_path
-        """
-        Path searched for local config.
-        The file might not exist.
-        """
-
-        # TEST - Remove?
-        self.global_config_path: str = global_config_path
-        """
-        Path searched for global config.
-        The file might not exist.
-        """
-
         self.raw_config: typing.Dict[str, edq.util.serial.PODType] = raw_config
-        """ Key-value configurations. """
+        """ The key-value config pairs after all overrides are processed. """
 
-        self.sources: typing.Dict[str, ConfigLoadResult] = sources
-        """ Where configs came from. """
+        self.sources: typing.Dict[str, typing.List[ConfigLoadResult]] = sources
+        """
+        A representation of every source/value loaded for each config key.
+        As config values are loaded for a key, they are pushed (not appended) onto its dictionary value.
+        The *first* value in the list represents the final loaded value (and should match the corresponding entry in self.raw_config).
+        """
 
         if (application_config is None):
             application_config = edq.config.app.BaseApplicationConfig()
 
         self.application_config: edq.config.app.BaseApplicationConfig = application_config
         """ The config typed for the specific application. """
-
-# TEST - Remove?
-def get_global_config_path() -> str:
-    """ Get the path for the global config file. """
-
-    return platformdirs.user_config_dir(edq.config.settings.get_config_filename())
-
-# TEST - Rework?
-def resolve_config_location(
-        config_info: TieredConfigInfo,
-        is_local: bool,
-        is_global: bool,
-        config_file_path: typing.Union[str, None],
-        ) -> str:
-    """
-    Resolve the config location from the given scope information.
-    Defaults to local config location if unspecified.
-    Raises an exception if an unknown config scope is given.
-    """
-
-    # Default to the local configuration if no configuration type is specified.
-    if ((not is_local) and (not is_global) and (config_file_path is None)):
-        is_local = True
-
-    if (config_file_path is not None):
-        return config_file_path
-
-    if (is_global):
-        return config_info.global_config_path
-
-    if (is_local):
-        local_config_path = config_info.local_config_path
-
-        # Fall back to the default config file name if no local config exists.
-        if (local_config_path is None):
-            local_config_path = config_info.config_filename
-
-        return local_config_path
-
-    raise ValueError("Unknown config location (e.g., not local or global).")
 
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
@@ -133,19 +78,12 @@ def get_tiered_config(
         cli_arguments = {}
 
     raw_config: typing.Dict[str, edq.util.serial.PODType] = {}
-    sources: typing.Dict[str, ConfigLoadResult] = {}
+    sources: typing.Dict[str, typing.List[ConfigLoadResult]] = {}
 
     # Ensure CLI arguments are always a dict,
     # even if provided as an argparse.Namespace.
     if (isinstance(cli_arguments, argparse.Namespace)):
         cli_arguments = vars(cli_arguments)
-
-    # TEST
-    default_global_config_path = cli_arguments.get(edq.config.constants.GLOBAL_CONFIG_KEY, get_global_config_path())
-
-    default_local_config_path = _get_local_config_path(local_config_root_cutoff = local_config_root_cutoff)
-    if (default_local_config_path is None):
-        default_local_config_path = os.path.abspath(edq.config.settings.get_config_filename())
 
     # Load from each specified source.
     for spec in load_order:
@@ -155,7 +93,11 @@ def get_tiered_config(
                 (key, value) = edq.config.util.parse_string_config_option(cli_config_option)
 
                 raw_config[key] = value
-                sources[key] = ConfigLoadResult(spec)
+
+                if (key not in sources):
+                    sources[key] = []
+
+                sources[key].insert(0, ConfigLoadResult(value, spec))
         elif (isinstance(spec, edq.config.source.CLIFileSpec)):
             config_paths = cli_arguments.get(edq.config.constants.CONFIG_PATHS_KEY, [])
             for path in config_paths:
@@ -166,16 +108,10 @@ def get_tiered_config(
         elif (isinstance(spec, edq.config.source.ENVSpec)):
             _load_env_variables(raw_config, sources, spec)
         elif (isinstance(spec, edq.config.source.GlobalSpec)):
-            # TEST - Should be able to pick this up from the source.
-            path = cli_arguments.get(edq.config.constants.GLOBAL_CONFIG_KEY, get_global_config_path())
+            path = spec.resolve_path(override_path = cli_arguments.get(edq.config.constants.GLOBAL_CONFIG_KEY, None))
             _load_config_file(path, raw_config, sources, spec)
-        elif (isinstance(spec, edq.config.source.LocalSpec)):
-            # TEST - Path work
-            path = spec.config_dir
-            if (path is None):
-                path = default_local_config_path
-
-            _load_config_file(path, raw_config, sources, spec)
+        elif (isinstance(spec, edq.config.source.AbstractPathSpec)):
+            _load_config_file(spec.resolve_path(), raw_config, sources, spec)
         else:
             raise ValueError(f"Unknown config source spec: '{type(spec)}'.")
 
@@ -209,11 +145,6 @@ def get_tiered_config(
     )
 
     return TieredConfigInfo(
-        edq.config.settings.get_config_filename(),
-        # TEST
-        default_local_config_path,
-        # TEST
-        default_global_config_path,
         raw_config,
         sources,
         application_config = application_config,
@@ -222,7 +153,7 @@ def get_tiered_config(
 def _load_config_file(
         config_path: str,
         config: typing.Dict[str, typing.Any],
-        sources: typing.Dict[str, ConfigLoadResult],
+        sources: typing.Dict[str, typing.List[ConfigLoadResult]],
         spec: edq.config.source.ConfigSourceSpec,
         ) -> None:
     """
@@ -241,11 +172,15 @@ def _load_config_file(
         key = edq.config.util.validate_config_key(key, value)
 
         config[key] = value
-        sources[key] = ConfigLoadResult(spec, config_path)
+
+        if (key not in sources):
+            sources[key] = []
+
+        sources[key].insert(0, ConfigLoadResult(value, spec, config_path))
 
 def _load_env_variables(
         config: typing.Dict[str, typing.Any],
-        sources: typing.Dict[str, ConfigLoadResult],
+        sources: typing.Dict[str, typing.List[ConfigLoadResult]],
         spec: edq.config.source.ConfigSourceSpec,
         ) -> None:
     """
@@ -261,71 +196,8 @@ def _load_env_variables(
         key = key.removeprefix(prefix).lower()
 
         config[key] = value
-        sources[key] = ConfigLoadResult(spec)
 
-def _get_local_config_path(
-        local_config_root_cutoff: typing.Union[str, None] = None,
-        ) -> typing.Union[str, None]:
-    """
-    Search for a config file in hierarchical order.
-    Begins with the provided config file name,
-    then legacy config file name (if set),
-    then continues up the directory tree looking for the provided config file name.
-    Returns the absolute path to the first config file found.
+        if (key not in sources):
+            sources[key] = []
 
-    Returns None if no config file is found.
-
-    The cutoff parameter limits the search depth,
-    preventing detection of config file in higher-level directories during testing.
-    """
-
-    config_filename = edq.config.settings.get_config_filename()
-    legacy_config_filename = edq.config.settings.get_legacy_config_filename()
-
-    # Provided config file is in current directory.
-    if (os.path.isfile(config_filename)):
-        return os.path.abspath(config_filename)
-
-    # Provided legacy config file is in current directory.
-    if (legacy_config_filename is not None):
-        if (os.path.isfile(legacy_config_filename)):
-            return os.path.abspath(legacy_config_filename)
-
-    # Provided config file is found in an ancestor directory up to the root or cutoff limit.
-    parent_dir = os.path.dirname(os.getcwd())
-    return _get_ancestor_config_file_path(
-        parent_dir,
-        local_config_root_cutoff = local_config_root_cutoff,
-    )
-
-def _get_ancestor_config_file_path(
-        current_directory: str,
-        local_config_root_cutoff: typing.Union[str, None] = None,
-        ) -> typing.Union[str, None]:
-    """
-    Search through the parent directories (until root or a given cutoff directory(inclusive)) for a config file.
-    Stops at the first occurrence of the specified config file along the path to root.
-    Returns the path if a config file is found.
-    Otherwise, returns None.
-    """
-
-    if (local_config_root_cutoff is not None):
-        local_config_root_cutoff = os.path.abspath(local_config_root_cutoff)
-
-    current_directory = os.path.abspath(current_directory)
-    for _ in range(edq.util.dirent.DEPTH_LIMIT):
-        config_file_path = os.path.join(current_directory, edq.config.settings.get_config_filename())
-        if (os.path.isfile(config_file_path)):
-            return config_file_path
-
-        # Check if current directory is root.
-        parent_dir = os.path.dirname(current_directory)
-        if (parent_dir == current_directory):
-            break
-
-        if (local_config_root_cutoff == current_directory):
-            break
-
-        current_directory = parent_dir
-
-    return None
+        sources[key].insert(0, ConfigLoadResult(value, spec))

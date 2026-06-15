@@ -2,6 +2,7 @@ import os
 import typing
 
 import edq.config.constants
+import edq.config.settings
 import edq.config.testing
 import edq.config.util
 import edq.testing.unittest
@@ -24,11 +25,11 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Non-exisiting Path
             (
                 {
-                    'path': os.path.join('non-exisiting-path', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('non-exisiting-path', edq.config.settings.get_config_filename()),
                     'config_to_write': {'user': 'user@test.edulinq.org'},
                 },
                 {
-                    'path': os.path.join('non-exisiting-path', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('non-exisiting-path', edq.config.settings.get_config_filename()),
                     'data': {'user': 'user@test.edulinq.org'},
                 },
                 None,
@@ -37,7 +38,7 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Directory Path
             (
                 {
-                    'path': os.path.join("dir-config", edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join("dir-config", edq.config.settings.get_config_filename()),
                     'config_to_write': {'user': 'user@test.edulinq.org'},
                 },
                 {},
@@ -47,11 +48,11 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Empty Config
             (
                 {
-                    'path': os.path.join('empty', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('empty', edq.config.settings.get_config_filename()),
                     'config_to_write': {'user': 'user@test.edulinq.org'},
                 },
                 {
-                    'path': os.path.join('empty', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('empty', edq.config.settings.get_config_filename()),
                     'data': {'user': 'user@test.edulinq.org'},
                 },
                 None,
@@ -60,11 +61,11 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Non-empty Config
             (
                 {
-                    'path': os.path.join('simple', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
                     'config_to_write': {'pass': 'password1234'},
                 },
                 {
-                    'path': os.path.join('simple', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
                     'data': {'user': 'user@test.edulinq.org', 'pass': 'password1234'},
                 },
                 None,
@@ -73,11 +74,11 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Non-empty Config (Overwrite)
             (
                 {
-                    'path': os.path.join('simple', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
                     'config_to_write': {'user': 'admin@test.edulinq.org'},
                 },
                 {
-                    'path': os.path.join('simple', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
                     'data': {'user': 'admin@test.edulinq.org'},
                 },
                 None,
@@ -133,7 +134,7 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Non-exisiting Path
             (
                 {
-                    'path': os.path.join('non-exisiting-path', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('non-exisiting-path', edq.config.settings.get_config_filename()),
                     'config_to_remove': ['user'],
                 },
                 {},
@@ -143,11 +144,11 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Remove No Options
             (
                 {
-                    'path': os.path.join('simple', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
                     'config_to_remove': [],
                 },
                 {
-                    'path': os.path.join('simple', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('simple', edq.config.settings.get_config_filename()),
                     'data': {'user': 'user@test.edulinq.org'},
                 },
                 None,
@@ -156,7 +157,7 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Directory Path
             (
                 {
-                    'path': os.path.join("dir-config", edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join("dir-config", edq.config.settings.get_config_filename()),
                     'config_to_remove': ['user'],
                 },
                 {},
@@ -166,11 +167,11 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Empty Config
             (
                 {
-                    'path': os.path.join('empty', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('empty', edq.config.settings.get_config_filename()),
                     'config_to_remove': ['user'],
                 },
                 {
-                    'path': os.path.join('empty', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('empty', edq.config.settings.get_config_filename()),
                     'data': {},
                 },
                 None,
@@ -179,11 +180,11 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Non-empty Config (Remove Single Option)
             (
                 {
-                    'path': os.path.join('multiple-options', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('multiple-options', edq.config.settings.get_config_filename()),
                     'config_to_remove': ['pass'],
                 },
                 {
-                    'path': os.path.join('multiple-options', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('multiple-options', edq.config.settings.get_config_filename()),
                     'data': {'user': 'user@test.edulinq.org'},
                 },
                 None,
@@ -192,11 +193,11 @@ class TestConfigUtils(edq.testing.unittest.BaseTest):
             # Non-empty Config (Remove Multiple Options)
             (
                 {
-                    'path': os.path.join('multiple-options', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('multiple-options', edq.config.settings.get_config_filename()),
                     'config_to_remove': ['pass', 'user'],
                 },
                 {
-                    'path': os.path.join('multiple-options', edq.config.constants.DEFAULT_CONFIG_FILENAME),
+                    'path': os.path.join('multiple-options', edq.config.settings.get_config_filename()),
                     'data': {},
                 },
                 None,

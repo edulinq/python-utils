@@ -20,9 +20,8 @@ def run(args: argparse.Namespace) -> int:
     if (len(args.paths) > 0):
         paths |= set(args.paths)
     else:
-        paths.add(args._config_info.local_config_path)
-        paths.add(args._config_info.global_config_path)
-        paths |= {source.path for source in args._config_info.sources.values() if (source.path is not None)}
+        for load_results in args._config_info.sources.values():
+            paths |= {result.path for result in load_results if (result.path is not None)}
 
     encryption_key = config_info.application_config.encryption_key
     config_class = type(config_info.application_config)

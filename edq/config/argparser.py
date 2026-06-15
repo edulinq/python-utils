@@ -1,8 +1,10 @@
 import argparse
+import os
 import typing
 
 import edq.config.constants
 import edq.config.load
+import edq.config.settings
 import edq.util.serial
 
 def set_cli_args(
@@ -34,7 +36,7 @@ def set_cli_args(
     )
 
     group.add_argument('--config-global', dest = edq.config.constants.GLOBAL_CONFIG_KEY,
-        action = 'store', type = str, default = edq.config.load.get_global_config_path(),
+        action = 'store', type = str, default = os.path.join(edq.config.settings.get_global_dir(), edq.config.settings.get_config_filename()),
         help = 'Set the default global config file path (default: %(default)s).',
     )
 

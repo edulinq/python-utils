@@ -14,4 +14,4 @@
     },
 }
 ---
-Unset config options from: '__TEMP_DIR__(multiple-options/edq-config.json)'.
+Unset config option ('user') from: '__TEMP_DIR__(multiple-options/edq-config.json)'.

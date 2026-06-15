@@ -15,7 +15,7 @@ def run(args: argparse.Namespace) -> int:
     for (key, value) in config_info.raw_config.items():
         row = [key, str(value)]
         if (args.show_origin):
-            row.append(str(config_info.sources.get(key)))
+            row.append(str(config_info.sources[key][-1]))
 
         rows.append(CONFIG_FIELD_SEPARATOR.join(row))
 

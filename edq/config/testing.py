@@ -78,21 +78,21 @@ def create_test_dir(temp_dir_prefix: str) -> str:
     edq.util.dirent.mkdir(empty_config_dir_path)
     edq.util.json.dump_path(
         {},
-        os.path.join(empty_config_dir_path, edq.config.constants.DEFAULT_CONFIG_FILENAME),
+        os.path.join(empty_config_dir_path, edq.config.settings.get_config_filename()),
     )
 
     multiple_option_config_dir_path = os.path.join(temp_dir, "multiple-options")
     edq.util.dirent.mkdir(multiple_option_config_dir_path)
     edq.util.json.dump_path(
         {"user": "user@test.edulinq.org", "pass": "password1234"},
-        os.path.join(multiple_option_config_dir_path, edq.config.constants.DEFAULT_CONFIG_FILENAME),
+        os.path.join(multiple_option_config_dir_path, edq.config.settings.get_config_filename()),
     )
 
     empty_key_config_dir_path = os.path.join(temp_dir, "empty-key")
     edq.util.dirent.mkdir(empty_key_config_dir_path)
     edq.util.json.dump_path(
         {"": "user@test.edulinq.org"},
-        os.path.join(empty_key_config_dir_path, edq.config.constants.DEFAULT_CONFIG_FILENAME),
+        os.path.join(empty_key_config_dir_path, edq.config.settings.get_config_filename()),
     )
 
     custom_name_config_dir_path = os.path.join(temp_dir, "custom-name")
@@ -109,7 +109,7 @@ def create_test_dir(temp_dir_prefix: str) -> str:
     edq.util.dirent.mkdir(global_config_dir_path)
     edq.util.json.dump_path(
         {"user": "user@test.edulinq.org"},
-        os.path.join(global_config_dir_path, edq.config.constants.DEFAULT_CONFIG_FILENAME),
+        os.path.join(global_config_dir_path, edq.config.settings.get_config_filename()),
     )
 
     old_name_config_dir_path = os.path.join(temp_dir, "old-name")
@@ -124,7 +124,7 @@ def create_test_dir(temp_dir_prefix: str) -> str:
     edq.util.dirent.mkdir(os.path.join(nested_dir_path, "nest1", "nest2b"))
     edq.util.json.dump_path(
         {"server": "http://test.edulinq.org"},
-        os.path.join(nested_dir_path, edq.config.constants.DEFAULT_CONFIG_FILENAME),
+        os.path.join(nested_dir_path, edq.config.settings.get_config_filename()),
     )
     edq.util.json.dump_path(
         {"user": "user@test.edulinq.org"},
@@ -132,7 +132,7 @@ def create_test_dir(temp_dir_prefix: str) -> str:
     )
     edq.util.json.dump_path(
         {"user": "user@test.edulinq.org"},
-        os.path.join(nested_dir_path, "nest1", "nest2b", edq.config.constants.DEFAULT_CONFIG_FILENAME),
+        os.path.join(nested_dir_path, "nest1", "nest2b", edq.config.settings.get_config_filename()),
     )
     edq.util.json.dump_path(
         {"user": "user@test.edulinq.org"},
@@ -142,14 +142,14 @@ def create_test_dir(temp_dir_prefix: str) -> str:
     simple_config_dir_path = os.path.join(temp_dir, "simple")
     edq.util.dirent.mkdir(simple_config_dir_path)
     edq.util.dirent.write_file(
-        os.path.join(simple_config_dir_path, edq.config.constants.DEFAULT_CONFIG_FILENAME),
+        os.path.join(simple_config_dir_path, edq.config.settings.get_config_filename()),
         '{"user": "user@test.edulinq.org",}',
     )
 
     malformed_config_dir_path = os.path.join(temp_dir, "malformed")
     edq.util.dirent.mkdir(malformed_config_dir_path)
     edq.util.dirent.write_file(
-        os.path.join(malformed_config_dir_path, edq.config.constants.DEFAULT_CONFIG_FILENAME),
+        os.path.join(malformed_config_dir_path, edq.config.settings.get_config_filename()),
         "{user: user@test.edulinq.org}",
     )
 
@@ -172,14 +172,14 @@ def create_cli_test_dir(
     edq.util.dirent.mkdir(simple_config_dir_path)
     edq.util.json.dump_path(
         {"user": "user@test.edulinq.org"},
-        os.path.join(simple_config_dir_path, edq.config.constants.DEFAULT_CONFIG_FILENAME),
+        os.path.join(simple_config_dir_path, edq.config.settings.get_config_filename()),
     )
 
     multiple_option_config_dir_path = os.path.join(test_info.temp_dir, "multiple-options")
     edq.util.dirent.mkdir(multiple_option_config_dir_path)
     edq.util.json.dump_path(
         {"user": "user@test.edulinq.org", "pass": "password1234"},
-        os.path.join(multiple_option_config_dir_path, edq.config.constants.DEFAULT_CONFIG_FILENAME),
+        os.path.join(multiple_option_config_dir_path, edq.config.settings.get_config_filename()),
     )
 
 def verify_cli_test_config_content(
@@ -193,7 +193,7 @@ def verify_cli_test_config_content(
     data_actual = edq.util.json.load_path(path)
     data_expected = test_info.extra_options["data"]
 
-    test.assertJSONDictEqual(data_actual, data_expected)
+    test.assertJSONDictEqual(data_expected, data_actual)
 
 def set_testing_application_config_class(
     test: edq.testing.unittest.BaseTest,

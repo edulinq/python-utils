@@ -1,30 +1,112 @@
+#pylint: disable=invalid-name
+
+"""
+This module houses common information, mainly for the purpose of breaking dependency cycles.
+Users should strongly prefer `edq.config.settings` over this module.
+"""
+
 import typing
 
+import platformdirs
+
 import edq.config.constants
-import edq.config.source
 import edq.util.serial
 
-DEFAULT_LOAD_ORDER: typing.List[edq.config.source.ConfigSourceSpec] = [
-    edq.config.source.GlobalSpec(),
-    edq.config.source.LocalSpec(),
-    edq.config.source.ENVSpec(),
-    edq.config.source.CLIFileSpec(),
-    edq.config.source.CLISpec(),
-]
+_DEFAULT_CONFIG_FILENAME: str = 'edq-config.json'
+_config_filename: str = _DEFAULT_CONFIG_FILENAME
 
-# Private module-level options.
-# See edq.config.settings for outside access to these.
+_DEFAULT_DEFAULT_ENCRYPTION_KEY: str = 'edq'
+_default_encryption_key: str = _DEFAULT_DEFAULT_ENCRYPTION_KEY
 
-# This type is extra abstracted due to a circular dependency with edq.config.app.
-# edq.config.settings will ensure this value is properly set when used..
-_application_config_class: typing.Union[typing.Type[edq.util.serial.DictConverter], None] = None  # pylint: disable=invalid-name
+_DEFAULT_ENV_PREFIX: str = 'EDQ__'
+_env_prefix: str = _DEFAULT_ENV_PREFIX
 
-_config_filename: str = edq.config.constants.DEFAULT_CONFIG_FILENAME  # pylint: disable=invalid-name
+_DEFAULT_GLOBAL_DIR: str = platformdirs.user_config_dir()
+_global_dir: str = _DEFAULT_GLOBAL_DIR
 
-_default_encryption_key: str = edq.config.constants.DEFAULT_ENCRYPTION_KEY  # pylint: disable=invalid-name
+class InternalApplicationConfig(edq.util.serial.DictConverter):
+    """
+    An internal-only class for breaking dependency cycles.
+    See edq.config.app.BaseApplicationConfig for information about application configs.
+    """
 
-_env_prefix: str = edq.config.constants.DEFAULT_ENV_PREFIX  # pylint: disable=invalid-name
+    serialization_skip_fields = {
+        '_extra',
+    }
 
-_legacy_config_filename: typing.Union[str, None] = None  # pylint: disable=invalid-name
+    def __init__(self,
+            encryption_key: typing.Union[str, None] = None,
+            configs: typing.Union[typing.List[str], None] = None,
+            config_paths: typing.Union[typing.List[str], None] = None,
+            global_config_path: typing.Union[str, None] = None,
+            ignore_configs: typing.Union[typing.List[str], None] = None,
+            debug: typing.Union[bool, None] = None,
+            log_level: typing.Union[str, None] = None,
+            quiet: typing.Union[bool, None] = None,
+            **kwargs: typing.Any) -> None:
+        self.configs: typing.Union[typing.List[str], None] = configs
+        """ Config options set directly on the command-line. """
 
-_load_order: typing.List[edq.config.source.ConfigSourceSpec] = DEFAULT_LOAD_ORDER.copy()
+        self.config_paths: typing.Union[typing.List[str], None] = config_paths
+        """ Config file paths specified on the command-line. """
+
+        self.global_config_path: typing.Union[str, None] = global_config_path
+        """ The path to the used global config file. """
+
+        self.ignore_configs: typing.Union[typing.List[str], None] = ignore_configs
+        """ Config keys to ignore. """
+
+        if (encryption_key is None):
+            encryption_key = _default_encryption_key
+
+        self.encryption_key: str = encryption_key
+        """ The encryption key to use for config secrets. """
+
+        self.debug: typing.Union[bool, None] = debug
+        """ If extra debugging (e.g., logging) information should be provided. """
+
+        self.log_level: typing.Union[str, None] = log_level
+        """ The log level this program was started with. """
+
+        self.quiet: typing.Union[bool, None] = quiet
+        """ If the logs should give reduced output. """
+
+        self._extra: typing.Dict[str, typing.Any] = kwargs
+        """ Config options that were not explicitly handled in the constructor. """
+
+    def to_dict(self,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
+            ) -> typing.Dict[str, edq.util.serial.PODType]:
+        if (context is None):
+            context = edq.util.serial.SerializationContext()
+        else:
+            context = context.copy()
+
+        if (context.key is None):
+            context.key = self.encryption_key
+
+        return super().to_dict(context)
+
+class InternalConfigSourceSpec(edq.util.serial.DictConverter):
+    """
+    An internal-only class for breaking dependency cycles.
+    See edq.config.source.ConfigSourceSpec for information about config source specifications.
+    """
+
+    label: str = ''
+    """
+    A label set by each subclass to identify the type of source spec.
+    Generally, a user-friendly version of the class name.
+    """
+
+    def __init__(self) -> None:
+        if (len(self.label) == 0):
+            raise ValueError(f"ConfigSourceSpec child class ({type(self)}) did not set label.")
+
+# Will be set by edq.config.app on import.
+_DEFAULT_APPLICATION_CONFIG_CLASS: typing.Type[InternalApplicationConfig] = InternalApplicationConfig
+_application_config_class: typing.Type[InternalApplicationConfig] = _DEFAULT_APPLICATION_CONFIG_CLASS
+
+# Will be set by edq.config.source on import.
+_DEFAULT_LOAD_ORDER: typing.List[InternalConfigSourceSpec] = []
+_load_order: typing.List[InternalConfigSourceSpec] = _DEFAULT_LOAD_ORDER.copy()
