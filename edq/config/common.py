@@ -5,6 +5,7 @@ This module houses common information, mainly for the purpose of breaking depend
 Users should strongly prefer `edq.config.settings` over this module.
 """
 
+import abc
 import typing
 
 import platformdirs
@@ -87,7 +88,7 @@ class InternalApplicationConfig(edq.util.serial.DictConverter):
 
         return super().to_dict(context)
 
-class InternalConfigSourceSpec(edq.util.serial.DictConverter):
+class InternalConfigSourceSpec(abc.ABC, edq.util.serial.DictConverter):
     """
     An internal-only class for breaking dependency cycles.
     See edq.config.source.ConfigSourceSpec for information about config source specifications.
@@ -105,6 +106,13 @@ class InternalConfigSourceSpec(edq.util.serial.DictConverter):
 
         self.type: str = self.label
         """ A label identifying the type of source this is (mainly used for identification during serialization). """
+
+    @abc.abstractmethod
+    def get_help_lines(self) -> typing.List[str]:
+        """
+        Get lines of text describing how this source is loaded.
+        This text is intended to be used in a help prompt.
+        """
 
 # Will be set by edq.config.app on import.
 _DEFAULT_APPLICATION_CONFIG_CLASS: typing.Type[InternalApplicationConfig] = InternalApplicationConfig

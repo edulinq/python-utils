@@ -14,15 +14,37 @@ class CLISpec(ConfigSourceSpec):
 
     label: str = 'cli argument'
 
+    def get_help_lines(self) -> typing.List[str]:
+        return [
+            'Command-Line Arguments',
+            'Load configuration values set directly on the command-line via the `--config` flag.',
+            'Multiple instances may be supplied, and they will be processed in the order provided.',
+        ]
+
 class CLIFileSpec(ConfigSourceSpec):
     """ A source spec for loading a file that was specified as a CLI argument. """
 
     label: str = 'cli config file'
 
+    def get_help_lines(self) -> typing.List[str]:
+        return [
+            'Command-Line Files',
+            'Load configuration files specified on the command-line via the `--config-file` flag.',
+            'Multiple instances may be supplied, and they will be processed in the order provided.',
+        ]
+
 class ENVSpec(ConfigSourceSpec):
     """ A source spec for loading from an environmental variable. """
 
     label: str = 'environmental variable'
+
+    def get_help_lines(self) -> typing.List[str]:
+        return [
+            'Environmental Variables',
+            'Load configuration values specified in environmental variables.',
+            f"Variable names must start with the prefix: '{edq.config.common._env_prefix}'.",
+            'Variable names will be stripped of the above prefix and turned to lower case.',
+        ]
 
 class AbstractPathSpec(ConfigSourceSpec):
     """
@@ -48,6 +70,22 @@ class AbstractPathSpec(ConfigSourceSpec):
         self.filename: typing.Union[str, None] = filename
         """ The filename to look for. """
 
+    def get_base_dir(self) -> typing.Union[str, None]:
+        """ Get the base dir for this spec. """
+
+        if (self.base_dir is not None):
+            return self.base_dir
+
+        return self.get_default_base_dir()
+
+    def get_filename(self) -> typing.Union[str, None]:
+        """ Get the filename for this spec. """
+
+        if (self.filename is not None):
+            return self.filename
+
+        return self.get_default_filename()
+
     def get_default_base_dir(self) -> typing.Union[str, None]:
         """ Retrieve the default base dir (usually from edq.config.settings) for use when no base dir is explicitly set. """
 
@@ -69,17 +107,11 @@ class AbstractPathSpec(ConfigSourceSpec):
         if (override_path is not None):
             return override_path
 
-        base_dir = self.base_dir
-        if (base_dir is None):
-            base_dir = self.get_default_base_dir()
-
+        base_dir = self.get_base_dir()
         if (base_dir is None):
             raise ValueError(f"Unable to resolve a config base dir for class {type(self)}.")
 
-        filename = self.filename
-        if (filename is None):
-            filename = self.get_default_filename()
-
+        filename = self.get_filename()
         if (filename is None):
             raise ValueError(f"Unable to resolve a config filename for class {type(self)}.")
 
@@ -89,6 +121,15 @@ class GlobalSpec(AbstractPathSpec):
     """ A source spec for loading from a global (user-level) config file. """
 
     label: str = 'global config file'
+
+    def get_help_lines(self) -> typing.List[str]:
+        return [
+            'Global Config File',
+            'Load configurations from a "global" config file (e.g., a file that stays the same for a specific user).',
+            'This file is a good location for configuration values that do not change from project to project,',
+            'such as usernames and passwords/tokens.',
+            f"For this machine and user, the global config is located at: '{self.resolve_path()}'.",
+        ]
 
     def get_default_base_dir(self) -> typing.Union[str, None]:
         return edq.config.common._global_dir
@@ -100,6 +141,13 @@ class LocalSpec(AbstractPathSpec):
     """ A source spec for loading from a local config file. """
 
     label: str = 'local config file'
+
+    def get_help_lines(self) -> typing.List[str]:
+        return [
+            'Local Config File',
+            'Load configurations from a "local" config file inside of the current directory.',
+            f"The file must be named: '{self.get_filename()}'.",
+        ]
 
     def get_default_base_dir(self) -> typing.Union[str, None]:
         return os.path.abspath(os.getcwd())
@@ -113,6 +161,17 @@ class ProjectSpec(AbstractPathSpec):
     """
 
     label: str = 'project config file'
+
+    def get_help_lines(self) -> typing.List[str]:
+        return [
+            'Project Config File',
+            'Load configurations from a "project" config file.',
+            'To find a project configuration file, we will look in the current directory and all parents (until root).',
+            'The first file found with the correct name will be loaded.',
+            'It is recommended to keep this file in your project\'s root directory.',
+            'This allows you to execute commands from anywhere in the project using the correct configuration settings.',
+            f"The file must be named: '{self.get_filename()}'.",
+        ]
 
     def __init__(self,
             root_cutoff: typing.Union[str, None] = None,
@@ -135,17 +194,11 @@ class ProjectSpec(AbstractPathSpec):
         if (override_path is not None):
             return override_path
 
-        base_dir = self.base_dir
-        if (base_dir is None):
-            base_dir = self.get_default_base_dir()
-
+        base_dir = self.get_base_dir()
         if (base_dir is None):
             raise ValueError(f"Unable to resolve a config base dir for class {type(self)}.")
 
-        filename = self.filename
-        if (filename is None):
-            filename = self.get_default_filename()
-
+        filename = self.get_filename()
         if (filename is None):
             raise ValueError(f"Unable to resolve a config filename for class {type(self)}.")
 

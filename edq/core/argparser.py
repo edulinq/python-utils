@@ -12,6 +12,7 @@ import functools
 import typing
 
 import edq.config.argparser
+import edq.config.constants
 import edq.core.log
 import edq.net.cli
 
@@ -50,12 +51,24 @@ class PostParseFunction(typing.Protocol):
         and will be placed in the final parsed output under `_post_extra_state_`.
         """
 
+class HelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """ A default formatter that modifiers indents and does not strip descriptions. """
+
+    def __init__(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        if ('indent_increment' not in kwargs):
+            kwargs['indent_increment'] = edq.config.constants.DEFAULT_INDENT
+
+        super().__init__(*args, **kwargs)
+
 class Parser(argparse.ArgumentParser):
     """
     Extend an argparse parser to call the pre and post functions.
     """
 
     def __init__(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        if ('formatter_class' not in kwargs):
+            kwargs['formatter_class'] = HelpFormatter
+
         super().__init__(*args, **kwargs)
 
         self._pre_parse_callbacks: typing.Dict[str, PreParseFunction] = {}

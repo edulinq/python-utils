@@ -53,6 +53,59 @@ def set_cli_args(
         help = 'Encryption key to use for configuration secrets (e.g., passwords and tokens).',
     )
 
+    _attach_epilogue(parser)
+
+def _attach_epilogue(parser: argparse.ArgumentParser) -> None:
+    """
+    Construct an epilogue detailing configuration information and attach it to the parser's epilogue.
+    The epilogue will be created from the current config load order.
+    Each source spec will be asked to create their portion of the epilogue.
+    """
+
+    load_order = edq.config.settings.get_load_order()
+    if (len(load_order) == 0):
+        return
+
+    lines = [
+        'Configuration is loaded into this program using a "tiered" system.',
+        'This means that configuration options will be loaded from various sources in a pre-defined order.',
+        'If the same value is read from multiple sources, then the **last** read value overrides any previous values.',
+        'If you want to see where your configuration values are being loaded from, see the config list command with the `--show-origin` flag.',
+        '',
+        'Below is the order that configurations are read for this program:'
+    ]
+
+    indent = ' ' * edq.config.constants.DEFAULT_INDENT
+
+    for (step_index, spec) in enumerate(load_order):
+        spec_lines = spec.get_help_lines()
+        if ((spec_lines is None) or (len(spec_lines) == 0)):
+            continue
+
+        for i in range(len(spec_lines)):  # pylint: disable=consider-using-enumerate
+            # Add in a step number for this first line, and an indentation for all other lines..
+            if (i == 0):
+                spec_lines[i] = f"{step_index + 1}) {spec_lines[i]}"
+            else:
+                spec_lines[i] = indent + spec_lines[i]
+
+        # Add another indentation level (for all lines).
+        spec_lines = [indent + line for line in spec_lines]
+
+        if (step_index != 0):
+            lines.append('')
+
+        lines += spec_lines
+
+    # Prepare any existing epilogue.
+    if (parser.epilog is None):
+        parser.epilog = ''
+    elif (len(parser.epilog) > 0):
+        parser.epilog += "\n\n"
+
+    lines = [indent + line for line in lines]
+    parser.epilog += "CONFIGURATION\n\n" + "\n".join(lines)
+
 def add_config_location_argument_group(parser: argparse.ArgumentParser) -> None:
     """ Add the configuration location argument group to the parser. """
 
