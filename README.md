@@ -27,6 +27,8 @@ pip3 install .
 
 This project provides a configuration system that supplies options (e.g., username, password) to a command-line interface (CLI) tool.
 The configuration system follows a tiered order, allowing options to be specified and overridden from both files and command-line options.
+The order that configuration sources are processed should be set by the tool using this library.
+A description of each configuration source (and the order they are loaded) is output in the help prompt from the `--help` flag.
 
 ### Configuration Sources
 
@@ -42,21 +44,45 @@ For example, a configuration file containing the `user` and `pass` options might
 }
 ```
 
-The table below summarizes the configuration sources in the order they are evaluated.
-Values from earlier sources can be overwritten by values from later sources.
+The table below summarizes the configuration sources provided by this library.
 
 | Source   | Description |
 | :-----   | :---------- |
-| Global   | Loaded from a file in a user-specific location, which is platform-dependent. |
-| Local    | Loaded from a file in the current or nearest ancestor directory. |
-| CLI File | Loaded from one or more explicitly provided configuration files through the CLI. |
 | CLI      | Loaded from the command line. |
+| CLI File | Loaded from one or more explicitly provided configuration files through the CLI. |
+| Global   | Loaded from a file in a user-specific location, which is platform-dependent. |
+| Local    | Loaded from a file in the current directory. |
+| Project  | Loaded from a file in the current or nearest ancestor directory. |
 
-The system produces an error if a global or local configuration file is unreadable (but not missing), or if a CLI-specified file is unreadable or missing.
+The system produces an error if a configuration file is unreadable (but not missing), or if a CLI-specified file is unreadable or missing.
+
+#### CLI Configuration
+
+CLI configurations are options specified directly on the command line, these are useful for quick option overrides without editing config files.
+Configuration options are passed to the command line by the `--config` flag in this format `<key>=<value>`.
+The provided values overrides the values from configuration files.
+Configuration options are structured as key value pairs and keys cannot contain the "=" character.
+
+Below is an example of specifying a configuration option directly from the CLI:
+```sh
+python3 -m edq.cli.config.list --config user=alice --config pass=password123
+```
+
+#### CLI-Specified Config Files
+
+CLI config files are options specified on the command line via a file.
+These are useful for a common set of options you don’t need every time, such as login credentials for different user.
+Any files passed via `--config-file` will be loaded in the order they appear on the command line.
+Options from later files override options from previous files.
+
+Below is an example of a CLI specified configuration paths:
+```sh
+python3 -m edq.cli.config.list --config-file ./edq-config.json --config-file ~/.secrets/edq-config.json
+```
 
 #### Global Configuration
 
-Global configuration are options that are user specific and stick with the user between projects, these are well suited for options like login credentials.
+Global configurations are options that are user specific and stick with the user between projects, these are well suited for options like login credentials.
 The global configuration file defaults to `<platform-specific user configuration location>/edq-config.json`.
 The configuration location is chosen according to the [XDG standard](https://en.wikipedia.org/wiki/Freedesktop.org#Base_Directory_Specification) (implemented by [platformdirs](https://github.com/tox-dev/platformdirs)).
 Below are examples of user-specific configuration file paths for different operating systems:
@@ -73,38 +99,18 @@ python3 -m edq.cli.config.list --config-global  ~/.config/custom-config.json
 
 #### Local Configuration
 
-Local configuration are options that are specific to a project or directory, like a project's build directory.
-Local configuration files are searched in multiple locations, the first file found is used.
-The local config search order is:
-1. `edq-config.json` in the current directory.
-2. A legacy file in the current directory (only if a legacy file is preconfigured).
-3. `edq-config.json` in any ancestor directory on the path to root (including root itself).
+Local configurations are options that are specific to a directory.
+These options are generally used for special cases.
+Users should generally prefer project sources instead of local ones.
 
-#### CLI-Specified Config Files
+#### Project Configuration
 
-CLI config files are options specified on the command line via a file.
-These are useful for a common set of options you don’t need every time, such as login credentials for different user.
-Any files passed via `--config-file` will be loaded in the order they appear on the command line.
-Options from later files override options from previous files.
+Project configurations are options that are specific to a project or directory, like a project's build directory.
+Project configuration files are searched in multiple locations, starting with the current directory and moving up to each ancestor.
+The first file found is used.
+This source is very useful for setting project-specific options in your project's root.
 
-Below is an example of a CLI specified configuration paths:
-```sh
-python3 -m edq.cli.config.list --config-file ./edq-config.json --config-file ~/.secrets/edq-config.json
-```
-
-#### CLI Configuration
-
-CLI configurations are options specified directly on the command line, these are useful for quick option overrides without editing config files.
-Configuration options are passed to the command line by the `--config` flag in this format `<key>=<value>`.
-The provided values overrides the values from configuration files.
-Configuration options are structured as key value pairs and keys cannot contain the "=" character.
-
-Below is an example of specifying a configuration option directly from the CLI:
-```sh
-python3 -m edq.cli.config.list --config user=alice --config pass=password123
-```
-
-#### CLI Config Options
+### CLI Config Options
 
 The table below lists common configuration CLI options available for CLI tools using this library.
 
