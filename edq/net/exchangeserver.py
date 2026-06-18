@@ -8,6 +8,7 @@ import typing
 
 import edq.net.exchange
 import edq.util.dirent
+import edq.util.serial
 
 _logger = logging.getLogger(__name__)
 
@@ -280,20 +281,27 @@ class HTTPExchangeServer():
         target = target[exchange.method]
         target.append(exchange)
 
-    def load_exchange_file(self, path: str) -> None:
+    def load_exchange_file(self,
+            path: str,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
+            ) -> None:
         """
         Load an exchange from a file.
         This will also handle setting the exchanges source path and resolving the exchange's paths.
         """
 
-        self.load_exchange(edq.net.exchange.HTTPExchange.from_path(path))
+        self.load_exchange(edq.net.exchange.HTTPExchange.from_path(path, context = context))
 
-    def load_exchanges_dir(self, base_dir: str, extension: str = edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION) -> None:
+    def load_exchanges_dir(self,
+            base_dir: str,
+            extension: str = edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION,
+            context: typing.Union[edq.util.serial.SerializationContext, None] = None,
+            ) -> None:
         """ Load all exchanges found (recursively) within a directory. """
 
         paths = list(sorted(glob.glob(os.path.join(base_dir, "**", f"*{extension}"), recursive = True)))
         for path in paths:
-            self.load_exchange_file(path)
+            self.load_exchange_file(path, context = context)
 
 @typing.runtime_checkable
 class MissingRequestFunction(typing.Protocol):
