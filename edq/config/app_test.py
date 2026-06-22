@@ -97,7 +97,7 @@ class TestApplicationConfig(edq.testing.unittest.BaseTest):
                 )
 
                 # Ignore some config fields by setting them equal.
-                ignore_fields = ['encryption_key', 'global_config_path']
+                ignore_fields = ['encryption_key']
                 for ignore_field in ignore_fields:
                     value = getattr(tiered_config.application_config, ignore_field)
 

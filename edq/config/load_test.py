@@ -32,7 +32,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
         edq.config.settings.set_config_filename('edq-testing.json')
 
         # Create a variable for each config source spec to make it easier for testing.
-        (spec_global, spec_project, spec_env, spec_cli_file, spec_cli) = edq.config.settings.get_load_order()
+        (spec_global, spec_project, spec_env, spec_cli_file, spec_cli_implicit, spec_cli_explicit) = edq.config.settings.get_load_order()
 
         # [(test case label, directory structure, cli arguments, env variables, expected raw config, expected sources, error substring), ...]
         test_cases: typing.List[typing.Tuple[
@@ -135,7 +135,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
             ),
 
             (
-                'CLI - Base',
+                'CLI Explicit - Base',
                 [],
                 {
                     edq.config.constants.CONFIG_OPTIONS_KEY: [
@@ -148,7 +148,25 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     'user': [
-                        edq.config.load.ConfigLoadResult('user@test.edulinq.org', spec_cli),
+                        edq.config.load.ConfigLoadResult('user@test.edulinq.org', spec_cli_explicit),
+                    ],
+                },
+                None,
+            ),
+
+            (
+                'CLI Implicit - Base',
+                [],
+                {
+                    'user': 'user@test.edulinq.org',
+                },
+                {},
+                {
+                    'user': 'user@test.edulinq.org',
+                },
+                {
+                    'user': [
+                        edq.config.load.ConfigLoadResult('user@test.edulinq.org', spec_cli_implicit),
                     ],
                 },
                 None,
@@ -252,7 +270,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                 },
                 {
                     'key': [
-                        edq.config.load.ConfigLoadResult('cli', spec_cli),
+                        edq.config.load.ConfigLoadResult('cli', spec_cli_explicit),
                         edq.config.load.ConfigLoadResult('cli file', spec_cli_file, 'foo.json'),
                         edq.config.load.ConfigLoadResult('env', spec_env),
                         edq.config.load.ConfigLoadResult('project', spec_project, 'edq-testing.json'),
@@ -343,8 +361,7 @@ class TestLoadConfig(edq.testing.unittest.BaseTest):
                     self.fail(f"Did not get expected error: '{error_substring}'.")
 
                 # Normalize some keys from the application config.
-                normalize_keys = ['config_paths', 'configs', 'global_config_path', 'ignore_configs']
-                for normalize_key in normalize_keys:
+                for normalize_key in edq.config.constants.IGNORE_CLI_KEYS:
                     setattr(actual_config_info.application_config, normalize_key, None)
                     setattr(expected_config_info.application_config, normalize_key, None)
 

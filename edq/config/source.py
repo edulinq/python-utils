@@ -9,15 +9,38 @@ class ConfigSourceSpec(edq.config.common.InternalConfigSourceSpec):
     A source spec represents a location where config values may be stored.
     """
 
-class CLISpec(ConfigSourceSpec):
-    """ A source spec for loading from CLI arguments (but not files specified on the command-line). """
+class CLIExplicitSpec(ConfigSourceSpec):
+    """
+    A source spec for loading from CLI arguments (but not files specified on the command-line).
+    Explicit refers to arguments that are explicitly noted with the `--config` flag.
+    """
 
-    label: str = 'cli argument'
+    label: str = 'cli argument (explicit)'
 
     def get_help_lines(self) -> typing.List[str]:
         return [
-            'Command-Line Arguments',
+            'Command-Line Arguments (Explicit)',
             'Load configuration values set directly on the command-line via the `--config` flag.',
+            '"Explicit" refers to the fact that these arguments use the `--config` flag.',
+            'Multiple instances may be supplied, and they will be processed in the order provided.',
+        ]
+
+class CLIImplicitSpec(ConfigSourceSpec):
+    """
+    A source spec for loading from CLI arguments (but not files specified on the command-line).
+    Implicit refers to arguments that are not explicitly supplied with the `--config` flag,
+    and instead specified with other flags.
+    For example, a CLI may accept a `--server` flag that sets a `server` argument.
+    """
+
+
+    label: str = 'cli argument (implicit)'
+
+    def get_help_lines(self) -> typing.List[str]:
+        return [
+            'Command-Line Arguments (Implicit)',
+            'Load configuration values set directly on the command-line.',
+            '"Implicit" refers to the fact that these arguments do not use the `--config` flag.',
             'Multiple instances may be supplied, and they will be processed in the order provided.',
         ]
 
@@ -226,6 +249,7 @@ edq.config.common._DEFAULT_LOAD_ORDER = [
     ProjectSpec(),
     ENVSpec(),
     CLIFileSpec(),
-    CLISpec(),
+    CLIImplicitSpec(),
+    CLIExplicitSpec(),
 ]
 edq.config.common._load_order = edq.config.common._DEFAULT_LOAD_ORDER.copy()

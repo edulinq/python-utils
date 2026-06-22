@@ -40,14 +40,6 @@ def set_cli_args(
         help = 'Set the default global config file path (default: %(default)s).',
     )
 
-    group.add_argument('--ignore-config-option', dest = edq.config.constants.IGNORE_CONFIG_OPTIONS_KEY,
-        action = 'append', type = str, default = [],
-        help = ('Ignore any config option with the specified key.'
-            + ' The system-provided default value will be used for that option if one exists.'
-            + ' This flag can be specified multiple times.'
-            + ' Ignored options are processed last.')
-    )
-
     group.add_argument('--encryption-key', dest = edq.config.constants.CONFIG_ENCRYPTION_KEY,
         action = 'store', type = str, default = None,
         help = 'Encryption key to use for configuration secrets (e.g., passwords and tokens).',

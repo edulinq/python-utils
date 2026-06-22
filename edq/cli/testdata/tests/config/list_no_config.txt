@@ -14,3 +14,9 @@
 }
 ---
 Key	Value
+debug	False
+encryption_key	None
+log_level	INFO
+quiet	False
+show_origin	False
+skip_header	False

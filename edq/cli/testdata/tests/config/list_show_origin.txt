@@ -6,7 +6,8 @@
     "arguments": [
         "--config-global", "global.json",
         "--config-file", "foo.json",
-        "--config", "pass=password1234",
+        "--config", "pass=pass1",
+        "--config", "pass=pass2",
         "--show-origin",
     ],
     "work_dir": "__TEMP_DIR__()",
@@ -22,5 +23,11 @@
 }
 ---
 Key	Value	Origin
-pass	password1234	<cli argument>
+debug	False	<cli argument (implicit)>
+encryption_key	None	<cli argument (implicit)>
+log_level	INFO	<cli argument (implicit)>
+pass	pass2	<cli argument (explicit)>
+quiet	False	<cli argument (implicit)>
+show_origin	True	<cli argument (implicit)>
+skip_header	False	<cli argument (implicit)>
 user	user@test.edulinq.org	<cli config file (__TEMP_DIR__(foo.json))>

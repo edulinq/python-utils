@@ -37,26 +37,10 @@ class InternalApplicationConfig(edq.util.serial.DictConverter):
 
     def __init__(self,
             encryption_key: typing.Union[str, None] = None,
-            configs: typing.Union[typing.List[str], None] = None,
-            config_paths: typing.Union[typing.List[str], None] = None,
-            global_config_path: typing.Union[str, None] = None,
-            ignore_configs: typing.Union[typing.List[str], None] = None,
             debug: typing.Union[bool, None] = None,
             log_level: typing.Union[str, None] = None,
             quiet: typing.Union[bool, None] = None,
             **kwargs: typing.Any) -> None:
-        self.configs: typing.Union[typing.List[str], None] = configs
-        """ Config options set directly on the command-line. """
-
-        self.config_paths: typing.Union[typing.List[str], None] = config_paths
-        """ Config file paths specified on the command-line. """
-
-        self.global_config_path: typing.Union[str, None] = global_config_path
-        """ The path to the used global config file. """
-
-        self.ignore_configs: typing.Union[typing.List[str], None] = ignore_configs
-        """ Config keys to ignore. """
-
         if (encryption_key is None):
             encryption_key = _default_encryption_key
 

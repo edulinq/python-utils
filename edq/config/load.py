@@ -83,10 +83,20 @@ def get_tiered_config(
 
     # Load from each specified source.
     for spec in load_order:
-        if (isinstance(spec, edq.config.source.CLISpec)):
-            cli_configs = cli_arguments.get(edq.config.constants.CONFIG_OPTIONS_KEY, [])
-            for cli_config_option in cli_configs:
+        if (isinstance(spec, edq.config.source.CLIExplicitSpec)):
+            for cli_config_option in cli_arguments.get(edq.config.constants.CONFIG_OPTIONS_KEY, []):
                 (key, value) = edq.config.util.parse_string_config_option(cli_config_option)
+
+                raw_config[key] = value
+
+                if (key not in sources):
+                    sources[key] = []
+
+                sources[key].insert(0, ConfigLoadResult(value, spec))
+        elif (isinstance(spec, edq.config.source.CLIImplicitSpec)):
+            for (key, value) in cli_arguments.items():
+                if (key in edq.config.constants.IGNORE_CLI_KEYS):
+                    continue
 
                 raw_config[key] = value
 
@@ -111,32 +121,23 @@ def get_tiered_config(
         else:
             raise ValueError(f"Unknown config source spec: '{type(spec)}'.")
 
-    # Finally, ignore any configs that are specified from CLI command.
-    cli_ignore_configs = cli_arguments.get(edq.config.constants.IGNORE_CONFIG_OPTIONS_KEY, [])
-    for ignore_config in cli_ignore_configs:
-        raw_config.pop(ignore_config, None)
-        sources.pop(ignore_config, None)
-
-    # Create an application config with all config we have seen.
-    all_config = cli_arguments.copy()
-    all_config.update(raw_config)
-
     if (serialization_context is None):
         serialization_context = edq.util.serial.SerializationContext()
     else:
         serialization_context = serialization_context.copy()
 
-    encryption_key: typing.Union[str, None] = all_config.get(
+    raw_application_config = raw_config.copy()
+    encryption_key = raw_application_config.get(
             edq.config.constants.CONFIG_ENCRYPTION_KEY,
             edq.config.settings.get_default_encryption_key())
     if (encryption_key is None):
         encryption_key = edq.config.settings.get_default_encryption_key()
 
-    all_config[edq.config.constants.CONFIG_ENCRYPTION_KEY] = encryption_key
-    serialization_context.key = encryption_key
+    raw_application_config[edq.config.constants.CONFIG_ENCRYPTION_KEY] = str(encryption_key)
+    serialization_context.key = str(encryption_key)
 
     application_config = edq.config.settings.get_application_config_class().from_dict(
-        all_config,
+        raw_application_config,
         context = serialization_context,
     )
 
