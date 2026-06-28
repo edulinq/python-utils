@@ -27,12 +27,6 @@
 ---
 Key	Value
 api-key	KEY-1234567890
-debug	False
-encryption_key	None
-log_level	INFO
 pass	password1234
-quiet	False
 server	http://test.edulinq.org
-show_origin	False
-skip_header	False
 user	user@test.edulinq.org

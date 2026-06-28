@@ -53,7 +53,7 @@ def _get_target_path(args: argparse.Namespace) -> typing.Union[str, None]:
     """
 
     if (args.scope_file is not None):
-        return args.scope_file
+        return str(args.scope_file)
 
     # If no explicit scope is provided, use either local or project scopes (whichever appears first).
     no_explicit_scope = ((not args.scope_local) and (not args.scope_project) and (not args.scope_global))

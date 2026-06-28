@@ -48,6 +48,8 @@ def _get_path_from_source(key: str, args: argparse.Namespace) -> typing.Union[st
     """ Look through a key's sources for the first file-based entry that matches the specified config. """
 
     for source in args._config_info.sources.get(key, []):
+        source = typing.cast(edq.config.load.ConfigLoadResult, source)
+
         if (source.path is None):
             continue
 
