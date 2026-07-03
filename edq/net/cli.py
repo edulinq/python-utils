@@ -3,6 +3,7 @@ import typing
 
 import edq.net.exchange
 import edq.net.request
+import edq.net.settings
 
 def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, typing.Any]) -> None:
     """
@@ -54,4 +55,4 @@ def init_from_args(
         edq.net.exchange._exchanges_finalize_func = args.http_exchanges_finalize_func
 
     if (args.https_no_verify):
-        edq.net.request._disable_https_verification()
+        edq.net.settings.set_https_verification(False)

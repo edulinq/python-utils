@@ -12,6 +12,7 @@ import requests
 import edq.core.errors
 import edq.net.exchange
 import edq.net.exchangeserver
+import edq.net.settings
 import edq.util.dirent
 import edq.util.encoding
 import edq.util.json
@@ -35,12 +36,6 @@ _exchanges_cache_dir: typing.Union[str, None] = None  # pylint: disable=invalid-
 
 _exchanges_out_dir: typing.Union[str, None] = None  # pylint: disable=invalid-name
 """ If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
-
-_module_makerequest_options: typing.Union[typing.Dict[str, typing.Any], None] = None  # pylint: disable=invalid-name
-"""
-Module-wide options for requests.request().
-These should generally only be used in testing.
-"""
 
 _cache_servers: typing.Dict[str, edq.net.exchangeserver.HTTPExchangeServer] = {}
 """ A mapping of cache dirs to their active cache server. """
@@ -82,7 +77,6 @@ def make_request(method: str, url: str,
         additional_requests_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
         exchange_complete_func: typing.Union[edq.net.exchange.HTTPExchangeComplete, None] = None,
         allow_redirects: typing.Union[bool, None] = None,
-        use_module_options: bool = True,
         retries: int = 0,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
@@ -126,8 +120,9 @@ def make_request(method: str, url: str,
         'timeout': timeout_secs,
     }
 
-    if (use_module_options and (_module_makerequest_options is not None)):
-        options.update(_module_makerequest_options)
+    if (not edq.net.settings.get_https_verification()):
+        options['verify'] = False
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     options.update(additional_requests_options)
 
@@ -353,16 +348,3 @@ def _clear_cache_servers() -> None:
 
     for cache_dir in list(_cache_servers.keys()):
         _cleanup_cache_server(cache_dir)
-
-def _disable_https_verification() -> None:
-    """ Disable checking the SSL certificate for HTTPS requests. """
-
-    global _module_makerequest_options  # pylint: disable=global-statement
-
-    if (_module_makerequest_options is None):
-        _module_makerequest_options = {}
-
-    _module_makerequest_options['verify'] = False
-
-    # Ignore insecure warnings.
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
