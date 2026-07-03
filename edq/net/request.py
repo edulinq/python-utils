@@ -19,15 +19,6 @@ import edq.util.pyimport
 
 _logger = logging.getLogger(__name__)
 
-DEFAULT_REQUEST_TIMEOUT_SECS: typing.Union[float, typing.Tuple[float, float]] = (30.0, 60.0 * 30)
-"""
-Default timeout for an HTTP request.
-Can be a single float for both the connection and read timeouts.
-Or a tuple for the connection and read timeouts, respectively.
-
-See: https://docs.python-requests.org/en/latest/user/advanced/#timeouts
-"""
-
 RETRY_BACKOFF_SECS: float = 0.5
 """ A back-off factor between failed network requests. """
 
@@ -59,7 +50,7 @@ def make_request(method: str, url: str,
         data: typing.Union[typing.Dict[str, typing.Any], None] = None,
         files: typing.Union[typing.List[typing.Any], None] = None,
         raise_for_status: bool = True,
-        timeout_secs: typing.Union[float, typing.Tuple[float, float]] = DEFAULT_REQUEST_TIMEOUT_SECS,
+        timeout_secs: typing.Union[float, typing.Tuple[float, float], None] = None,
         output_dir: typing.Union[str, None] = None,
         send_anchor_header: bool = True,
         headers_to_skip: typing.Union[typing.List[str], None] = None,
@@ -70,9 +61,12 @@ def make_request(method: str, url: str,
         exchange_complete_func: typing.Union[edq.net.exchange.HTTPExchangeComplete, None] = None,
         allow_redirects: typing.Union[bool, None] = None,
         retries: int = 0,
+        https_verification: typing.Union[bool, None] = None,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
     Make an HTTP request and return the response object and text body.
+
+    For `timeout_secs`, see: https://docs.python-requests.org/en/latest/user/advanced/#timeouts
     """
 
     if (add_http_prefix and (not url.lower().startswith('http'))):
@@ -102,11 +96,18 @@ def make_request(method: str, url: str,
         parts = urllib.parse.urlparse(url)
         headers[edq.net.exchange.ANCHOR_HEADER_KEY] = parts.fragment.lstrip('#')
 
+    # Compute the full connection/read timeout.
+    if (timeout_secs is None):
+        timeout_secs = (edq.net.settings.get_connection_timeout_secs(), edq.net.settings.get_read_timeout_secs())
+    elif (isinstance(timeout_secs, float)):
+        timeout_secs = (timeout_secs, timeout_secs)
+
     options: typing.Dict[str, typing.Any] = {
         'timeout': timeout_secs,
     }
 
-    if (not edq.net.settings.get_https_verification()):
+    # Check for HTTPS verification.
+    if ((https_verification is False) or ((https_verification is None) and (not edq.net.settings.get_https_verification()))):
         options['verify'] = False
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -262,4 +263,4 @@ def _make_request_with_retry(
     if (len(errors) == attempt_count):
         raise edq.core.errors.RetryError(f"HTTP {method} for '{url}'", attempt_count, retry_errors = errors)
 
-    return typing.cast(requests.Response, response)
+    return response
