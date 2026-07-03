@@ -58,12 +58,18 @@ class HTTPServerTest(edq.testing.unittest.BaseTest):
         if (cls.server_key in cls._servers):
             return
 
-        server = edq.net.exchangeserver.HTTPExchangeServer()
+        server = cls.create_server()
         cls._servers[cls.server_key] = server
 
         cls.setup_server(server)
         server.start()
         cls.post_start_server(server)
+
+    @classmethod
+    def create_server(cls) -> edq.net.exchangeserver.HTTPExchangeServer:
+        """ Create the actual exchange server. """
+
+        return edq.net.exchangeserver.HTTPExchangeServer()
 
     @classmethod
     def tearDownClass(cls) -> None:
