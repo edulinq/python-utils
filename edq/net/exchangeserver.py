@@ -284,24 +284,31 @@ class HTTPExchangeServer():
     def load_exchange_file(self,
             path: str,
             context: typing.Union[edq.util.serial.SerializationContext, None] = None,
+            finalize_func: typing.Union[typing.Callable, None] = None,
             ) -> None:
         """
         Load an exchange from a file.
         This will also handle setting the exchanges source path and resolving the exchange's paths.
         """
 
-        self.load_exchange(edq.net.exchange.HTTPExchange.from_path(path, context = context))
+        exchange = edq.net.exchange.HTTPExchange.from_path(path, context = context)
+
+        if (finalize_func is not None):
+            exchange = finalize_func(exchange)
+
+        self.load_exchange(exchange)
 
     def load_exchanges_dir(self,
             base_dir: str,
             extension: str = edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION,
             context: typing.Union[edq.util.serial.SerializationContext, None] = None,
+            finalize_func: typing.Union[typing.Callable, None] = None,
             ) -> None:
         """ Load all exchanges found (recursively) within a directory. """
 
         paths = list(sorted(glob.glob(os.path.join(base_dir, "**", f"*{extension}"), recursive = True)))
         for path in paths:
-            self.load_exchange_file(path, context = context)
+            self.load_exchange_file(path, context = context, finalize_func = finalize_func)
 
 @typing.runtime_checkable
 class MissingRequestFunction(typing.Protocol):
