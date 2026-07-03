@@ -164,16 +164,25 @@ def make_request(method: str, url: str,
 
     exchange = None
     if ((output_dir is not None) or (exchange_complete_func is not None) or (_make_request_exchange_complete_func is not None)):
-        exchange = edq.net.exchange.HTTPExchange.from_response(response,
-                headers_to_skip = headers_to_skip, params_to_skip = params_to_skip,
-                allow_redirects = options.get('allow_redirects', None))
+        exchange = edq.net.exchange.HTTPExchange.from_response(
+            response,
+            headers_to_skip = headers_to_skip,
+            params_to_skip = params_to_skip,
+            allow_redirects = options.get('allow_redirects', None),
+        )
 
-    if ((output_dir is not None) and (exchange is not None)):
-        relpath = exchange.compute_relpath(http_exchange_extension = http_exchange_extension)
-        path = os.path.abspath(os.path.join(output_dir, relpath))
+        if (output_dir is not None):
+            _write_exchange(exchange, output_dir, http_exchange_extension)
 
-        edq.util.dirent.mkdir(os.path.dirname(path))
-        edq.util.json.dump_path(exchange, path, indent = 4, sort_keys = False)
+            # Also write any redirects.
+            for redirect_response in response.history:
+                redirect_exchange = edq.net.exchange.HTTPExchange.from_response(
+                    redirect_response,
+                    headers_to_skip = headers_to_skip,
+                    params_to_skip = params_to_skip,
+                    allow_redirects = options.get('allow_redirects', None),
+                )
+                _write_exchange(redirect_exchange, output_dir, http_exchange_extension)
 
     if ((exchange_complete_func is not None) and (exchange is not None)):
         exchange_complete_func(exchange)
@@ -182,6 +191,15 @@ def make_request(method: str, url: str,
         _make_request_exchange_complete_func(exchange)  # pylint: disable=not-callable
 
     return response, body
+
+def _write_exchange(exchange: edq.net.exchange.HTTPExchange, output_dir: str, http_exchange_extension: str) -> None:
+    """ Write an exchange to disk in the computed path. """
+
+    relpath = exchange.compute_relpath(http_exchange_extension = http_exchange_extension)
+    path = os.path.abspath(os.path.join(output_dir, relpath))
+
+    edq.util.dirent.mkdir(os.path.dirname(path))
+    edq.util.json.dump_path(exchange, path, indent = 4, sort_keys = False)
 
 def make_with_exchange(
         exchange: edq.net.exchange.HTTPExchange,
