@@ -42,6 +42,11 @@ DEFAULT_EXCHANGE_IGNORE_HEADERS: typing.List[str] = [
     'accept',
     'accept-encoding',
     'accept-language',
+    'access-control-allow-origin',
+    'access-control-allow-credentials',
+    'access-control-allow-methods',
+    'access-control-request-method',
+    'access-control-allow-headers',
     'cache-control',
     'connection',
     'content-length',
@@ -53,7 +58,8 @@ DEFAULT_EXCHANGE_IGNORE_HEADERS: typing.List[str] = [
     'etag',
     'host',
     'link',
-    'location',
+    'location',  # Will be specially kept on allowed redirects.
+    'pragma',
     'priority',
     'referrer-policy',
     'sec-fetch-dest',
@@ -554,7 +560,6 @@ class HTTPExchange(edq.util.serial.DictConverter):
         url = self.get_url().strip()
         parts = url.split('/')
 
-
         if (url in ['', '/']):
             filename = '_index_'
             dirname = ''
@@ -650,17 +655,21 @@ class HTTPExchange(edq.util.serial.DictConverter):
         request_headers = {key.lower().strip(): value for (key, value) in response.request.headers.items()}
         response_headers = {key.lower().strip(): value for (key, value) in response.headers.items()}
 
-        # Clean headers.
-        for key in headers_to_skip:
-            key = key.lower()
-
-            request_headers.pop(key, None)
-            response_headers.pop(key, None)
-
         request_data, request_files = edq.net.util.parse_request_data(
                 response.request.url,
                 request_headers,
                 response.request.body)  # type: ignore[arg-type]
+
+        # Clean headers.
+        for key in headers_to_skip:
+            key = key.lower()
+
+            # Keep the location header if this is an allowed redirect.
+            if (allow_redirects and (key == 'location') and (300 <= response.status_code < 400)):
+                continue
+
+            request_headers.pop(key, None)
+            response_headers.pop(key, None)
 
         # Clean parameters.
         for key in params_to_skip:
