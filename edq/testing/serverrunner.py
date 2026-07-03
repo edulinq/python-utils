@@ -34,6 +34,7 @@ class ServerRunner():
             startup_skip_identify: typing.Union[bool, None] = False,
             identify_max_attempts: int = DEFAULT_IDENTIFY_MAX_ATTEMPTS,
             identify_wait_secs: float = DEFAULT_IDENTIFY_WAIT_SECS,
+            skip_restart: bool = False,
             **kwargs: typing.Any) -> None:
         if (server is None):
             raise ValueError('No server specified.')
@@ -86,6 +87,9 @@ class ServerRunner():
 
         self.identify_wait_secs: float = identify_wait_secs
         """ The number of seconds each identify request will wait for the server to respond. """
+
+        self.skip_restart: bool = skip_restart
+        """ While set, self.restart() should become a no-op. """
 
         self._old_exchanges_out_dir: typing.Union[str, None] = None
         """
@@ -196,6 +200,9 @@ class ServerRunner():
 
     def restart(self) -> None:
         """ Restart the server. """
+
+        if (self.skip_restart):
+            return
 
         _logger.debug('Restarting the server.')
         self._stop_server()
