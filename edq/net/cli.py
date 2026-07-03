@@ -39,7 +39,7 @@ def init_from_args(
     """
 
     if (args.http_exchanges_out_dir is not None):
-        edq.net.request._exchanges_out_dir = args.http_exchanges_out_dir
+        edq.net.settings.set_exchanges_out_dir(args.http_exchanges_out_dir)
 
     if (args.http_exchanges_clean_func is not None):
         edq.net.exchange._exchanges_clean_func = args.http_exchanges_clean_func

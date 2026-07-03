@@ -22,9 +22,6 @@ _logger = logging.getLogger(__name__)
 RETRY_BACKOFF_SECS: float = 0.5
 """ A back-off factor between failed network requests. """
 
-_exchanges_out_dir: typing.Union[str, None] = None  # pylint: disable=invalid-name
-""" If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
-
 _make_request_exchange_complete_func: typing.Union[edq.net.exchange.HTTPExchangeComplete, None] = None  # pylint: disable=invalid-name
 """ If not None, call this func after make_request() has created its HTTPExchange. """
 
@@ -75,7 +72,7 @@ def make_request(method: str, url: str,
     retries = max(0, retries)
 
     if (output_dir is None):
-        output_dir = _exchanges_out_dir
+        output_dir = edq.net.settings.get_exchanges_out_dir()
 
     if (headers is None):
         headers = {}

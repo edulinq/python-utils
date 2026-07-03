@@ -1,5 +1,10 @@
 # pylint: disable=global-statement,invalid-name
 
+"""
+This module holds options that persist the lifetime of the program.
+Most options can be overwritten in specific calls, e.g., in edq.net.request.make_request().
+"""
+
 import typing
 
 DEFAULT_HTTPS_VERIFICATION: bool = True
@@ -8,11 +13,31 @@ DEFAULT_CONNECTION_TIMEOUT_SECS: float = 30.0
 
 DEFAULT_READ_TIMEOUT_SECS: float = 60.0 * 30
 
+_exchanges_out_dir: typing.Union[str, None] = None
+""" If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
+
 _http_verification: bool = DEFAULT_HTTPS_VERIFICATION
+"""
+Whether to verify HTTPS requests.
+Should be set to false when using fake/testing certificates.
+"""
 
 _connection_timeout_secs: float = DEFAULT_CONNECTION_TIMEOUT_SECS
+""" The timeout for establishing a connection. """
 
 _read_timeout_secs: float = DEFAULT_READ_TIMEOUT_SECS
+""" The timeout for reading from a connection. """
+
+def get_exchanges_out_dir() -> typing.Union[str, None]:
+    """ Get the directory to write HTTP exchanges (if any). """
+
+    return _exchanges_out_dir
+
+def set_exchanges_out_dir(value: typing.Union[str, None] = None) -> None:
+    """ Set the directory to write HTTP exchanges. """
+
+    global _exchanges_out_dir
+    _exchanges_out_dir = value
 
 def get_https_verification() -> bool:
     """ Get whether to check the SSL certificate for HTTPS requests. """
