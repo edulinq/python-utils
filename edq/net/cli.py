@@ -13,10 +13,6 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
 
     group = parser.add_argument_group('network options')
 
-    group.add_argument('--http-exchanges-clean-func', dest = 'http_exchanges_clean_func',
-        action = 'store', type = str, default = None,
-        help = 'If set, default all created exchanges to this modifier function.')
-
     group.add_argument('--http-exchanges-out-dir', dest = 'http_exchanges_out_dir',
         action = 'store', type = str, default = None,
         help = 'If set, write all outgoing HTTP requests as exchanges to this directory.')
@@ -36,9 +32,6 @@ def init_from_args(
 
     if (args.http_exchanges_out_dir is not None):
         edq.net.settings.set_exchanges_out_dir(args.http_exchanges_out_dir)
-
-    if (args.http_exchanges_clean_func is not None):
-        edq.net.exchange._exchanges_clean_func = args.http_exchanges_clean_func
 
     if (args.http_exchanges_finalize_func is not None):
         edq.net.settings.set_exchanges_finalize_func(args.http_exchanges_finalize_func)

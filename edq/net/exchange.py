@@ -90,12 +90,6 @@ Some are sent automatically and we don't need to record (like content-length),
 and some are additional information we don't need.
 """
 
-_exchanges_clean_func: typing.Union[str, None] = None  # pylint: disable=invalid-name
-"""
-If not None, all created exchanges (in HTTPExchange.make_request() and HTTPExchange.from_response()) will use this response modifier.
-This function will be called with the response and response body before parsing the rest of the data to build the exchange.
-"""
-
 class FileInfo(edq.util.serial.DictConverter):
     """ Store info about files used in HTTP exchanges. """
 
@@ -626,6 +620,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
             headers_to_skip: typing.Union[typing.List[str], None] = None,
             params_to_skip: typing.Union[typing.List[str], None] = None,
             allow_redirects: typing.Union[bool, None] = None,
+            clean_response_func: typing.Union[str, None] = None,
             finalize_func: typing.Union[str, None] = None,
             ) -> 'HTTPExchange':
         """ Create a full exchange from a response. """
@@ -636,18 +631,21 @@ class HTTPExchange(edq.util.serial.DictConverter):
         if (params_to_skip is None):
             params_to_skip = []
 
+        if (clean_response_func is None):
+            clean_response_func = edq.net.settings.get_exchanges_clean_response_func()
+
         if (finalize_func is None):
             finalize_func = edq.net.settings.get_exchanges_finalize_func()
 
         body = response.text
 
         # Use a clean function (if one exists).
-        if (_exchanges_clean_func is not None):
+        if (clean_response_func is not None):
             # Make a copy of the response to avoid cleaning functions modifying it.
             # Note that this is not a very complete solution, since we can't rely on the deep copy getting everything right.
             response = copy.deepcopy(response)
 
-            modify_func = edq.util.pyimport.fetch(_exchanges_clean_func)
+            modify_func = edq.util.pyimport.fetch(clean_response_func)
             body = modify_func(response, body)
 
         request_headers = {key.lower().strip(): value for (key, value) in response.request.headers.items()}
@@ -685,7 +683,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
             'response_code': response.status_code,
             'response_headers': response_headers,
             'response_body': body,
-            'response_modifier': _exchanges_clean_func,
+            'response_modifier': clean_response_func,
             'allow_redirects': allow_redirects,
         }
 
@@ -699,6 +697,21 @@ class HTTPExchange(edq.util.serial.DictConverter):
             exchange.finalize = finalize_func
 
         return exchange
+
+@typing.runtime_checkable
+class HTTPExchangeResponseCleanFunc(typing.Protocol):
+    """
+    A function that can be used to clean a response before creating an exchange.
+    """
+
+    def __call__(self,
+            response: requests.Response,
+            body: str,
+            ) -> str:
+        """
+        Take in a response and response body.
+        Clean the response in-place and return the new body.
+        """
 
 @typing.runtime_checkable
 class HTTPExchangeFinalizeFunc(typing.Protocol):
