@@ -22,12 +22,6 @@ DEFAULT_HTTP_EXCHANGE_EXTENSION: str= '.httpex.json'
 QUERY_CLIP_LENGTH: int = 100
 """ If the filename of an HTTPExhange being saved is longer than this, then clip it. """
 
-ANCHOR_HEADER_KEY: str = 'edq-anchor'
-"""
-By default, requests made via make_request() will send a header with this key that includes the anchor component of the URL.
-Anchors are not traditionally sent in requests, but this will allow exchanges to capture this extra piece of information.
-"""
-
 ALLOWED_METHODS: typing.List[str] = [
     'DELETE',
     'GET',
@@ -38,57 +32,6 @@ ALLOWED_METHODS: typing.List[str] = [
     'PUT',
 ]
 """ Allowed HTTP methods for an HTTPExchange. """
-
-DEFAULT_EXCHANGE_IGNORE_HEADERS: typing.List[str] = [
-    'accept',
-    'accept-encoding',
-    'accept-language',
-    'access-control-allow-origin',
-    'access-control-allow-credentials',
-    'access-control-allow-methods',
-    'access-control-request-method',
-    'access-control-allow-headers',
-    'cache-control',
-    'connection',
-    'content-length',
-    'content-security-policy',
-    'content-type',
-    'cookie',
-    'date',
-    'dnt',
-    'etag',
-    'host',
-    'link',
-    'location',  # Will be specially kept on allowed redirects.
-    'pragma',
-    'priority',
-    'referrer-policy',
-    'sec-fetch-dest',
-    'sec-fetch-mode',
-    'sec-fetch-site',
-    'sec-fetch-user',
-    'sec-gpc',
-    'server',
-    'server-timing',
-    'set-cookie',
-    'upgrade-insecure-requests',
-    'user-agent',
-    'x-content-type-options',
-    'x-download-options',
-    'x-permitted-cross-domain-policies',
-    'x-rate-limit-remaining',
-    'x-request-context-id',
-    'x-request-cost',
-    'x-runtime',
-    'x-session-id',
-    'x-xss-protection',
-    ANCHOR_HEADER_KEY,
-]
-"""
-By default, ignore these headers during exchange matching.
-Some are sent automatically and we don't need to record (like content-length),
-and some are additional information we don't need.
-"""
 
 class FileInfo(edq.util.serial.DictConverter):
     """ Store info about files used in HTTP exchanges. """
@@ -423,7 +366,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
             return False, f"URL anchor does not match (query = {query.url_anchor}, target = {self.url_anchor})."
 
         if (headers_to_skip is None):
-            headers_to_skip = DEFAULT_EXCHANGE_IGNORE_HEADERS
+            headers_to_skip = edq.net.settings.get_exchanges_ignore_headers()
 
         if (params_to_skip is None):
             params_to_skip = []
@@ -502,7 +445,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
         """
 
         if (headers_to_skip is None):
-            headers_to_skip = DEFAULT_EXCHANGE_IGNORE_HEADERS
+            headers_to_skip = edq.net.settings.get_exchanges_ignore_headers()
 
         response_body = override_body
         if (response_body is None):
@@ -626,7 +569,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
         """ Create a full exchange from a response. """
 
         if (headers_to_skip is None):
-            headers_to_skip = DEFAULT_EXCHANGE_IGNORE_HEADERS
+            headers_to_skip = edq.net.settings.get_exchanges_ignore_headers()
 
         if (params_to_skip is None):
             params_to_skip = []
@@ -676,7 +619,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
         data: typing.Dict[str, typing.Any] = {
             'method': response.request.method,
             'url': response.request.url,
-            'url_anchor': response.request.headers.get(ANCHOR_HEADER_KEY, None),
+            'url_anchor': response.request.headers.get(edq.net.settings.ANCHOR_HEADER_KEY, None),
             'parameters': request_data,
             'files': files,
             'headers': request_headers,

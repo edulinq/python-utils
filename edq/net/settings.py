@@ -7,11 +7,70 @@ Most options can be overwritten in specific calls, e.g., in edq.net.request.make
 
 import typing
 
+ANCHOR_HEADER_KEY: str = 'edq-anchor'
+"""
+By default, requests made via make_request() will send a header with this key that includes the anchor component of the URL.
+Anchors are not traditionally sent in requests, but this will allow exchanges to capture this extra piece of information.
+"""
+
 DEFAULT_HTTPS_VERIFICATION: bool = True
 
 DEFAULT_CONNECTION_TIMEOUT_SECS: float = 30.0
 
 DEFAULT_READ_TIMEOUT_SECS: float = 60.0 * 30
+
+DEFAULT_EXCHANGES_IGNORE_HEADERS: typing.List[str] = [
+    'accept',
+    'accept-encoding',
+    'accept-language',
+    'access-control-allow-origin',
+    'access-control-allow-credentials',
+    'access-control-allow-methods',
+    'access-control-request-method',
+    'access-control-allow-headers',
+    'cache-control',
+    'connection',
+    'content-length',
+    'content-security-policy',
+    'content-type',
+    'cookie',
+    'date',
+    'dnt',
+    'etag',
+    'host',
+    'link',
+    'location',  # Will be specially kept on allowed redirects.
+    'pragma',
+    'priority',
+    'referrer-policy',
+    'sec-fetch-dest',
+    'sec-fetch-mode',
+    'sec-fetch-site',
+    'sec-fetch-user',
+    'sec-gpc',
+    'server',
+    'server-timing',
+    'set-cookie',
+    'upgrade-insecure-requests',
+    'user-agent',
+    'x-content-type-options',
+    'x-download-options',
+    'x-permitted-cross-domain-policies',
+    'x-rate-limit-remaining',
+    'x-request-context-id',
+    'x-request-cost',
+    'x-runtime',
+    'x-session-id',
+    'x-xss-protection',
+    ANCHOR_HEADER_KEY,
+]
+
+_exchanges_ignore_headers: typing.List[str] = DEFAULT_EXCHANGES_IGNORE_HEADERS.copy()
+"""
+By default, ignore these headers during exchange matching.
+Some are sent automatically and we don't need to record (like content-length),
+and some are additional information we don't need.
+"""
 
 _exchanges_out_dir: typing.Union[str, None] = None
 """ If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
@@ -75,6 +134,21 @@ def set_exchanges_finalize_func(value: typing.Union[str, None] = None) -> None:
 
     global _exchanges_finalize_func
     _exchanges_finalize_func = value
+
+def get_exchanges_ignore_headers() -> typing.List[str]:
+    """ Get the exchange headers to ignore. """
+
+    return _exchanges_ignore_headers
+
+def set_exchanges_ignore_headers(value: typing.Union[typing.List[str], None] = None) -> None:
+    """ Set the exchange headers to ignore. """
+
+    global _exchanges_ignore_headers
+
+    if (value is None):
+        value = DEFAULT_EXCHANGES_IGNORE_HEADERS.copy()
+
+    _exchanges_ignore_headers = value
 
 def get_exchanges_out_dir() -> typing.Union[str, None]:
     """ Get the directory to write HTTP exchanges (if any). """

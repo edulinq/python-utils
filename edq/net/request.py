@@ -93,7 +93,7 @@ def make_request(method: str, url: str,
         headers = headers.copy()
 
         parts = urllib.parse.urlparse(url)
-        headers[edq.net.exchange.ANCHOR_HEADER_KEY] = parts.fragment.lstrip('#')
+        headers[edq.net.settings.ANCHOR_HEADER_KEY] = parts.fragment.lstrip('#')
 
     # Compute the full connection/read timeout.
     if (timeout_secs is None):

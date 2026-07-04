@@ -71,7 +71,7 @@ class HTTPExchangeServer():
             if ('headers_to_skip' not in match_options):
                 match_options['headers_to_skip'] = []
 
-            match_options['headers_to_skip'] += edq.net.exchange.DEFAULT_EXCHANGE_IGNORE_HEADERS
+            match_options['headers_to_skip'] += edq.net.settings.get_exchanges_ignore_headers()
 
         self.match_options: typing.Dict[str, typing.Any] = match_options.copy()
         """ Options to use when matching HTTP exchanges. """
@@ -423,7 +423,7 @@ class _TestHTTPHandler(http.server.BaseHTTPRequestHandler):
 
         query = edq.net.exchange.HTTPExchange(method = method,
                 url = self.path,
-                url_anchor = self.headers.get(edq.net.exchange.ANCHOR_HEADER_KEY, None),
+                url_anchor = self.headers.get(edq.net.settings.ANCHOR_HEADER_KEY, None),
                 headers = self.headers,  # type: ignore[arg-type]
                 parameters = parameters, files = files)
 
