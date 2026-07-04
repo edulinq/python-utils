@@ -22,9 +22,6 @@ _logger = logging.getLogger(__name__)
 RETRY_BACKOFF_SECS: float = 0.5
 """ A back-off factor between failed network requests. """
 
-_make_request_exchange_complete_func: typing.Union[edq.net.exchange.HTTPExchangeComplete, None] = None  # pylint: disable=invalid-name
-""" If not None, call this func after make_request() has created its HTTPExchange. """
-
 @typing.runtime_checkable
 class ResponseModifierFunction(typing.Protocol):
     """
@@ -55,10 +52,10 @@ def make_request(method: str, url: str,
         http_exchange_extension: str = edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION,
         add_http_prefix: bool = True,
         additional_requests_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-        exchange_complete_func: typing.Union[edq.net.exchange.HTTPExchangeComplete, None] = None,
         allow_redirects: typing.Union[bool, None] = None,
         retries: int = 0,
         https_verification: typing.Union[bool, None] = None,
+        request_complete_callback: typing.Union[edq.net.exchange.HTTPExchangeComplete, None] = None,
         **kwargs: typing.Any) -> typing.Tuple[requests.Response, str]:
     """
     Make an HTTP request and return the response object and text body.
@@ -85,6 +82,11 @@ def make_request(method: str, url: str,
 
     if (additional_requests_options is None):
         additional_requests_options = {}
+
+    if (request_complete_callback is None):
+        raw_callback = edq.net.settings.get_request_complete_callback()
+        if (raw_callback is not None):
+            request_complete_callback = typing.cast(edq.net.exchange.HTTPExchangeComplete, raw_callback)
 
     # Add in the anchor as a header (since it is not traditionally sent in an HTTP request).
     if (send_anchor_header):
@@ -142,7 +144,7 @@ def make_request(method: str, url: str,
         response.raise_for_status()
 
     exchange = None
-    if ((output_dir is not None) or (exchange_complete_func is not None) or (_make_request_exchange_complete_func is not None)):
+    if ((output_dir is not None) or (request_complete_callback is not None)):
         exchange = edq.net.exchange.HTTPExchange.from_response(
             response,
             headers_to_skip = headers_to_skip,
@@ -163,11 +165,8 @@ def make_request(method: str, url: str,
                 )
                 _write_exchange(redirect_exchange, output_dir, http_exchange_extension)
 
-    if ((exchange_complete_func is not None) and (exchange is not None)):
-        exchange_complete_func(exchange)
-
-    if ((_make_request_exchange_complete_func is not None) and (exchange is not None)):
-        _make_request_exchange_complete_func(exchange)  # pylint: disable=not-callable
+        if (request_complete_callback is not None):
+            request_complete_callback(exchange)
 
     return response, body
 

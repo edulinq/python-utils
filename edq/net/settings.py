@@ -20,7 +20,9 @@ _exchanges_clean_response_func: typing.Union[str, None] = None
 """
 If not None, this function reference will be used to clean responses (and bodies)
 before creating an exchange with edq.net.exchange.HTTPExchange.from_response().
+
 This reference must be importable via edq.util.pyimport.fetch().
+String references are used instead of actual function references because these values will be stored inside the exchange.
 The referenced function should follow the edq.net.exchange.HTTPExchangeResponseCleanFunc protocol.
 """
 
@@ -28,7 +30,9 @@ _exchanges_finalize_func: typing.Union[str, None] = None
 """
 If not None, all exchanges created with edq.net.exchange.HTTPExchange.from_response()
 will have this function reference called before returning the created exchange.
+
 This reference must be importable via edq.util.pyimport.fetch().
+String references are used instead of actual function references because these values will be stored inside the exchange.
 The referenced function should follow the edq.net.exchange.HTTPExchangeFinalizeFunc protocol.
 """
 
@@ -43,6 +47,12 @@ _connection_timeout_secs: float = DEFAULT_CONNECTION_TIMEOUT_SECS
 
 _read_timeout_secs: float = DEFAULT_READ_TIMEOUT_SECS
 """ The timeout for reading from a connection. """
+
+_request_complete_callback: typing.Union[typing.Callable, None] = None  # pylint: disable=invalid-name
+"""
+If not None, call this func when make_request() is about to end.
+This function should follow the edq.net.exchange.HTTPExchangeComplete protocol.
+"""
 
 def get_exchanges_clean_response_func() -> typing.Union[str, None]:
     """ Get the clean response func for exchanges. """
@@ -121,3 +131,14 @@ def set_read_timeout_secs(value: typing.Union[float, None] = None) -> None:
         value = DEFAULT_READ_TIMEOUT_SECS
 
     _read_timeout_secs = value
+
+def get_request_complete_callback() -> typing.Union[typing.Callable, None]:
+    """ Get the make_request() callback. """
+
+    return _request_complete_callback
+
+def set_request_complete_callback(value: typing.Union[typing.Callable, None] = None) -> None:
+    """ Set the make_request() callback. """
+
+    global _request_complete_callback
+    _request_complete_callback = value
