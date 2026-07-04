@@ -284,7 +284,7 @@ class HTTPExchangeServer():
     def load_exchange_file(self,
             path: str,
             context: typing.Union[edq.util.serial.SerializationContext, None] = None,
-            finalize_func: typing.Union[typing.Callable, None] = None,
+            finalize_func: typing.Union[edq.net.exchange.HTTPExchangeFinalizeFunc, None] = None,
             ) -> None:
         """
         Load an exchange from a file.
@@ -302,7 +302,7 @@ class HTTPExchangeServer():
             base_dir: str,
             extension: str = edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION,
             context: typing.Union[edq.util.serial.SerializationContext, None] = None,
-            finalize_func: typing.Union[typing.Callable, None] = None,
+            finalize_func: typing.Union[edq.net.exchange.HTTPExchangeFinalizeFunc, None] = None,
             ) -> None:
         """ Load all exchanges found (recursively) within a directory. """
 
