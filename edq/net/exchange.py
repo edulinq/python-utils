@@ -7,6 +7,7 @@ import urllib.parse
 
 import requests
 
+import edq.net.settings
 import edq.net.util
 import edq.util.dirent
 import edq.util.encoding
@@ -93,13 +94,6 @@ _exchanges_clean_func: typing.Union[str, None] = None  # pylint: disable=invalid
 """
 If not None, all created exchanges (in HTTPExchange.make_request() and HTTPExchange.from_response()) will use this response modifier.
 This function will be called with the response and response body before parsing the rest of the data to build the exchange.
-"""
-
-_exchanges_finalize_func: typing.Union[str, None] = None  # pylint: disable=invalid-name
-"""
-If not None, all created exchanges (in HTTPExchange.make_request()) will use this finalize function.
-This function will be called with the created exchange right after construction and before passing back to the caller
-(or writing).
 """
 
 class FileInfo(edq.util.serial.DictConverter):
@@ -307,7 +301,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
 
         self.finalize: typing.Union[str, None] = finalize
         """
-        This function reference will be used to finalize echanges before sent back to the caller.
+        This function reference will be used to finalize echanges when created using from_response() before sent back to the caller.
         This reference must be importable via edq.util.pyimport.fetch().
         """
 
@@ -632,6 +626,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
             headers_to_skip: typing.Union[typing.List[str], None] = None,
             params_to_skip: typing.Union[typing.List[str], None] = None,
             allow_redirects: typing.Union[bool, None] = None,
+            finalize_func: typing.Union[str, None] = None,
             ) -> 'HTTPExchange':
         """ Create a full exchange from a response. """
 
@@ -640,6 +635,9 @@ class HTTPExchange(edq.util.serial.DictConverter):
 
         if (params_to_skip is None):
             params_to_skip = []
+
+        if (finalize_func is None):
+            finalize_func = edq.net.settings.get_exchanges_finalize_func()
 
         body = response.text
 
@@ -694,13 +692,26 @@ class HTTPExchange(edq.util.serial.DictConverter):
         exchange = HTTPExchange(**data)
 
         # Use a finalize function (if one exists).
-        if (_exchanges_finalize_func is not None):
-            finalize_func = edq.util.pyimport.fetch(_exchanges_finalize_func)
+        if (finalize_func is not None):
+            finalize_func_object = edq.util.pyimport.fetch(finalize_func)
 
-            exchange = finalize_func(exchange)
-            exchange.finalize = _exchanges_finalize_func
+            exchange = finalize_func_object(exchange)
+            exchange.finalize = finalize_func
 
         return exchange
+
+@typing.runtime_checkable
+class HTTPExchangeFinalizeFunc(typing.Protocol):
+    """
+    A function that can be used to finalize an exchange.
+    """
+
+    def __call__(self,
+            exchange: HTTPExchange
+            ) -> HTTPExchange:
+        """
+        Take in an exchange, finalize it, and pass back the finalized exchange (which may be different than the input one).
+        """
 
 @typing.runtime_checkable
 class HTTPExchangeComplete(typing.Protocol):

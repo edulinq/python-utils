@@ -16,6 +16,14 @@ DEFAULT_READ_TIMEOUT_SECS: float = 60.0 * 30
 _exchanges_out_dir: typing.Union[str, None] = None
 """ If not None, all requests made via make_request() will be saved as an HTTPExchange in this directory. """
 
+_exchanges_finalize_func: typing.Union[str, None] = None
+"""
+If not None, all exchanges created with edq.net.exchange.HTTPExchange.from_response()
+will have this function reference called before returning the created exchange.
+This reference must be importable via edq.util.pyimport.fetch().
+The referenced function should follow the edq.net.exchange.HTTPExchangeFinalizeFunc protocol.
+"""
+
 _http_verification: bool = DEFAULT_HTTPS_VERIFICATION
 """
 Whether to verify HTTPS requests.
@@ -27,6 +35,17 @@ _connection_timeout_secs: float = DEFAULT_CONNECTION_TIMEOUT_SECS
 
 _read_timeout_secs: float = DEFAULT_READ_TIMEOUT_SECS
 """ The timeout for reading from a connection. """
+
+def get_exchanges_finalize_func() -> typing.Union[str, None]:
+    """ Get the default finalize func for exchanges. """
+
+    return _exchanges_finalize_func
+
+def set_exchanges_finalize_func(value: typing.Union[str, None] = None) -> None:
+    """ Set the default finalize func for exchanges. """
+
+    global _exchanges_finalize_func
+    _exchanges_finalize_func = value
 
 def get_exchanges_out_dir() -> typing.Union[str, None]:
     """ Get the directory to write HTTP exchanges (if any). """

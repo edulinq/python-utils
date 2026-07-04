@@ -17,10 +17,6 @@ def set_cli_args(parser: argparse.ArgumentParser, extra_state: typing.Dict[str, 
         action = 'store', type = str, default = None,
         help = 'If set, default all created exchanges to this modifier function.')
 
-    group.add_argument('--http-exchanges-finalize-func', dest = 'http_exchanges_finalize_func',
-        action = 'store', type = str, default = None,
-        help = 'If set, default all created exchanges to this finalize.')
-
     group.add_argument('--http-exchanges-out-dir', dest = 'http_exchanges_out_dir',
         action = 'store', type = str, default = None,
         help = 'If set, write all outgoing HTTP requests as exchanges to this directory.')
@@ -45,7 +41,7 @@ def init_from_args(
         edq.net.exchange._exchanges_clean_func = args.http_exchanges_clean_func
 
     if (args.http_exchanges_finalize_func is not None):
-        edq.net.exchange._exchanges_finalize_func = args.http_exchanges_finalize_func
+        edq.net.settings.set_exchanges_finalize_func(args.http_exchanges_finalize_func)
 
     if (args.https_no_verify):
         edq.net.settings.set_https_verification(False)
