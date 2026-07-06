@@ -52,7 +52,7 @@ def make_request(method: str, url: str,
         http_exchange_extension: str = edq.net.exchange.DEFAULT_HTTP_EXCHANGE_EXTENSION,
         add_http_prefix: bool = True,
         additional_requests_options: typing.Union[typing.Dict[str, typing.Any], None] = None,
-        allow_redirects: typing.Union[bool, None] = None,
+        allow_redirects: typing.Union[bool, None] = True,
         retries: int = 0,
         https_verification: typing.Union[bool, None] = None,
         request_complete_callback: typing.Union[edq.net.exchange.HTTPExchangeComplete, None] = None,
@@ -117,8 +117,8 @@ def make_request(method: str, url: str,
         'files': files,
     })
 
-    if (allow_redirects is not None):
-        options['allow_redirects'] = allow_redirects
+    if (allow_redirects is False):
+        options['allow_redirects'] = False
 
     if (method == 'GET'):
         options['params'] = data
@@ -149,7 +149,7 @@ def make_request(method: str, url: str,
             response,
             headers_to_skip = headers_to_skip,
             params_to_skip = params_to_skip,
-            allow_redirects = options.get('allow_redirects', None),
+            allow_redirects = options.get('allow_redirects', True),
         )
 
         if (output_dir is not None):
@@ -161,7 +161,7 @@ def make_request(method: str, url: str,
                     redirect_response,
                     headers_to_skip = headers_to_skip,
                     params_to_skip = params_to_skip,
-                    allow_redirects = options.get('allow_redirects', None),
+                    allow_redirects = options.get('allow_redirects', True),
                 )
                 _write_exchange(redirect_exchange, output_dir, http_exchange_extension)
 
