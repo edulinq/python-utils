@@ -33,8 +33,5 @@ def init_from_args(
     if (args.http_exchanges_out_dir is not None):
         edq.net.settings.set_exchanges_out_dir(args.http_exchanges_out_dir)
 
-    if (args.http_exchanges_finalize_func is not None):
-        edq.net.settings.set_exchanges_finalize_func(args.http_exchanges_finalize_func)
-
     if (args.https_no_verify):
         edq.net.settings.set_https_verification(False)
