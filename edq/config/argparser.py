@@ -150,8 +150,17 @@ def load_config_into_args(
         if (value is not None):
             getattr(args, edq.config.constants.CONFIG_OPTIONS_KEY).append(f"{config_key}={value}")
 
+    default_values = {}
+    for action in parser._actions:
+        key = getattr(action, 'dest', None)
+        if (key is None):
+            continue
+
+        default_values[str(key)] = getattr(action, 'default', None)
+
     config_info = edq.config.load.get_tiered_config(
         cli_arguments = args,
+        cli_default_values = default_values,
         serialization_context = serialization_context,
     )
     setattr(args, "_config_info", config_info)

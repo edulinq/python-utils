@@ -60,6 +60,7 @@ class TieredConfigInfo(edq.util.serial.DictConverter):
 
 def get_tiered_config(
         cli_arguments: typing.Union[dict, argparse.Namespace, None] = None,
+        cli_default_values: typing.Union[typing.Dict[str, typing.Any], None] = None,
         load_order: typing.Union[typing.List[edq.config.source.ConfigSourceSpec], None] = None,
         serialization_context: typing.Union[edq.util.serial.SerializationContext, None] = None,
         ) -> TieredConfigInfo:
@@ -67,11 +68,14 @@ def get_tiered_config(
     Load all configuration options from files and command-line arguments.
     """
 
-    if (load_order is None):
-        load_order = edq.config.settings.get_load_order()
-
     if (cli_arguments is None):
         cli_arguments = {}
+
+    if (cli_default_values is None):
+        cli_default_values = {}
+
+    if (load_order is None):
+        load_order = edq.config.settings.get_load_order()
 
     raw_config: typing.Dict[str, edq.util.serial.PODType] = {}
     sources: typing.Dict[str, typing.List[ConfigLoadResult]] = {}
@@ -96,6 +100,10 @@ def get_tiered_config(
         elif (isinstance(spec, edq.config.source.CLIImplicitSpec)):
             for (key, value) in cli_arguments.items():
                 if (key in edq.config.constants.IGNORE_CLI_KEYS):
+                    continue
+
+                # Don't override existing values with default values.
+                if ((key in sources) and (value == cli_default_values.get(key, None))):
                     continue
 
                 raw_config[key] = value

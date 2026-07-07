@@ -42,6 +42,7 @@ class CLIImplicitSpec(ConfigSourceSpec):
             'Load configuration values set directly on the command-line.',
             '"Implicit" refers to the fact that these arguments do not use the `--config` flag.',
             'Multiple instances may be supplied, and they will be processed in the order provided.',
+            'Default values from implicit command-line arguments will not override previously set values.',
         ]
 
 class CLIFileSpec(ConfigSourceSpec):
