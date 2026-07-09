@@ -158,14 +158,26 @@ class Timestamp(int, edq.util.serial.PODConverter):  # type: ignore[misc]
         return text
 
     @staticmethod
-    def guess(value: typing.Any) -> 'Timestamp':
+    def guess(
+            value: typing.Any,
+            default_timezone: typing.Union[datetime.tzinfo, None] = None,
+            use_local_timezone: bool = True,
+            ) -> 'Timestamp':
         """
         Try to parse a timestamp out of a value.
         Empty values will get zero timestamps.
         Purely digit strings will be converted to ints and treated as UNIX times.
         Floats will be considered UNIX epoch seconds and converted to milliseconds.
         Other strings will be attempted to be parsed with datetime.fromisoformat().
+
+        If a value, but not a timezone, was parsed,
+        then set the timezone for the parsed value to `default_timezone`.
+        If `default_timezone` is None and `use_local_timezone` is true,
+        then use get_local_timezone() to get the timezone.
         """
+
+        if ((default_timezone is None) and use_local_timezone):
+            default_timezone = get_local_timezone()
 
         raw_value = value
 
@@ -224,6 +236,10 @@ class Timestamp(int, edq.util.serial.PODConverter):  # type: ignore[misc]
             value = datetime.datetime.fromisoformat(value)
         except Exception as ex:
             raise ValueError(f"Failed to parse timestamp string '{raw_value}'.") from ex
+
+        # If no timezone was parsed, use the default one.
+        if (value.tzinfo is None):
+            value = value.replace(tzinfo = default_timezone)
 
         return Timestamp.from_pytime(value)
 

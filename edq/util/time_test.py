@@ -289,6 +289,13 @@ class TestTime(edq.testing.unittest.BaseTest):
                 None,
             ),
 
+            # No timezone (should use testing timezone (UTC)).
+            (
+                '2025-02-25',
+                edq.util.time.Timestamp(1740441600000),
+                None,
+            ),
+
             # Errors
             (
                 'ZZZ',
