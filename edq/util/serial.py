@@ -1,3 +1,4 @@
+import collections
 import enum
 import os
 import typing
@@ -488,8 +489,10 @@ def _from_pod_internal(
                 return allowed_type(raw_value)
 
         # Sequence container types.
-        if ((typing.get_origin(allowed_type) in (list, tuple, set)) and isinstance(raw_value, (list, tuple, set))):
+        if ((typing.get_origin(allowed_type) in (list, tuple, set, collections.abc.Sequence)) and isinstance(raw_value, (list, tuple, set))):
             collection_type = typing.get_origin(allowed_type)
+            if (collection_type is collections.abc.Sequence):
+                collection_type = list
 
             item_type = None
             args = typing.get_args(allowed_type)
@@ -503,7 +506,7 @@ def _from_pod_internal(
             ])
 
         # Dict
-        if ((typing.get_origin(allowed_type) is dict) and isinstance(raw_value, dict)):
+        if ((typing.get_origin(allowed_type) in (dict, collections.abc.Mapping)) and isinstance(raw_value, dict)):
             key_type = None
             value_type = None
 

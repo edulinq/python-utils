@@ -62,6 +62,9 @@ class _TestDictConverter(edq.util.serial.DictConverter):
             dict_mixed: typing.Union[typing.Dict[str, typing.Union[str, int, _TestEnumStr, _TestEnumInt]], None] = None,
             dict_nested: typing.Union[typing.Dict[str, '_TestDictConverter'], None] = None,
 
+            sequence_str: typing.Union[typing.Sequence[str], None] = None,
+            mapping_str: typing.Union[typing.Mapping[str, str], None] = None,
+
             **kwargs: typing.Any) -> None:
         super().__init__(**kwargs)
 
@@ -85,6 +88,9 @@ class _TestDictConverter(edq.util.serial.DictConverter):
         self.dict_str: typing.Union[typing.Dict[str, str], None] = dict_str
         self.dict_mixed: typing.Union[typing.Dict[str, typing.Union[str, int, _TestEnumStr, _TestEnumInt]], None] = dict_mixed
         self.dict_nested: typing.Union[typing.Dict[str, '_TestDictConverter'], None] = dict_nested
+
+        self.sequence_str: typing.Union[typing.Sequence[str], None] = sequence_str
+        self.mapping_str: typing.Union[typing.Mapping[str, str], None] = mapping_str
 
     def __eq__(self, other: object) -> bool:
         """ Add in a hard equality check so exact types are checked. """
@@ -263,6 +269,28 @@ class TestSerialization(edq.testing.unittest.BaseTest):
                                 'enum_str': 'a',
                             }
                         },
+                    },
+                },
+                None,
+            ),
+
+            # Abstract Types
+            (
+                _TestDictConverter(sequence_str = ['a', 'b', 'c']),
+                {
+                    'sequence_str': ['a', 'b', 'c'],
+                },
+                None,
+            ),
+            (
+                _TestDictConverter(mapping_str = {
+                    'a': 'b',
+                    'c': 'd',
+                }),
+                {
+                    'mapping_str': {
+                        'a': 'b',
+                        'c': 'd',
                     },
                 },
                 None,
