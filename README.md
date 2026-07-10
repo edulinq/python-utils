@@ -46,22 +46,24 @@ For example, a configuration file containing the `user` and `pass` options might
 
 The table below summarizes the configuration sources provided by this library.
 
-| Source   | Description |
-| :-----   | :---------- |
-| CLI      | Loaded from the command line. |
-| CLI File | Loaded from one or more explicitly provided configuration files through the CLI. |
-| Global   | Loaded from a file in a user-specific location, which is platform-dependent. |
-| Local    | Loaded from a file in the current directory. |
-| Project  | Loaded from a file in the current or nearest ancestor directory. |
+| Source         | Description |
+| :-----         | :---------- |
+| CLI (Implicit) | Loaded from the command line as a flag that is **NOT** `--config`. |
+| CLI (Explicit) | Loaded from the command line via the `--config` flag. |
+| CLI File       | Loaded from one or more explicitly provided configuration files through the CLI. |
+| Global         | Loaded from a file in a user-specific location, which is platform-dependent. |
+| Local          | Loaded from a file in the current directory. |
+| Project        | Loaded from a file in the current or nearest ancestor directory. |
 
 The system produces an error if a configuration file is unreadable (but not missing), or if a CLI-specified file is unreadable or missing.
 
 #### CLI Configuration
 
 CLI configurations are options specified directly on the command line, these are useful for quick option overrides without editing config files.
-Configuration options are passed to the command line by the `--config` flag in this format `<key>=<value>`.
+Explicit configuration options are passed to the command line using the `--config` flag in this format `<key>=<value>`.
 The provided values overrides the values from configuration files.
 Configuration options are structured as key value pairs and keys cannot contain the "=" character.
+All other options specified on the command-line are considered "implicit" options.
 
 Below is an example of specifying a configuration option directly from the CLI:
 ```sh
