@@ -2,4 +2,4 @@
 General Python tools used by several EduLinq projects.
 """
 
-__version__ = '0.4.6'
+__version__ = '1.0.0'
