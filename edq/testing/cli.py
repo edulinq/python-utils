@@ -60,7 +60,7 @@ class SetupTeardownFunction(typing.Protocol):
     def __call__(self,
             test: edq.testing.unittest.BaseTest,
             test_info: 'CLITestInfo',
-            ) -> typing.Callable:
+            ) -> None:
         """
         Setup or teardown function to run before/after a CLI test.
         """
@@ -385,6 +385,13 @@ def _get_test_method(test_name: str, path: str, data_dir: str) -> typing.Callabl
         for setup_func in test_info.setup_funcs:
             setup_func(self, test_info)
 
+        # Check for skipping once more after any setup funcs are called.
+        if (test_info.should_skip()):
+            for teardown_func in test_info.teardown_funcs:
+                teardown_func(self, test_info)
+
+            self.skipTest(test_info.skip_message())
+
         old_args = sys.argv
         sys.argv = [test_info.module.__file__] + test_info.arguments
 
@@ -502,3 +509,17 @@ def create_directory_structure(
     """
 
     edq.testing.unittest.create_directory_structure(test_info.extra_options.get('directory_structure', []), test_info.temp_dir)
+
+def check_paths_or_skip(
+        test: edq.testing.unittest.BaseTest,
+        test_info: CLITestInfo,
+        ) -> None:
+    """
+    Check for any required paths listed in `test_info.extra_options['paths_or_skip']`.
+    If a path does not exist, skip this test.
+    """
+
+    for path in test_info.extra_options.get('paths_or_skip', []):
+        path = test_info._process_text(path)
+        if (not os.path.exists(path)):
+            test_info.skip_reasons.append(f"Path does not exist: '{path}'.")
