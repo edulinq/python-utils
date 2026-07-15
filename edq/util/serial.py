@@ -1,6 +1,7 @@
 import collections
 import enum
 import os
+import types
 import typing
 
 import edq.core.errors
@@ -24,6 +25,11 @@ PODConverterClass = typing.TypeVar('PODConverterClass', bound = 'PODConverter')
 
 # Alias the context (which we don't store here because of a cyclic dependency with edq.util.json).
 SerializationContext = edq.util.common.SerializationContext
+
+# For Python 3.9 compatibility, we need to dynamically check for which union types are available.
+_UNION_TYPES: typing.Set[typing.Any] = {typing.Union}
+if (hasattr(types, 'UnionType')):
+    _UNION_TYPES.add(getattr(types, 'UnionType'))
 
 class SerializationBase:
     """
@@ -466,7 +472,7 @@ def _from_pod_internal(
     allowed_types: typing.Tuple[typing.Any, ...] = tuple([type_hint])
 
     # Check if the hint is a union.
-    if (typing.get_origin(type_hint) is typing.Union):
+    if (typing.get_origin(type_hint) in _UNION_TYPES):
         allowed_types = typing.get_args(type_hint)
 
     if (len(allowed_types) == 0):
