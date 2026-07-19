@@ -3,41 +3,17 @@ Profile some Python target using Python's cprofile stdlib.
 """
 
 import argparse
-import cProfile
-import os
-import pstats
-import runpy
 import sys
 
 import edq.core.argparser
-import edq.util.dirent
-import edq.util.pyimport
+import edq.util.profile
 
 DEFAULT_ROW_COUNT: int = 50
 
 def run_cli(args: argparse.Namespace) -> int:
     """ Run the CLI. """
 
-    profile_globals = globals().copy()
-    for name in args.imports:
-        profile_globals[name] = edq.util.pyimport.import_name(name)
-
-    temp_dir = edq.util.dirent.get_temp_dir('edq-cprofile-')
-    stats_path = os.path.join(temp_dir, 'stats.profile')
-    old_argv = sys.argv.copy()
-
-    command = args.run_target
-    if (args.module):
-        profile_globals['run_module'] = runpy.run_module
-        profile_globals['modname'] = args.run_target
-        sys.argv = [args.run_target] + args.module_args
-
-        command = "run_module(modname, run_name = '__main__')"
-
-    cProfile.runctx(command, profile_globals, None, filename = stats_path)  # type: ignore[arg-type]
-    sys.argv = old_argv
-
-    stats = pstats.Stats(stats_path)
+    stats = edq.util.profile.cprofile(args.run_target, imports = args.imports, is_module = args.module, module_args = args.module_args)
 
     print(f"--- BEGIN: All Functions, Sorted by Cumulative Time, Top {args.row_count} ---")
     stats.sort_stats('cumtime').print_stats(args.row_count)
@@ -71,7 +47,7 @@ def _get_parser() -> argparse.ArgumentParser:
 
     parser.add_argument('run_target', metavar = 'RUN_TARGET',
         action = 'store', type = str,
-        help = 'The code to profile. This will be passed directly to cProfile.run().')
+        help = 'The code to profile.')
 
     parser.add_argument('module_args', metavar = 'MODULE_ARGS',
         action = 'store', type = str, nargs = '*',
