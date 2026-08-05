@@ -597,7 +597,7 @@ class HTTPExchange(edq.util.serial.DictConverter):
         request_data, request_files = edq.net.util.parse_request_data(
                 response.request.url,
                 request_headers,
-                response.request.body)
+                response.request.body)  # type: ignore[arg-type]
 
         # Clean headers.
         for key in headers_to_skip:

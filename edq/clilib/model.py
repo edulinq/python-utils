@@ -156,30 +156,28 @@ class CLIModule(CLIDirent):
     def get_help_text(self) -> str:
         """ Get the help text from the parser. """
 
-        old_color = self.parser.color
-        self.parser.color = False
-
-        buffer = io.StringIO()
-        self.parser.print_help(file = buffer)
-        text = buffer.getvalue()
-        buffer.close()
-
-        self.parser.color = old_color
-
-        return text
+        return self._capture_parse_print(self.parser.print_help)
 
     def get_usage_text(self) -> str:
         """ Get the help text from the parser. """
 
-        old_color = self.parser.color
-        self.parser.color = False
+        return self._capture_parse_print(self.parser.print_usage)
+
+    def _capture_parse_print(self, print_method: typing.Callable) -> str:
+        """ Capture the output from one of the parser printing methods. """
+
+        old_color = False
+        if (hasattr(self.parser, 'color')):
+            old_color = self.parser.color
+            self.parser.color = False
 
         buffer = io.StringIO()
-        self.parser.print_usage(file = buffer)
+        print_method(file = buffer)
         text = buffer.getvalue()
         buffer.close()
 
-        self.parser.color = old_color
+        if (hasattr(self.parser, 'color')):
+            self.parser.color = old_color
 
         return text
 

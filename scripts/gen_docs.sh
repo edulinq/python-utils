@@ -9,8 +9,6 @@ readonly BASE_PACKAGE="edq"
 readonly PACKAGE_DIR="${ROOT_DIR}/${BASE_PACKAGE}"
 readonly DEFAULT_OUT_DIR="${ROOT_DIR}/build/html"
 
-readonly FILE_PATTERNS='!.*_test'
-
 function main() {
     if [[ $# -gt 1 ]]; then
         echo "USAGE: $0 [out dir]"
@@ -29,19 +27,10 @@ function main() {
 
     mkdir -p "${outputDir}"
 
-    # Build the base docs.
-    # Ignore warnings caused by bugs in pdoc.
-    pdoc --output-directory "${outputDir}" "${PACKAGE_DIR}" ${FILE_PATTERNS} 2>&1 | $(grep -v "Import of PODType failed: name 'PODType' is not defined" || true)
+    python3 -m edq.cli.doc.gen-docs "${PACKAGE_DIR}" --out-dir "${outputDir}"
     if [[ $? -ne 0 ]] ; then
         echo "Failed to generate docs."
         return 2
-    fi
-
-    # Update the docs with CLI information.
-    NO_COLOR=1 python3 -m edq.cli.doc.update-pdoc-cli "${PACKAGE_DIR}" "${BASE_PACKAGE}" "${outputDir}"
-    if [[ $? -ne 0 ]] ; then
-        echo "Failed to update docs with CLI information."
-        return 3
     fi
 
     return 0
