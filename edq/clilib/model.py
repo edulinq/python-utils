@@ -156,20 +156,30 @@ class CLIModule(CLIDirent):
     def get_help_text(self) -> str:
         """ Get the help text from the parser. """
 
+        old_color = self.parser.color
+        self.parser.color = False
+
         buffer = io.StringIO()
         self.parser.print_help(file = buffer)
         text = buffer.getvalue()
         buffer.close()
+
+        self.parser.color = old_color
 
         return text
 
     def get_usage_text(self) -> str:
         """ Get the help text from the parser. """
 
+        old_color = self.parser.color
+        self.parser.color = False
+
         buffer = io.StringIO()
         self.parser.print_usage(file = buffer)
         text = buffer.getvalue()
         buffer.close()
+
+        self.parser.color = old_color
 
         return text
 

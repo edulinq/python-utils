@@ -1,3 +1,4 @@
+import html
 import os
 import typing
 
@@ -73,25 +74,23 @@ def _list_package(
         rel_href = '/'.join(parts)
 
         if (isinstance(entry, edq.clilib.model.CLIModule)):
-            html = f"""
+            lines.append(f"""
                 <div class='{CSS_CLASS_PACKAGE_DIRENT}'>
                     <a href='{rel_href}'>{entry.qualified_name}</a>
                     <p>
-                        {entry.get_description()}
-                    </p><pre><code>{entry.get_usage_text()}</code></pre>
+                        {html.escape(entry.get_description())}
+                    </p><pre><code>{html.escape(entry.get_usage_text())}</code></pre>
                 </div>
-            """
-            lines.append(html)
+            """)
         elif (isinstance(entry, edq.clilib.model.CLIPackage)):
-            html = f"""
+            lines.append(f"""
                 <div class='{CSS_CLASS_PACKAGE_DIRENT}'>
                     <a href='{rel_href}'>{entry.qualified_name}.*</a>
                     <p>
-                        {entry.get_description()}
+                        {html.escape(entry.get_description())}
                     </p>
                 </div>
-            """
-            lines.append(html)
+            """)
 
             _list_package(entry, docs_base_dir, base_rel_name, lines)
         else:
@@ -101,7 +100,7 @@ def _update_module_docs(module: edq.clilib.model.CLIModule, docs_base_dir: str) 
     """ Update the documentation for a module. """
 
     path = _get_docs_path(module, docs_base_dir)
-    content = f"<div class='.{CSS_CLASS_MODULE_DOCS}'><pre><code>{module.get_help_text()}</code></pre></div>"
+    content = f"<div class='.{CSS_CLASS_MODULE_DOCS}'><pre><code>{html.escape(module.get_help_text())}</code></pre></div>"
     _insert_html(path, CSS_CLASS_MODULE_DOCS, content)
 
 def _insert_html(path: str, css_class: str, content: str) -> None:
