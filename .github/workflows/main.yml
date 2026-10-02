@@ -16,17 +16,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         env:
           PIP_DISABLE_PIP_VERSION_CHECK: 1
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache Python Dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.pythonLocation }}
           key: ${{ runner.os }}-os:${{ matrix.os }}-python:${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}-${{ hashFiles('requirements-dev.txt') }}-${{ hashFiles('pyproject.toml') }}
@@ -73,18 +73,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache Python Dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.pythonLocation }}
           key: ${{ runner.os }}-os:${{ matrix.os }}-python:${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('requirements.txt') }}-${{ hashFiles('requirements-dev.txt') }}
@@ -130,17 +130,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set Up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         env:
           PIP_DISABLE_PIP_VERSION_CHECK: 1
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache Python Dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.pythonLocation }}
           key: ${{ runner.os }}-os:${{ matrix.os }}-python:${{ matrix.python-version }}-${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}-${{ hashFiles('requirements-dev.txt') }}-${{ hashFiles('pyproject.toml') }}
